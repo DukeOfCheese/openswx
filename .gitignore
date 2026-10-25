@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+*.oswprt
+*.step
+*.stl
+agent_bracket.png
+build-new/
+dist-new/
+*.stackdump
+*.oswasm
+*.oswdrw
+*.log

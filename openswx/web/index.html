@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>openswx</title>
+<link rel="stylesheet" href="/static/style.css">
+<script type="importmap">{"imports": {"three": "/static/vendor/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="app">
+  <!-- title bar: brand, menus, quick access, document title, search -->
+  <header id="titlebar">
+    <div id="brand" title="Menu">
+      <span class="brand-cube"></span><span class="brand-name">open<b>swx</b></span><span class="caret">&#9656;</span>
+    </div>
+    <nav id="menubar"></nav>
+    <div id="quickaccess"></div>
+    <div id="doctitle">Part1</div>
+    <div id="search"><input type="search" placeholder="Search commands" id="cmdsearch"><div id="searchresults"></div></div>
+  </header>
+
+  <!-- CommandManager -->
+  <section id="commandmanager">
+    <div id="cm-buttons"></div>
+    <div id="cm-tabs"></div>
+  </section>
+
+  <main id="workspace">
+    <!-- left pane: FeatureManager / PropertyManager -->
+    <aside id="leftpane">
+      <div id="lp-tabs">
+        <button class="lp-tab active" data-pane="tree" title="FeatureManager Design Tree"></button>
+        <button class="lp-tab" data-pane="pm" title="PropertyManager"></button>
+        <button class="lp-tab" data-pane="config" title="ConfigurationManager"></button>
+        <button class="lp-tab" data-pane="display" title="DisplayManager"></button>
+      </div>
+      <div id="lp-filter"><input type="text" placeholder="&#x1F50D;  Filter" id="treefilter"></div>
+      <div id="tree" class="lp-pane"></div>
+      <div id="pm" class="lp-pane hidden"></div>
+      <div id="config" class="lp-pane hidden"><div class="cfg-item">&#9632; Default [ Part1 ]</div></div>
+      <div id="display" class="lp-pane hidden"></div>
+      <div id="lp-resize"></div>
+    </aside>
+
+    <!-- graphics area -->
+    <section id="graphics">
+      <canvas id="view"></canvas>
+      <div id="overlay"></div>
+      <div id="headsup"></div>
+      <div id="confirm"></div>
+      <div id="docname-corner"></div>
+      <div id="prompt-msg"></div>
+      <div id="minitb" class="hidden"></div>
+      <div id="orient-menu" class="hidden"></div>
+      <canvas id="triad" width="110" height="110"></canvas>
+    </section>
+
+    <!-- task pane -->
+    <aside id="taskpane" class="collapsed">
+      <div id="tp-tabs">
+        <button class="tp-tab" data-pane="agent" title="Agent activity (MCP)"></button>
+        <button class="tp-tab" data-pane="props" title="Mass Properties"></button>
+        <button class="tp-tab" data-pane="help" title="Shortcuts"></button>
+      </div>
+      <div id="tp-body">
+        <div id="tp-agent" class="tp-pane"></div>
+        <div id="tp-props" class="tp-pane hidden"></div>
+        <div id="tp-help" class="tp-pane hidden"></div>
+      </div>
+    </aside>
+  </main>
+
+  <footer id="statusbar">
+    <span id="sb-app">openswx</span>
+    <span class="sb-fill"></span>
+    <span id="sb-coords"></span>
+    <span id="sb-state"></span>
+    <span id="sb-editing">Editing Part</span>
+    <span id="sb-units">MMGS</span>
+    <span id="sb-agent" title="MCP endpoint"></span>
+  </footer>
+</div>
+
+<div id="ctxmenu" class="hidden"></div>
+<div id="modal" class="hidden"><div id="modal-box"></div></div>
+<div id="toasts"></div>
+<input type="file" id="fileinput" class="hidden" accept=".oswprt,.oswasm,.step,.stp,.brep,.x_t,.x_b,.sldprt,.sldasm">
+<script type="module" src="/static/app.js"></script>
+</body>
+</html>
