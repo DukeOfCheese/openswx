@@ -153,8 +153,9 @@ def _build_structural_separate(body, E: float, nu: float, element_size, target_e
                 n=subs[0]["n"], nodes_near=nodes_near, parts=parts)
 
 
-def _build_structural(body, E: float, nu: float, element_size, target_elements, regions):
-    """Finite-cell voxel mesh + assembled stiffness. regions: [(solid, E factor[, density factor])]."""
+def _build_structural(body, E: float, nu: float, element_size, target_elements, regions, keep: bool = False):
+    """Finite-cell voxel mesh + assembled stiffness. regions: [(solid, E factor[, density factor])]. keep: also
+    return the element matrices (Kall) and their global rows / cols, to reassemble with per-element factors."""
     h = float(element_size) if element_size else (body.volume / target_elements) ** (1 / 3)
     frac, flags, origin, n = voxelize(body, h)
     mask = frac > 0.0  # finite-cell method: cut cells are integrated over their inside part only
@@ -206,6 +207,7 @@ def _build_structural(body, E: float, nu: float, element_size, target_elements, 
         Kii += np.eye(9)[None] * (1e-9 * np.trace(ii.sum(0)) + 1e-30)  # tiny cut cells: keep Kii invertible
         Kall[cut] = Kcc - Kci @ np.linalg.solve(Kii, np.transpose(Kci, (0, 2, 1)))
         Kall[cut] += np.eye(24)[None] * (1e-8 * np.trace(Ke) / 24) * (fr[cut] < 0.05)[:, None, None]  # stabilise slivers
+    kept = {"Kall": Kall.copy(), "rows": rows, "cols": cols} if keep else {}
     Kall *= scale[:, None, None]
     data = Kall.reshape(-1)
     Kg = coo_matrix((data, (rows, cols)), shape=(3 * nn, 3 * nn)).tocsr()
@@ -220,7 +222,20 @@ def _build_structural(body, E: float, nu: float, element_size, target_elements, 
         return [int(c) for c in cand if face.distance_to(Vector(*coords[c])) <= 0.75 * h]
 
     return dict(h=h, hh=hh, frac=frac, mask=mask, I=I, J=J, K=K, used=used, conn=conn, nn=nn, coords=coords,
-                edofs=edofs, fr=fr, scale=scale, rho_scale=rho_scale, Kg=Kg, origin=origin, n=n, nodes_near=nodes_near)
+                edofs=edofs, fr=fr, scale=scale, rho_scale=rho_scale, Kg=Kg, origin=origin, n=n, nodes_near=nodes_near,
+                **kept)
+
+
+SLIVER_FILL = 0.1  # cut cells this empty hold only a few inside points: under-integrated, with hourglass modes
+
+
+def mass_fill(fr: np.ndarray) -> np.ndarray:
+    """Per-element mass weights: the inside fraction, except that slivers carry none (their share spread over
+    the rest, keeping the total): a sliver's mass on its near-zero-energy modes would give spurious low
+    frequencies and runaway nodes under inertial loads."""
+    w = np.where(fr >= SLIVER_FILL, fr, 0.0)
+    s = w.sum()
+    return w * (fr.sum() / s) if s > 0 else fr
 
 
 def solve_static(body, material: dict, fixtures: list, loads: list, element_size: float | None = None,
@@ -463,7 +478,7 @@ def solve_modal(body, material: dict, fixtures: list, modes: int = 5, element_si
         raise ValueError("add at least one fixture (unrestrained modal analysis is not supported)")
     m = _build_structural(body, E, nu, element_size, target_elements, regions)
     h, nn, conn, fr, Kg = m["h"], m["nn"], m["conn"], m["fr"], m["Kg"]
-    me = rho * 1e-12 * fr * m["rho_scale"] * h ** 3 / 8  # tonne per node per element
+    me = rho * 1e-12 * mass_fill(fr) * m["rho_scale"] * h ** 3 / 8  # tonne per node per element
     mass = np.bincount(conn.ravel(), weights=np.repeat(me, 8), minlength=nn)
     Mdiag = np.repeat(mass, 3)
     fixed = set()

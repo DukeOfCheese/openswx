@@ -4,6 +4,7 @@ import { Viewport } from "./viewport.js";
 import { PropertyManager, SPECS, UNITS, el, escapeHtml } from "./propman.js";
 import { Sketcher } from "./sketcher.js";
 import { DrawingEditor } from "./drawing.js";
+import { MORE_FEATURE_TO_SPEC, MORE_SPECS, MORE_TYPE_ICON, installMore, menuTree, renderMenu } from "./more.js";
 
 const $ = (s) => document.querySelector(s);
 const TYPE_ICON = { sketch: "sketch_item", extrude: "extrude", cut_extrude: "cut_extrude", revolve: "revolve", cut_revolve: "cut_revolve",
@@ -27,6 +28,7 @@ const FEATURE_TO_SPEC = { extrude: "extrude", cut_extrude: "cut_extrude", revolv
   rib: "rib", thread: "thread", dome: "dome", split: "split_body", cut_with_surface: "cut_with_surface", delete_face: "delete_face",
   move_face: "move_face", replace_face: "replace_face", projected_curve: "projected_curve", composite_curve: "composite_curve", xyz_curve: "xyz_curve", split_line: "split_line", intersect: "intersect", indent: "indent" };
 const CURVE_TYPES = ["sketch3d", "helix", "projected_curve", "composite_curve", "xyz_curve"];
+Object.assign(SPECS, MORE_SPECS); Object.assign(TYPE_ICON, MORE_TYPE_ICON); Object.assign(FEATURE_TO_SPEC, MORE_FEATURE_TO_SPEC);
 
 class App {
   constructor() {
@@ -88,6 +90,7 @@ class App {
       this.hiddenComps.clear(); this.vp.hiddenComponents = new Set();
     }
     this.vp.setMesh(mesh);
+    this.afterRefreshMore();
     if (this.sk.active) await this.loadSketch();
     if (this.sk.showDims) await this.showFeatureDims(this.sk.showDims.feature, true);
     if (this.measureOpen) this.updateMeasure();
@@ -139,64 +142,118 @@ class App {
   }
 
   buildMenus() {
+    const asm = () => this.model?.kind === "assembly";
+    const F = (k) => () => this.feature(k);
+    const partInsert = [
+      ["Boss/Base > Extrude...", "", F("extrude")], ["Boss/Base > Revolve...", "", F("revolve")], ["Boss/Base > Sweep...", "", F("sweep")],
+      ["Boss/Base > Loft...", "", F("loft")], ["Boss/Base > Thicken...", "", F("thicken")],
+      ["Cut > Extrude...", "", F("cut_extrude")], ["Cut > Revolve...", "", F("cut_revolve")], ["Cut > Sweep...", "", F("cut_sweep")],
+      ["Cut > Loft...", "", F("cut_loft")], ["Cut > With Surface...", "", F("cut_with_surface")],
+      ["Features > Fillet/Round...", "", F("fillet")], ["Features > Conic / Curvature Continuous Fillet...", "", F("fillet_profile")],
+      ["Features > FilletXpert...", "", F("fillet_xpert")], ["Features > Chamfer...", "", F("chamfer")], "-",
+      ["Features > Hole > Simple...", "", F("hole")], ["Features > Hole > Wizard...", "", F("hole_wizard")], ["Features > Thread...", "", F("thread")],
+      ["Features > Shell...", "", F("shell")], ["Features > Rib...", "", F("rib")], ["Features > Draft...", "", F("draft")], ["Features > Dome...", "", F("dome")],
+      ["Features > Wrap...", "", F("wrap")], ["Features > Flex...", "", F("flex")], ["Features > Deform...", "", F("deform")], ["Features > Freeform...", "", F("freeform")],
+      ["Features > Combine...", "", () => this.bodyDialog("combine")], ["Features > Delete/Keep Body...", "", () => this.bodyDialog("delete")],
+      ["Features > Move/Copy Body...", "", () => this.bodyDialog("move")], ["Features > Scale...", "", () => this.bodyDialog("scale")],
+      ["Features > Split...", "", F("split_body")], ["Features > Intersect...", "", F("intersect")], ["Features > Indent...", "", F("indent")],
+      ["Pattern/Mirror > Linear Pattern...", "", F("linear_pattern")], ["Pattern/Mirror > Circular Pattern...", "", F("circular_pattern")],
+      ["Pattern/Mirror > Mirror...", "", F("mirror")], ["Pattern/Mirror > Sketch Driven Pattern...", "", F("sketch_pattern")],
+      ["Pattern/Mirror > Curve Driven Pattern...", "", F("curve_pattern")], ["Pattern/Mirror > Table Driven Pattern...", "", F("table_pattern")],
+      ["Pattern/Mirror > Fill Pattern...", "", F("fill_pattern")],
+      ["Surface > Extruded...", "", F("extruded_surface")], ["Surface > Revolved...", "", F("revolved_surface")], ["Surface > Swept...", "", F("swept_surface")],
+      ["Surface > Lofted...", "", F("lofted_surface")], ["Surface > Boundary...", "", F("boundary_surface")], ["Surface > Planar...", "", F("planar_surface")],
+      ["Surface > Filled > From Sketch...", "", F("filled_surface")], ["Surface > Filled > From Edges...", "", F("filled_surface_edges")],
+      ["Surface > Offset...", "", F("offset_surface")], ["Surface > Ruled...", "", F("ruled_surface")], ["Surface > Radiate...", "", F("radiate_surface")],
+      ["Surface > Extend...", "", F("extend_surface")], ["Surface > Untrim...", "", F("untrim_surface")], ["Surface > Flatten...", "", F("flatten_surface")],
+      ["Surface > Knit...", "", F("knit_surface")], ["Surface > Trim...", "", F("trim_surface")],
+      ["Face > Delete...", "", F("delete_face")], ["Face > Move...", "", F("move_face")], ["Face > Replace...", "", F("replace_face")],
+      ["Curve > Helix/Spiral...", "", F("helix")], ["Curve > Projected...", "", F("projected_curve")], ["Curve > Composite...", "", F("composite_curve")],
+      ["Curve > Split Line...", "", F("split_line")], ["Curve > Curve Through XYZ Points...", "", F("xyz_curve")],
+      ["Reference Geometry > Plane...", "", F("plane")], ["Reference Geometry > Axis...", "", F("ref_axis")], ["Reference Geometry > Coordinate System...", "", F("csys")],
+      ["Reference Geometry > Point...", "", F("ref_point")], ["Reference Geometry > Mate Reference...", "", F("mate_reference")],
+      ["Reference Geometry > Connection Point...", "", F("connection_point")],
+      ["Sheet Metal > Base Flange/Tab...", "", F("base_flange")], ["Sheet Metal > Edge Flange...", "", F("edge_flange")], ["Sheet Metal > Miter Flange...", "", F("miter_flange")],
+      ["Sheet Metal > Hem...", "", F("hem")], ["Sheet Metal > Jog...", "", F("jog")], ["Sheet Metal > Sketched Bend...", "", F("sketched_bend")],
+      ["Sheet Metal > Flatten / Fold", "", () => this.run("flatten", { flat: !this.model?.flattened })],
+      ["Weldments > Structural Member...", "", F("structural_member")], ["Weldments > End Cap...", "", F("end_cap")], ["Weldments > Gusset...", "", F("gusset")],
+      ["Molds > Parting Line...", "", F("parting_line")], ["Molds > Shut-Off Surfaces...", "", F("shut_off_surfaces")],
+      ["Molds > Parting Surface...", "", F("parting_surface")], ["Molds > Tooling Split...", "", F("tooling_split")], "-",
+      ["Part...", "", F("insert_part")], ["Mirror Part...", "", F("mirror_part")], ["Library Feature...", "", () => this.designLibraryDialog()], "-",
+      ["Annotations > Cosmetic Thread...", "", F("cosmetic_thread")], ["Annotations > DimXpert Auto Dimension Scheme...", "", () => this.dimxpertDialog()],
+      ["Annotations > Show / Hide 3D Annotations", "", () => this.togglePMI()], ["Annotations > Delete DimXpert Annotations", "", () => this.run("dimxpert_clear")], "-",
+      ["Sketch", "", () => this.sketchCommand()], ["3D Sketch...", "", () => this.sketch3dDialog()]];
+    const asmInsert = [
+      ["Component > Existing Part/Assembly...", "", () => this.insertComponentDialog()], ["Component > Toolbox...", "", () => this.toolboxDialog()],
+      ["Component > Smart Fasteners", "", () => this.smartFasteners()], ["Component > From Design Library...", "", () => this.designLibraryDialog()],
+      ["Mate...", "", () => this.openPM(SPECS.mate)], ["SmartMates...", "", () => this.feature("smart_mate")], ["Magnetic Mate (snap)", "", () => this.magneticSnap()], "-",
+      ["Component Pattern > Linear...", "", () => this.componentPatternDialog("linear")], ["Component Pattern > Circular...", "", () => this.componentPatternDialog("circular")],
+      ["Mirror Components...", "", () => this.mirrorComponentsDialog()],
+      ["Assembly Feature > Hole...", "", () => this.asmCutDialog("hole")], ["Assembly Feature > Extruded Cut...", "", () => this.asmCutDialog("extrude")],
+      ["Assembly Feature > Hole Series...", "", () => this.holeSeriesDialog()], ["Assembly Feature > Weld Bead...", "", () => this.feature("weld_bead")],
+      ["Routing > Pipe...", "", () => this.routeDialog("pipe")], ["Routing > Cable / Wire...", "", () => this.routeDialog("cable")], "-",
+      ["Exploded View...", "", () => this.explodeDialog()], ["Alternate Position...", "", () => this.altPositionsDialog()]];
     const M = {
-      File: [["New Part...", "Ctrl+N", () => this.newPart()], ["New Assembly...", "", () => this.newAssembly()], ["Open...", "Ctrl+O", () => this.openFile()],
+      File: () => [["New Part...", "Ctrl+N", () => this.newPart()], ["New Assembly...", "", () => this.newAssembly()], ["Open...", "Ctrl+O", () => this.openFile()],
         ["Import STEP...", "", () => this.openFile("import")], ["Make Drawing from Part/Assembly", "", () => this.makeDrawing()], "-",
-        ["Save", "Ctrl+S", () => this.save()], ["Save As...", "", () => this.save(true)], ["Download .oswprt", "", () => window.open("/api/download?format=oswprt")], "-",
-        ["Export STEP", "", () => this.exportAs("step")], ["Export Parasolid (x_t)", "", () => this.exportAs("x_t")], ["Export STL", "", () => this.exportAs("stl")],
-        ["Export IGES", "", () => this.exportAs("iges")], ["Export 3MF (3D printing)", "", () => this.exportAs("3mf")], ["Export glTF (GLB)", "", () => this.exportAs("glb")],
-        ["Export Image (PNG)", "", () => (this.desk ? this.deskCall("save_image") : window.open("/api/image?view=isometric&width=1600&height=1200"))],
-        ["Import DXF into Sketch...", "", () => this.importDxf()], ["Export Sketch as DXF...", "", () => this.exportSketchDxf()],
-        ["Export Flat Pattern DXF...", "", () => this.exportFlatDxf()],
-        "-", ["Close", "", () => this.run("close_document")], ...(window.pywebview ? [["Exit", "Alt+F4", () => window.close()]] : [])],
+        ["Save", "Ctrl+S", () => this.save()], ["Save As...", "", () => this.save(true)], ["Download .oswprt", "", () => window.open("/api/download?format=oswprt")],
+        ...(asm() ? [["Pack and Go...", "", () => this.packAndGoDialog()]] : []), "-",
+        ["Export > STEP", "", () => this.exportAs("step")], ["Export > Parasolid (x_t)", "", () => this.exportAs("x_t")], ["Export > STL", "", () => this.exportAs("stl")],
+        ["Export > IGES", "", () => this.exportAs("iges")], ["Export > 3MF (3D printing)", "", () => this.exportAs("3mf")], ["Export > glTF (GLB)", "", () => this.exportAs("glb")],
+        ["Export > Image (PNG)", "", () => (this.desk ? this.deskCall("save_image") : window.open("/api/image?view=isometric&width=1600&height=1200"))],
+        ["Export > Flat Pattern DXF...", "", () => this.exportFlatDxf()], ["Export > Sketch as DXF...", "", () => this.exportSketchDxf()],
+        ["Import DXF into Sketch...", "", () => this.importDxf()], ["Publish eDrawings File...", "", () => this.publishEDrawing()], "-",
+        ["PDM > Vault...", "", () => this.pdmDialog()], ["PDM > Check In...", "", () => this.pdmDialog()], "-",
+        ["Close", "", () => this.run("close_document")], ...(window.pywebview ? [["Exit", "Alt+F4", () => window.close()]] : [])],
       Edit: [["Undo", "Ctrl+Z", () => this.run("undo")], ["Redo", "Ctrl+Y", () => this.run("redo")], "-", ["Rebuild", "Ctrl+B", () => this.run("rebuild")],
         ["Delete", "Del", () => this.deleteSelection()], ["Suppress", "", () => this.suppressSelected(true)], ["Unsuppress", "", () => this.suppressSelected(false)]],
       View: [["Zoom to Fit", "F", () => this.vp.zoomFit()], ["Zoom to Area", "", () => this.startZoomArea()], ["Zoom to Selection", "", () => this.zoomToSelection()],
         ["Previous View", "Ctrl+Shift+Z", () => this.vp.previousView()], "-",
-        ...["front", "back", "left", "right", "top", "bottom", "isometric", "trimetric"].map((v, i) => [cap(v), i < 7 ? `Ctrl+${[1, 2, 3, 4, 5, 6, 7][i]}` : "", () => this.vp.setView(v)]), "-",
-        ["Shaded With Edges", "", () => this.vp.applyStyle("shaded_edges")], ["Shaded", "", () => this.vp.applyStyle("shaded")], ["Hidden Lines Removed", "", () => this.vp.applyStyle("hlr")],
-        ["Wireframe", "", () => this.vp.applyStyle("wireframe")], "-", ["Toggle Sketch Relations", "", () => { this.showRelations = !this.showRelations; this.vp.dirty = true; }],
-        ["Planes (show / hide all)", "", () => this.vp.togglePlanes()], "-",
-        ["Perspective (toggle)", "", () => this.togglePerspective()], ["View Cube (show / hide)", "", () => document.querySelector(".vcube")?.classList.toggle("hidden")],
-        ["New View...", "", () => this.newNamedView()]],
-      Insert: [["Boss/Base > Extrude...", "", () => this.feature("extrude")], ["Boss/Base > Revolve...", "", () => this.feature("revolve")],
-        ["Cut > Extrude...", "", () => this.feature("cut_extrude")], ["Cut > Revolve...", "", () => this.feature("cut_revolve")], "-",
-        ["Features > Fillet...", "", () => this.feature("fillet")], ["Features > Chamfer...", "", () => this.feature("chamfer")], ["Features > Hole...", "", () => this.feature("hole")],
-        ["Features > Shell...", "", () => this.feature("shell")], "-", ["Pattern/Mirror > Linear Pattern...", "", () => this.feature("linear_pattern")],
-        ["Pattern/Mirror > Circular Pattern...", "", () => this.feature("circular_pattern")], ["Pattern/Mirror > Mirror...", "", () => this.feature("mirror")],
-        ["Pattern/Mirror > Sketch Driven Pattern...", "", () => this.feature("sketch_pattern")], ["Pattern/Mirror > Curve Driven Pattern...", "", () => this.feature("curve_pattern")],
-        ["Pattern/Mirror > Table Driven Pattern...", "", () => this.feature("table_pattern")], ["Pattern/Mirror > Fill Pattern...", "", () => this.feature("fill_pattern")], "-",
-        ["Reference Geometry > Plane...", "", () => this.feature("plane")], ["Reference Geometry > Axis...", "", () => this.feature("ref_axis")],
-        ["Reference Geometry > Coordinate System...", "", () => this.feature("csys")], ["Reference Geometry > Point...", "", () => this.feature("ref_point")],
-        ["Curve > Helix/Spiral...", "", () => this.feature("helix")], ["Curve > Projected...", "", () => this.feature("projected_curve")],
-        ["Curve > Composite...", "", () => this.feature("composite_curve")], ["Curve > Split Line...", "", () => this.feature("split_line")], ["Curve > Curve Through XYZ Points...", "", () => this.feature("xyz_curve")], ["3D Sketch...", "", () => this.sketch3dDialog()], ["Sketch", "", () => this.sketchCommand()], "-",
-        ["Features > Combine...", "", () => this.bodyDialog("combine")], ["Features > Delete/Keep Body...", "", () => this.bodyDialog("delete")],
-        ["Features > Move/Copy Body...", "", () => this.bodyDialog("move")], ["Features > Scale...", "", () => this.bodyDialog("scale")],
-        ["Features > Split...", "", () => this.feature("split_body")], ["Features > Intersect...", "", () => this.feature("intersect")], ["Features > Indent...", "", () => this.feature("indent")], ["Cut > With Surface...", "", () => this.feature("cut_with_surface")], "-",
-        ["Face > Delete...", "", () => this.feature("delete_face")], ["Face > Move...", "", () => this.feature("move_face")],
-        ["Face > Replace...", "", () => this.feature("replace_face")]],
-      Tools: [["Sketch Entities > Line", "", () => this.setSketchTool("line")], ["Sketch Entities > Rectangle", "", () => this.setSketchTool("rectangle")],
+        ...["front", "back", "left", "right", "top", "bottom", "isometric", "trimetric"].map((v, i) => [`Orientation > ${cap(v)}`, i < 7 ? `Ctrl+${i + 1}` : "", () => this.vp.setView(v)]),
+        ["New View...", "", () => this.newNamedView()],
+        ["Display > Shaded With Edges", "", () => this.vp.applyStyle("shaded_edges")], ["Display > Shaded", "", () => this.vp.applyStyle("shaded")],
+        ["Display > Hidden Lines Removed", "", () => this.vp.applyStyle("hlr")], ["Display > Wireframe", "", () => this.vp.applyStyle("wireframe")],
+        ["Display > Perspective", "", () => this.togglePerspective()], "-",
+        ["Hide/Show > Sketch Relations", "", () => { this.showRelations = !this.showRelations; this.vp.dirty = true; }],
+        ["Hide/Show > Planes", "", () => this.vp.togglePlanes()], ["Hide/Show > 3D Annotations (PMI)", "", () => this.togglePMI()],
+        ["Hide/Show > View Cube", "", () => document.querySelector(".vcube")?.classList.toggle("hidden")]],
+      Insert: () => (asm() ? asmInsert : partInsert),
+      Tools: () => [["Sketch Entities > Line", "", () => this.setSketchTool("line")], ["Sketch Entities > Rectangle", "", () => this.setSketchTool("rectangle")],
         ["Sketch Entities > Circle", "", () => this.setSketchTool("circle")], ["Dimensions > Smart", "", () => this.setSketchTool("smart_dim")], "-",
-        ["Evaluate > Mass Properties", "", () => this.massProps()], ["Evaluate > Measure", "", () => this.measure()], ["Evaluate > Section Properties", "", () => this.sectionPropsDialog()], "-",
-        ["Equations...", "", () => this.equationsDialog()], ["Design Table...", "", () => this.designTableDialog()], ["Material...", "", () => this.materialDialog()], ["Appearance...", "", () => this.appearanceDialog()], ["Properties...", "", () => this.propertiesDialog()], ["Options...", "", () => this.optionsDialog()]],
-      Window: () => [...(this.docs?.documents || []).map((d) => [`${d.name === this.model.name ? "✓ " : ""}${d.name}`, "", () => this.switchDocument(d.name)]),
+        ["Evaluate > Measure", "", () => this.measure()], ["Evaluate > Mass Properties", "", () => this.massProps()], ["Evaluate > Section Properties", "", () => this.sectionPropsDialog()],
+        ...(asm() ? [["Evaluate > Interference Detection", "", () => this.interference()]] : [["Evaluate > Check", "", () => this.checkGeometry()],
+          ["Evaluate > Draft Analysis", "", () => this.draftDialog()], ["Evaluate > Undercut Detection", "", () => this.undercutDialog()]]),
+        ["Evaluate > Costing...", "", () => this.costingDialog()], ["Evaluate > Sustainability...", "", () => this.sustainabilityDialog()],
+        ["Simulation > Static > Run", "", () => this.simRun()], ["Simulation > Static > Stress Plot", "", () => this.simPlot("stress")],
+        ["Simulation > Frequency", "", () => this.modeStudy("frequency")], ["Simulation > Buckling", "", () => this.modeStudy("buckling")],
+        ["Simulation > Thermal", "", () => this.thermalRun()], ["Simulation > Nonlinear...", "", () => this.nonlinearDialog()],
+        ["Simulation > Dynamic > Harmonic...", "", () => this.harmonicDialog()], ["Simulation > Dynamic > Transient...", "", () => this.transientDialog()],
+        ["Simulation > Drop Test...", "", () => this.dropTestDialog()], ["Simulation > Fatigue...", "", () => this.fatigueDialog()],
+        ["Simulation > Hide Results", "", () => this.simPlot(null)],
+        ["Flow Simulation...", "", () => this.flowDialog()], "-",
+        ["DimXpert > Auto Dimension Scheme...", "", () => this.dimxpertDialog()], ["DimXpert > Show / Hide", "", () => this.togglePMI()],
+        ["DimXpert > Delete Scheme", "", () => this.run("dimxpert_clear")],
+        ["Render Tools > Render...", "", () => this.renderDialog()], ["Render Tools > Decal...", "", () => this.feature("add_decal")],
+        ...(asm() ? [["Assembly > Envelope (selected)", "", () => this.compToggle("set_envelope", "envelope", "Envelope")],
+          ["Assembly > SpeedPak (selected)", "", () => this.compToggle("set_speedpak", "speedpak", "SpeedPak")],
+          ["Assembly > Large Assembly Mode", "", () => this.run("large_assembly_mode", { on: !this.model.large_assembly_mode })],
+          ["Assembly > Defeature...", "", () => this.defeatureDialog()]] : [["Defeature...", "", () => this.defeatureDialog()]]),
+        ["Design Library...", "", () => this.designLibraryDialog()], ["PDM Vault...", "", () => this.pdmDialog()],
+        ["Macro > Record / Stop", "", () => this.macroRecord()], ["Macro > Stop and Save...", "", () => this.macroStop()], ["Macro > Run...", "", () => this.macroRun()], "-",
+        ["Equations...", "", () => this.equationsDialog()], ["Design Table...", "", () => this.designTableDialog()], ["Material...", "", () => this.materialDialog()],
+        ["Appearance...", "", () => this.appearanceDialog()], ["Properties...", "", () => this.propertiesDialog()], ["Options...", "", () => this.optionsDialog()]],
+      Window: () => [...(this.docs?.documents || []).map((d) => [`${d.name === this.model.name ? "✓ " : ""}${d.name}`.replace(/ > /g, " › "), "", () => this.switchDocument(d.name)]),
         "-", ["Next Document", "Ctrl+Tab", () => this.nextDocument()], ["Close", "Ctrl+W", () => this.run("close_document").then(() => this.vp.zoomFit())]],
       Help: [["Keyboard Shortcuts", "", () => this.showTask("help")], ["Agent (MCP) Setup", "", () => this.mcpDialog()], ["About openswx", "", () => this.about()]],
     };
     const bar = $("#menubar");
     for (const [name, items] of Object.entries(M)) {
       const root = el("div", "menu-root", name), drop = el("div", "menu-drop");
-      const fill = () => {
-        drop.innerHTML = "";
-        for (const it of typeof items === "function" ? items() : items) {
-          if (it === "-") { drop.append(el("div", "menu-sep")); continue; }
-          const row = el("div", "menu-item", `<span>${escapeHtml(it[0])}</span><span class="key">${it[1]}</span>`);
-          row.onclick = (e) => { e.stopPropagation(); this.closeMenus(); it[2](); }; drop.append(row);
-        }
-      };
+      // "A > B" labels become cascading submenus that open on hover
+      const fill = () => renderMenu(drop, menuTree(typeof items === "function" ? items() : items), (fn) => { this.closeMenus(); fn(); });
       fill(); root.append(drop);
       root.onclick = (e) => { e.stopPropagation(); const open = root.classList.contains("open"); this.closeMenus(); if (!open) { fill(); root.classList.add("open"); bar.classList.add("open"); } };
-      root.onmouseenter = () => { if (bar.querySelector(".menu-root.open")) { this.closeMenus(); fill(); root.classList.add("open"); bar.classList.add("open"); } };
+      root.onmouseenter = () => { if (bar.querySelector(".menu-root.open") && !root.classList.contains("open")) { this.closeMenus(); fill(); root.classList.add("open"); bar.classList.add("open"); } };
       bar.append(root);
     }
     $("#brand").onclick = (e) => { e.stopPropagation(); bar.classList.toggle("open"); };
@@ -231,7 +288,17 @@ class App {
             B("spline", "Curve Through XYZ Points", () => this.feature("xyz_curve"))] },
           { stack: [B("equations", "Equations", () => this.equationsDialog()), B("properties", "Design Table", () => this.designTableDialog())] }, { stack: [B("appearance", "Edit Appearance", () => this.appearanceDialog()), B("material", "Edit Material", () => this.materialDialog()),
             B("properties", "Properties", () => this.propertiesDialog())] }],
+        [{ stack: [B("revolve", "Flex", () => this.feature("flex")), B("dimple", "Deform", () => this.feature("deform")), B("dimple", "Freeform", () => this.feature("freeform"))] },
+          { stack: [B("fillet", "Conic / G2 Fillet", () => this.feature("fillet_profile")), B("fillet", "FilletXpert", () => this.feature("fillet_xpert")),
+            B("thread", "Cosmetic Thread", () => this.feature("cosmetic_thread"))] },
+          { stack: [B("import", "Insert Part", () => this.feature("insert_part")), B("mirror", "Mirror Part", () => this.feature("mirror_part")),
+            B("folder", "Design Library", () => this.designLibraryDialog())] }],
       ],
+      "Mold Tools": [[B("intersection_curve", "Parting<br>Line", () => this.feature("parting_line")), B("planar_surface", "Shut-off<br>Surfaces", () => this.feature("shut_off_surfaces")),
+          B("surface", "Parting<br>Surface", () => this.feature("parting_surface")), B("cut_extrude", "Tooling<br>Split", () => this.feature("tooling_split"))],
+        [{ stack: [B("draft_analysis", "Draft Analysis", () => this.draftDialog()), B("draft_analysis", "Undercut Detection", () => this.undercutDialog()), B("draft_feat", "Draft", () => this.feature("draft"))] },
+          { stack: [B("planar_surface", "Planar Surface", () => this.feature("planar_surface")), B("knit_surface", "Knit Surface", () => this.feature("knit_surface")),
+            B("filled_surface", "Filled Surface (edges)", () => this.feature("filled_surface_edges"))] }]],
       Sketch: [
         [B(sketching ? "exit_sketch" : "sketch", sketching ? "Exit<br>Sketch" : "Sketch", () => (sketching ? this.exitSketch() : this.sketchCommand()), { active: sketching }),
           B("sketch3d", "3D<br>Sketch", () => this.sketch3dDialog()),
@@ -271,7 +338,11 @@ class App {
         [{ stack: [B("knit_surface", "Knit Surface", () => this.feature("knit_surface")), B("trim_surface", "Trim Surface", () => this.feature("trim_surface"))] },
           B("thicken", "Thicken", () => this.feature("thicken")),
           { stack: [B("cut_extrude", "Cut With Surface", () => this.feature("cut_with_surface")), B("surface", "Replace Face", () => this.feature("replace_face")),
-            B("knit_surface", "Intersect", () => this.feature("intersect"))] }]],
+            B("knit_surface", "Intersect", () => this.feature("intersect"))] }],
+        [{ stack: [B("surface", "Ruled Surface", () => this.feature("ruled_surface")), B("surface", "Radiate Surface", () => this.feature("radiate_surface")),
+          B("offset_surface", "Extend Surface", () => this.feature("extend_surface"))] },
+          { stack: [B("trim_surface", "Untrim Surface", () => this.feature("untrim_surface")), B("flatten", "Surface Flatten", () => this.feature("flatten_surface")),
+            B("filled_surface", "Filled Surface (edges)", () => this.feature("filled_surface_edges"))] }]],
       Weldments: [[B("weldment", "Structural<br>Member", () => this.feature("structural_member")),
           { stack: [B("end_cap", "End Cap", () => this.feature("end_cap")), B("gusset", "Gusset", () => this.feature("gusset"))] }, B("measure", "Cut<br>List", () => this.cutList())]],
       Simulation: [[B("sim_fixture", "Fixed<br>Geometry", () => this.simFixture()), { stack: [B("sim_force", "Force", () => this.simLoad("force")), B("sim_pressure", "Pressure", () => this.simLoad("pressure")),
@@ -284,13 +355,21 @@ class App {
         [{ stack: [B("thermal_temp", "Temperature", () => this.thermalBC("temperature")), B("thermal_heat", "Heat Power", () => this.thermalBC("heat")),
           B("thermal_conv", "Convection", () => this.thermalBC("convection"))] },
           { stack: [B("thermal_run", "Run Thermal", () => this.thermalRun()), B("thermal_plot", "Temperature Plot", () => this.thermalPlot()),
-            B("trash", "Clear Thermal", () => this.run("thermal_clear", {}))] }]],
+            B("trash", "Clear Thermal", () => this.run("thermal_clear", {}))] }],
+        [{ stack: [B("sim_run", "Nonlinear", () => this.nonlinearDialog()), B("sim_frequency", "Dynamic - Harmonic", () => this.harmonicDialog()),
+          B("sim_frequency", "Dynamic - Transient", () => this.transientDialog())] },
+          { stack: [B("sim_run", "Drop Test", () => this.dropTestDialog()), B("sim_stress", "Fatigue", () => this.fatigueDialog()), B("sim_run", "Flow Simulation", () => this.flowDialog())] }]],
       Evaluate: [[B("measure", "Measure", () => this.measure()), B("mass", "Mass<br>Properties", () => this.massProps()), B("drawing", "Make<br>Drawing", () => this.makeDrawing())],
         [B("section", "Section<br>View", () => this.sectionDialog()), { stack: [B("draft_analysis", "Draft Analysis", () => this.draftDialog()), B("zebra", "Zebra Stripes", () => this.toggleZebra()),
           B("curvature", "Curvature", () => this.toggleCurvature())] },
           { stack: [B("check", "Check", () => this.checkGeometry()), B("interference", "Body Interference", () => this.bodyInterference())] },
           { stack: [B("measure", "Thickness Analysis", () => this.thicknessDialog()), B("draft_analysis", "Undercut Detection", () => this.undercutDialog()),
-            B("section", "Section Properties", () => this.sectionPropsDialog())] }]],
+            B("section", "Section Properties", () => this.sectionPropsDialog())] },
+          { stack: [B("mass", "Costing", () => this.costingDialog()), B("material", "Sustainability", () => this.sustainabilityDialog())] }]],
+      MBD: [[B("gdt", "Auto Dimension<br>Scheme", () => this.dimxpertDialog()), { stack: [B("eye", "Show / Hide 3D Annotations", () => this.togglePMI()),
+        B("trash", "Delete Scheme", () => this.run("dimxpert_clear"))] }], [B("export", "Publish<br>eDrawings", () => this.publishEDrawing())]],
+      "Render Tools": [[B("appearance", "Final<br>Render", () => this.renderDialog()), B("appearance", "Edit<br>Decal", () => this.feature("add_decal")),
+        B("appearance", "Edit<br>Appearance", () => this.appearanceDialog())]],
     };
     if (this.model?.kind === "assembly") {
       const simTab = tabs.Simulation.slice(0, 2); // structural study works on bonded assemblies too
@@ -305,10 +384,18 @@ class App {
         [{ stack: [B("hole", "Assembly Hole", () => this.asmCutDialog("hole")), B("cut_extrude", "Assembly Cut", () => this.asmCutDialog("extrude"))] }],
         [B("interference", "Interference<br>Detection", () => this.interference())],
         [{ stack: [B("eye", "Hide / Show Components", () => this.toggleComponents(this.selectedComponentsAny())), B("eye", "Isolate", () => this.isolateComponents()),
-          B("eye", "Show All Components", () => this.showAllComponents())] }]];
+          B("eye", "Show All Components", () => this.showAllComponents())] }],
+        [{ stack: [B("mate", "SmartMates", () => this.feature("smart_mate")), B("mate", "Magnetic Snap", () => this.magneticSnap()),
+          B("explode", "Alternate Position", () => this.altPositionsDialog())] },
+          { stack: [B("eye", "Envelope", () => this.compToggle("set_envelope", "envelope", "Envelope")), B("part", "SpeedPak", () => this.compToggle("set_speedpak", "speedpak", "SpeedPak")),
+            B("part", "Large Assembly Mode", () => this.run("large_assembly_mode", { on: !this.model.large_assembly_mode }))] },
+          { stack: [B("trash", "Defeature", () => this.defeatureDialog()), B("save", "Pack and Go", () => this.packAndGoDialog()), B("folder", "Design Library", () => this.designLibraryDialog())] }],
+        [{ stack: [B("sweep", "Route Pipe", () => this.routeDialog("pipe")), B("sweep", "Route Cable", () => this.routeDialog("cable"))] },
+          { stack: [B("weldment", "Weld Bead", () => this.feature("weld_bead")), B("hole", "Hole Series", () => this.holeSeriesDialog())] }]];
       tabs.Simulation = simTab;
       tabs.Evaluate = [[B("measure", "Measure", () => this.measure()), B("mass", "Mass<br>Properties", () => this.massProps()), B("drawing", "Make<br>Drawing", () => this.makeDrawing()),
-        B("properties", "Bill of<br>Materials", () => this.bomDialog()), B("interference", "Clearance<br>Verification", () => this.clearanceDialog())]];
+        B("properties", "Bill of<br>Materials", () => this.bomDialog()), B("interference", "Clearance<br>Verification", () => this.clearanceDialog())],
+        [B("export", "Publish<br>eDrawings", () => this.publishEDrawing()), B("appearance", "Final<br>Render", () => this.renderDialog())]];
       if (!tabs[this.tab]) this.tab = "Assembly";
     } else if (!tabs[this.tab]) this.tab = "Features";
     const host = $("#cm-buttons"); host.innerHTML = "";
@@ -573,15 +660,27 @@ class App {
 
   async toolboxDialog() {
     const cat = (await this.run("list_fasteners", {}, { quiet: true }).catch(() => null))?.result || {};
-    const names = { hex_bolt: "Hex bolt", socket_cap_screw: "Socket head cap screw", hex_nut: "Hex nut", washer: "Plain washer" };
-    this.modal("Toolbox - ISO Hardware", `<div class="field"><label>Type</label><select id="tbk">${Object.entries(cat).map(([k, v]) => `<option value="${k}">${names[k] || k} (${v.standard})</option>`).join("")}</select></div>
+    const names = { hex_bolt: "Hex bolt", socket_cap_screw: "Socket head cap screw", button_head_screw: "Button head screw",
+      countersunk_screw: "Countersunk screw", set_screw: "Set screw", hex_nut: "Hex nut", thin_nut: "Thin hex nut", washer: "Plain washer",
+      lock_washer: "Spring lock washer", dowel_pin: "Dowel pin", ansi_hex_bolt: "Hex cap screw", ansi_socket_cap_screw: "Socket head cap screw",
+      ansi_hex_nut: "Hex nut", ansi_washer: "Flat washer" };
+    const fams = [...new Set(Object.values(cat).map((v) => v.family || "ISO"))];
+    const opts = fams.map((f) => `<optgroup label="${f}">${Object.entries(cat).filter(([, v]) => (v.family || "ISO") === f)
+      .map(([k, v]) => `<option value="${k}">${names[k] || k} (${v.standard})</option>`).join("")}</optgroup>`).join("");
+    this.modal("Toolbox - Hardware", `<div class="field"><label>Type</label><select id="tbk">${opts}</select></div>
       <div class="field"><label>Size</label><select id="tbs"></select></div>
-      <div class="field" id="tblen"><label>Length (mm)</label><input id="tbl" type="number" value="20"></div>
+      <div class="field" id="tblen"><label id="tbll">Length (mm)</label><input id="tbl" type="number" value="20" step="any"></div>
       <div class="field"><label>Position X, Y, Z (mm)</label><input id="tbp" value="0, 0, 0"></div>`, async () => {
       const k = $("#tbk").value;
       await this.run("insert_fastener", { kind: k, size: $("#tbs").value, length: cat[k].needs_length ? parseFloat($("#tbl").value) : null, position: $("#tbp").value.split(",").map(Number) });
     }, "toolbox");
-    const upd = () => { const c = cat[$("#tbk").value]; $("#tbs").innerHTML = c.sizes.map((s) => `<option ${s === "M8" ? "selected" : ""}>${s}</option>`).join(""); $("#tblen").style.display = c.needs_length ? "" : "none"; };
+    const upd = () => {
+      const c = cat[$("#tbk").value], inch = c.length_unit === "in";
+      $("#tbs").innerHTML = c.sizes.map((s) => `<option ${["M8", "1/4-20", "6"].includes(s) ? "selected" : ""}>${s}</option>`).join("");
+      $("#tblen").style.display = c.needs_length ? "" : "none";
+      $("#tbll").textContent = `Length (${inch ? "in" : "mm"})`;
+      $("#tbl").value = inch ? 1 : 20;
+    };
     $("#tbk").onchange = upd; upd();
   }
 
@@ -1634,6 +1733,7 @@ class App {
     if (key === "knit_surface" && feats.length) initial = { surfaces: feats, ...initial };
     if (["trim_surface", "offset_surface"].includes(key) && feats.length) initial = { surface: feats.slice(0, 1), ...initial };
     if (key === "end_cap" && feats.length) initial = { member: feats.slice(0, 1), ...initial };
+    if (spec?.prefill) initial = { ...spec.prefill(this.selection), ...initial };
     this.openPM(spec, { initial });
   }
 
@@ -1642,6 +1742,7 @@ class App {
     this.pm.open(spec, {
       initial, title: edit ? `${edit}` : spec.title,
       onChange: (args) => this.schedulePreview(args), onOK: (args) => this.pmOK(args), onCancel: () => this.pmCancel(),
+      browse: (types) => this.askPath("open", "", types, "Open"),
     });
     this.showPane("pm"); this.renderConfirm();
     this.schedulePreview(this.pm.args());
@@ -1652,8 +1753,9 @@ class App {
     this.previewTimer = setTimeout(async () => {
       if (!this.pm.active) return;
       const spec = this.pm.spec;
+      if (spec.noPreview) return; // commands that are not model features (or add several) have no preview
       const cmd = spec.commandFor ? spec.commandFor(this.pm.values) : spec.command;
-      const req = this.editing ? { name: "redefine_feature", args: { name: this.editing, command_name: cmd, args } } : { name: cmd, args };
+      const req =this.editing ? { name: "redefine_feature", args: { name: this.editing, command_name: cmd, args } } : { name: cmd, args };
       const res = await this.api("/api/preview", req);
       if (!this.pm.active) return;
       // like SOLIDWORKS: until something is picked the PropertyManager shows its prompt, not an error
@@ -2607,4 +2709,5 @@ function massHtml(mp, full = false) {
       <p style="margin-top:8px"><b>Bounding box</b> (${u}): ${mp.bounding_box.min.map((x) => f(L(x), 3)).join(", ")} → ${mp.bounding_box.max.map((x) => f(L(x), 3)).join(", ")}</p>` : "");
 }
 
+installMore(App);
 window.app = new App();

@@ -22,13 +22,16 @@ from .geom import face_normal, face_ref, resolve_face, tessellate
 
 FORMAT = "openswx-assembly"
 MATES = {"coincident", "parallel", "perpendicular", "distance", "angle", "concentric", "tangent", "lock", "width", "gear",
-         "symmetric", "slot", "limit_distance", "limit_angle", "cam", "path", "rack_pinion", "screw", "hinge", "universal_joint", "linear_coupler"}
+         "symmetric", "slot", "limit_distance", "limit_angle", "cam", "path", "rack_pinion", "screw", "hinge", "universal_joint", "linear_coupler",
+         "connection"}
 MOTION_MATES = {"rack_pinion", "screw", "universal_joint", "linear_coupler"}  # measured from the poses when the mate was added
 
 
 class Component:
     def __init__(self, name: str, part: dict, link: str | None, x: list[float], fixed: bool, derived: dict | None = None):
         self.name, self.part, self.link, self.fixed = name, part, link, fixed
+        self.envelope = False  # an envelope: shown, but not in mass properties, the BOM or interference
+        self.speedpak = False  # SpeedPak: shown simplified (small holes and fillets removed)
         self.x = np.array(x, float)  # rotation vector (rad) + translation (mm)
         self.derived = derived  # {"feature", "seed", ...}: placed by a pattern / mirror, not by mates
         self._doc = None
@@ -101,9 +104,12 @@ class AssemblyDocument:
     def to_dict(self) -> dict:
         return {"format": FORMAT, "version": 1, "name": self.name, "mate_counter": self.mate_counter,
                 "components": [{"name": c.name, "part": c.part, "link": c.link, "x": c.x.tolist(), "fixed": c.fixed,
-                                **({"derived": c.derived} if c.derived else {})} for c in self.components],
+                                **({"derived": c.derived} if c.derived else {}), **({"envelope": True} if c.envelope else {}),
+                                **({"speedpak": True} if c.speedpak else {})} for c in self.components],
                 "mates": self.mates, "features": self.features, "explode": self.explode, "drawing": self.drawing, "study": self.study,
-                "named_views": getattr(self, "named_views", {})}
+                "named_views": getattr(self, "named_views", {}),
+                "alternate_positions": getattr(self, "alternate_positions", {}),
+                "large_assembly_mode": getattr(self, "large_assembly_mode", False), "render": getattr(self, "render", {})}
 
     def load_dict(self, d: dict) -> None:
         if d.get("format") != FORMAT:
@@ -113,12 +119,17 @@ class AssemblyDocument:
         self.mate_counter = d.get("mate_counter", len(d.get("mates", [])))
         self.components = [Component(c["name"], c["part"], c.get("link"), c["x"], c.get("fixed", False), c.get("derived"))
                            for c in d.get("components", [])]
+        for c, cd in zip(self.components, d.get("components", [])):
+            c.envelope, c.speedpak = bool(cd.get("envelope")), bool(cd.get("speedpak"))
+        self.alternate_positions = d.get("alternate_positions", {})
+        self.large_assembly_mode = bool(d.get("large_assembly_mode", False))
         self.mates = d.get("mates", [])
         self.features = d.get("features", [])
         self.explode = d.get("explode", {"steps": [], "active": False})
         self.drawing = d.get("drawing", {})
         self.study = d.get("study", {"fixtures": [], "loads": [], "element_size": None})
         self.named_views = d.get("named_views", {})
+        self.render = d.get("render", {})
         self.solve()
 
     def save(self, path: str | None = None) -> str:
@@ -423,7 +434,7 @@ class AssemblyDocument:
                  "lock": "Lock", "width": "Width", "gear": "Gear", "symmetric": "Symmetric", "slot": "Slot",
                  "limit_distance": "LimitDistance", "limit_angle": "LimitAngle", "cam": "CamMateTangent", "path": "PathMate",
                  "rack_pinion": "RackPinion", "screw": "Screw", "hinge": "Hinge", "universal_joint": "UniversalJoint",
-                 "linear_coupler": "LinearCoupler"}[mtype]
+                 "linear_coupler": "LinearCoupler", "connection": "Magnetic"}[mtype]
         mate = {"name": f"{label}{self.mate_counter}", "type": mtype, "a": a, "b": b, "value": value, "aligned": aligned}
         if a2 is not None:
             mate.update(a2=a2, b2=b2)
@@ -487,6 +498,8 @@ class AssemblyDocument:
         if "edge" in ref:  # path mates: the local edge itself
             from .geom import resolve_edge
             return comp, "edge", np.zeros(3), np.zeros(3), resolve_edge(self._local_body(comp), ref["edge"])
+        if "point" in ref:  # a connection point (magnetic mate): point + direction in the part
+            return comp, "cpoint", np.array(ref["point"]["point"], float), np.array(ref["point"]["normal"], float), 0.0
         if "plane" in ref:  # a component reference plane (Front / Top / Right) given as point + normal
             return comp, "plane", np.array(ref["plane"]["point"], float), np.array(ref["plane"]["normal"], float), 0.0
         if "face" not in ref:  # whole component (lock mate)
@@ -620,7 +633,7 @@ class AssemblyDocument:
 
     @property
     def body(self):
-        shapes = [s for _, s in self.world_shapes()]
+        shapes = [s for c, s in self.world_shapes() if not c.envelope]  # (envelopes are reference only)
         return Compound([sol for s in shapes for sol in s.solids()]) if shapes else None
 
     # ------------------------------------------------------------------ queries
@@ -651,13 +664,17 @@ class AssemblyDocument:
                 "components": [{"name": c.name, "fixed": c.fixed, "link": c.link, "dof": self.status.get("dof", {}).get(c.name, 0),
                                 "derived": c.derived, "subassembly": c.is_subassembly, "pose": c.x.tolist(),
                                 "position": [round(v, 6) for v in c.x[3:]],
-                                "rotation_deg": [round(v, 6) for v in Rotation.from_rotvec(c.x[:3]).as_euler("xyz", degrees=True)]}
+                                "rotation_deg": [round(v, 6) for v in Rotation.from_rotvec(c.x[:3]).as_euler("xyz", degrees=True)],
+                                "envelope": c.envelope, "speedpak": c.speedpak}
                                for c in self.components],
+                "alternate_positions": {k: None for k in getattr(self, "alternate_positions", {})},
+                "large_assembly_mode": getattr(self, "large_assembly_mode", False),
                 "mates": [{**m, "error": m["name"] in self.status.get("failing", [])} for m in self.mates],
                 "state": self.status.get("state"), "volume_mm3": round(mp["volume"], 6), "bodies": mp["bodies"],
                 "errors": {m: "mate not satisfied" for m in self.status.get("failing", [])},
                 "features": [], "material": {"name": None, "density": 1000.0}, "units": "mm", "rollback": None,
-                "configurations": ["Default"], "active_config": "Default", "named_views": getattr(self, "named_views", {})}
+                "configurations": ["Default"], "active_config": "Default", "named_views": getattr(self, "named_views", {}),
+                "render": getattr(self, "render", {})}
 
     def topology(self) -> dict:
         faces, edges = [], []
@@ -698,17 +715,33 @@ class AssemblyDocument:
         return {"component": cname, "face": face_ref(face)}
 
     def mesh(self) -> dict:
-        out = {"faces": [], "edges": [], "sketches": [], "planes": [], "revision": self.revision, "components": []}
+        lam = getattr(self, "large_assembly_mode", False)
+        out = {"faces": [], "edges": [], "sketches": [], "planes": [], "revision": self.revision, "components": [],
+               "large_assembly_mode": lam}
         for c, shape in self.world_shapes():
-            m = tessellate(shape)
+            if c.speedpak:  # the simplified (defeatured) body stands in for the part on screen
+                shape = self.speedpak_body(c).moved(c.location())
+            # Large Assembly Mode: a coarser tessellation and no edges, for speed
+            m = tessellate(shape, tol=0.5 if lam else 0.05, ang=0.6 if lam else 0.2)
             for f in m["faces"]:
                 f["id"] = f"{c.name}/{f['id']}"
                 f["component"] = c.name
+                if c.envelope:
+                    f["envelope"] = True
             for e in m["edges"]:
                 e["id"] = f"{c.name}/{e['id']}"
             out["faces"] += m["faces"]
-            out["edges"] += m["edges"]
+            if not lam:
+                out["edges"] += m["edges"]
         return out
+
+    def speedpak_body(self, c):
+        from .commands_more import defeature_shape
+        body = self._local_body(c)
+        cache = self.__dict__.setdefault("_speedpak", {})
+        if cache.get(c.name, (None,))[0] is not body:
+            cache[c.name] = (body, defeature_shape(body, max_hole=None, max_fillet=None))
+        return cache[c.name][1]
 
 
 def _mate_residual(m, ea, eb, xa, xb, extra=None, xextra=None) -> list[float]:
@@ -724,6 +757,8 @@ def _mate_residual(m, ea, eb, xa, xb, extra=None, xextra=None) -> list[float]:
         return list((rel_r - want[:3]) * 100.0) + list(rel_t - want[3:])
     Pa, Na = ca.to_world(pa, xa), ca.dir_to_world(na, xa)
     Pb, Nb = cb.to_world(pb, xb), cb.dir_to_world(nb, xb)
+    if t == "connection":  # magnetic mate: the connection points meet, their directions face each other
+        return list(Pb - Pa) + list(np.cross(Na, Nb) * 10.0) + [float(np.dot(Na, Nb) + 1.0) * 10.0]
     if t == "gear":  # rotation of B about its axis = -(1/ratio) x rotation of A about its axis
         def spin(x, rv0, axis):
             rel = Rotation.from_rotvec(x[:3]) * Rotation.from_rotvec(rv0).inv()

@@ -3370,3 +3370,418 @@ def test_named_views(tmp_path):
     assert v["t"] == [1, 2, 3] and v["h"] == 150 and v["perspective"] is True
     S.delete_named_view("Corner")
     assert S.get_model()["named_views"] == {}
+
+
+def test_flex_deform_freeform():
+    """Flex (twist / bend keep the volume, taper and stretch scale it exactly), Deform and Freeform."""
+    block()
+    v0 = vol()
+    S.flex("taper", axis="X", factor=0.5)
+    assert vol() == pytest.approx(v0 * (1 - 0.5 + 0.25 / 3), rel=1e-6)  # cross-section scales by s^2
+    block(); S.flex("stretch", axis="X", distance=20)
+    assert vol() == pytest.approx(v0 * 120 / 100, rel=1e-6)
+    block(); S.flex("twist", axis="X", angle=45)
+    assert vol() == pytest.approx(v0, rel=3e-3)
+    block(); S.flex("bend", axis="X", angle=60)
+    assert vol() == pytest.approx(v0, rel=3e-3) and not S.get_model()["errors"]
+    block(); S.deform([[0, 20, 0]], [[0, 5, 0]], radius=30)
+    assert vol() > v0 + 1000
+    block(); S.freeform(top_face(), 4)
+    assert vol() > v0
+
+
+def test_profile_fillets_and_fillet_xpert():
+    block()
+    v0 = vol()
+    long_top = lambda: next(x["id"] for x in S.get_topology()["edges"]  # noqa: E731
+                            if x["type"] == "line" and abs(x["length"] - 100) < 1e-6 and x["point"][1] > 19)
+    S.fillet_profile([long_top()], 5, "conic", 0.5)  # a parabola leaves 1/3 of the corner triangle
+    assert v0 - vol() == pytest.approx(100 * 12.5 / 3, rel=1e-6)
+    block(); S.fillet_profile([long_top()], 5, "curvature_continuous")
+    assert 0 < v0 - vol() < 100 * 12.5
+    block()
+    edges = [x["id"] for x in S.get_topology()["edges"] if x["point"][1] > 19]
+    r = S.fillet_xpert(edges, 12)
+    assert r["features"] and not S.get_model()["errors"]
+
+
+def test_mold_tools():
+    block()
+    S.hole(top_face(), [[0, 0]], diameter=10, end_condition="ThroughAll")
+    part = vol()
+    info = S.parting_line("Y")["info"]
+    assert info["level"] == pytest.approx(0) and info["edges"] == 5  # the bottom outline and the hole's rim
+    assert S.shut_off_surfaces("Y")["info"]["surface_area"] == pytest.approx(PI * 25, rel=1e-6)
+    S.parting_surface("Y", 10)
+    out = S.tooling_split("Y", 10)["info"]
+    block_vol = 120 * 80 * 40
+    assert out["core_volume"] + out["cavity_volume"] + part == pytest.approx(block_vol, rel=1e-9)
+    assert S.get_model()["bodies"] == 3
+
+
+def test_insert_mirror_part_and_cosmetic_thread(tmp_path):
+    block(40, 30, 10)
+    src = S.save_part(str(tmp_path / "src.oswprt"))["saved"]
+    one = vol()
+    S.new_part()
+    S.insert_part(src, position=[100, 0, 0])
+    assert vol() == pytest.approx(one)
+    S.mirror_part(src, "Right")
+    assert vol() == pytest.approx(2 * one) and S.get_model()["bodies"] == 2
+    block()
+    S.hole(top_face(), [[0, 0]], diameter=8.5, end_condition="ThroughAll")
+    cyl = next(f["id"] for f in S.get_topology()["faces"] if f["type"] == "cylinder")
+    t = S.cosmetic_thread(cyl, "M10x1.5")["info"]["cosmetic_thread"]
+    assert t["internal"] and t["thread_diameter"] == pytest.approx(10.0) and t["length"] == pytest.approx(20)
+
+
+def test_more_surface_tools():
+    block()
+    top = [x["id"] for x in S.get_topology()["edges"] if x["point"][1] > 19 and abs(x["length"] - 60) < 1e-6]
+    assert S.ruled_surface(top[:1], 10, "normal")["info"]["surface_area"] == pytest.approx(600)
+    assert S.radiate_surface(top[:1], "Top", 10)["info"]["surface_area"] == pytest.approx(600)
+    assert S.extend_surface(5, faces=[top_face()])["info"]["surface_area"] == pytest.approx(110 * 70)
+    block()
+    S.hole(top_face(), [[0, 0]], diameter=10, end_condition="ThroughAll")
+    assert S.untrim_surface(faces=[top_face()])["info"]["surface_area"] == pytest.approx(100 * 60)
+    cyl = next(f["id"] for f in S.get_topology()["faces"] if f["type"] == "cylinder")
+    assert S.flatten_surface(faces=[cyl])["info"]["surface_area"] == pytest.approx(PI * 10 * 20, rel=1e-6)
+    rim = [x["id"] for x in S.get_topology()["edges"] if x["type"] == "circle" and x["point"][1] > 19]
+    assert S.filled_surface_edges(rim, "tangent")["info"]["surface_area"] == pytest.approx(PI * 25, rel=1e-4)
+
+
+def test_library_features(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENSWX_HOME", str(tmp_path))
+    block()
+    sk = S.create_sketch("Top")["sketch"]
+    S.sketch_circle(sk, [0, 0], 5)
+    S.cut_extrude(sk, end_condition="ThroughAll", reverse=True)
+    cut = S.get_model()["features"][-1]["name"]
+    with_hole = vol()
+    S.save_library_feature("Hole10", [cut])
+    assert S.list_design_library()["features"][0]["features"] == [sk, cut]
+    block()
+    S.insert_library_feature("Hole10", "Top", [20, 0])
+    assert vol() == pytest.approx(with_hole)
+    S.add_part_to_design_library()
+    assert S.list_design_library()["parts"]
+
+
+
+def _base_and_pin():
+    S.new_part("BaseM")
+    sk = S.create_sketch("Top")["sketch"]
+    S.sketch_rectangle(sk, [-50, -30], [50, 30])
+    S.extrude(sk, depth=20)
+    S.hole(top_face(), [[0, 0]], diameter=10, end_condition="ThroughAll")
+    S.connection_point([0, 20, 0], "Y", name="Socket")
+    hole = max((f for f in S.get_topology()["faces"] if f["type"] == "cylinder"), key=lambda f: f["area"])["id"]
+    S.mate_reference(hole, "concentric", reference="PinFit")
+    S.new_part("PinM")
+    sk = S.create_sketch("Top")["sketch"]
+    S.sketch_circle(sk, [0, 0], 5)
+    S.extrude(sk, depth=40)
+    S.connection_point([0, 0, 0], "-Y", name="Plug")
+    cyl = next(f["id"] for f in S.get_topology()["faces"] if f["type"] == "cylinder")
+    S.mate_reference(cyl, "concentric", reference="PinFit")
+    S.new_assembly("AsmM")
+    S.insert_component("BaseM")
+    S.insert_component("PinM", position=[60, 50, 30])
+
+
+def test_mate_references_magnetic_mates_and_assembly_display_modes(tmp_path):
+    _base_and_pin()
+    assert S.apply_mate_references()["mates"] == ["Concentric1"]
+    assert S.magnetic_snap("PinM-1", 5)["snapped"] is False  # too far away to snap
+    S.magnetic_mate("BaseM-1/Socket", "PinM-1/Plug")
+    pin = next(c for c in S.get_model()["components"] if c["name"] == "PinM-1")
+    assert pin["position"] == pytest.approx([0, 20, 0], abs=1e-6)
+    S.save_alternate_position("Seated")
+    assert S.APP.asm.to_dict()["alternate_positions"]["Seated"]["PinM-1"][3:] == pytest.approx([0, 20, 0], abs=1e-6)
+    S.set_envelope("PinM-1", True)
+    assert [r["part"] for r in S.assembly_bom()["bom"]] == ["BaseM"]
+    assert S.get_mass_properties()["volume"] == pytest.approx(120000 - PI * 25 * 20)
+    S.set_envelope("PinM-1", False)
+    S.large_assembly_mode(True)
+    assert S.APP.asm.mesh()["edges"] == []
+    S.large_assembly_mode(False)
+    S.set_speedpak("BaseM-1", True)  # shown without its hole
+    assert len([f for f in S.APP.asm.mesh()["faces"] if f["id"].startswith("BaseM")]) == 6
+    S.set_speedpak("BaseM-1", False)
+    files = S.pack_and_go(str(tmp_path / "pack"), prefix="X-", zip_file=str(tmp_path / "pack.zip"))
+    assert sorted(Path(f).name for f in files["files"]) == ["X-AsmM.oswasm", "X-BaseM.oswprt", "X-PinM.oswprt"]
+    assert Path(files["zip"]).exists()
+
+
+def test_smart_mate_routing_hole_series_weld_bead_defeature():
+    _base_and_pin()
+    t = S.get_topology()
+    hole = max((f for f in t["faces"] if f["id"].startswith("BaseM") and f["type"] == "cylinder"), key=lambda f: f["area"])["id"]
+    pin = next(f["id"] for f in t["faces"] if f["id"].startswith("PinM") and f["type"] == "cylinder")
+    assert S.smart_mate(hole, pin)["type"] == "concentric"
+    pipe = S.route_pipe([[0, 30, 0], [0, 80, 0], [80, 80, 0]], 12, 1.5, 15)
+    straight, arc = (50 - 15) + (80 - 15), 15 * PI / 2
+    assert pipe["length"] == pytest.approx(straight + arc, rel=1e-9)
+    assert pipe["volume"] == pytest.approx(PI * (36 - 20.25) * (straight + arc), rel=1e-4)
+    cable = S.route_cable([[0, 30, 40], [30, 60, 50], [60, 40, 80]], 4)
+    assert cable["volume"] == pytest.approx(PI * 4 * cable["length"], rel=1e-3)
+    holes = S.hole_series([30, 0, 0], [0, 1, 0], [6.6])["holes"]
+    assert [h["component"] for h in holes] == ["BaseM-1", "Pipe1-1"]  # (the line runs through the pipe too)
+    assert S.get_mass_properties()["volume"] < 120000 - PI * 25 * 20 + PI * 25 * 40 + pipe["volume"] + cable["volume"]
+    S.new_part("Tee")
+    sk = S.create_sketch("Top")["sketch"]
+    S.sketch_rectangle(sk, [-50, -30], [50, 30])
+    S.extrude(sk, depth=10)
+    sk2 = S.create_sketch(top_face())["sketch"]
+    S.sketch_rectangle(sk2, [-5, -30], [5, 30])
+    S.extrude(sk2, depth=40)
+    t = S.get_topology()["faces"]
+    base_top = next(f["id"] for f in t if f["normal"][1] > 0.99 and abs(f["point"][1] - 10) < 1e-6 and f["point"][0] > 5)
+    side = next(f["id"] for f in t if f["normal"][0] > 0.99 and f["point"][1] > 10)
+    v0 = vol()
+    S.weld_bead(base_top, side, 4)
+    assert vol() - v0 == pytest.approx(0.5 * 4 * 4 * 60, rel=1e-9)
+    block()
+    S.hole(top_face(), [[0, 0]], diameter=6, end_condition="ThroughAll")
+    out = S.defeature(10, 1)
+    assert out["faces_after"] == 6 and vol() == pytest.approx(100 * 60 * 20)
+
+
+
+def test_drawing_symbols_threads_layers_formats(tmp_path, monkeypatch):
+    """Surface finish and weld symbols, cosmetic threads in views, layers, sheet formats, stacked balloons and
+    alternate position views."""
+    monkeypatch.setenv("OPENSWX_HOME", str(tmp_path))
+    block()
+    S.hole(top_face(), [[0, 0]], diameter=8.5, end_condition="ThroughAll")
+    cyl = next(f["id"] for f in S.get_topology()["faces"] if f["type"] == "cylinder")
+    S.cosmetic_thread(cyl, "M10x1.5")
+    S.drawing_new(sheet="A3", scale=1)
+    svg = S.create_drawing()["svg"]
+    assert ' 0 1 1 ' in svg  # the thread's three-quarter circle in the top view
+    S.drawing_add_surface_finish(200, 100, 1.6, "required", lay="=")
+    S.drawing_add_weld_symbol(150, 60, [140, 80], "fillet", "both", size=5, length=50, all_around=True, field=True, process="MIG")
+    svg = S.create_drawing()["svg"]
+    assert ">Ra 1.6<" in svg and 'data-ann="Weld1"' in svg and ">MIG<" in svg
+    S.drawing_add_layer("Hidden", "#ff0000", visible=False)
+    S.drawing_set_layer(["Weld1"], "Hidden")
+    assert 'data-ann="Weld1"' not in S.create_drawing()["svg"]
+    S.drawing_add_layer("Red", "#ff0000")
+    S.drawing_set_layer(["Finish1"], "Red")
+    svg = S.create_drawing()["svg"]
+    assert 'data-ann="Weld1"' not in svg and "#ff0000" in svg
+    S.drawing_delete_annotation("Finish1")
+    assert ">Ra 1.6<" not in S.create_drawing()["svg"]
+    S.drawing_set_sheet_format("ISO 7200")
+    svg = S.create_drawing()["svg"]
+    assert "Identification number" in svg and ">TITLE<" not in svg
+    S.drawing_save_sheet_format("Mine")
+    assert "Mine" in S.list_sheet_formats()["saved"]
+    S.drawing_set_sheet_format()
+    assert ">TITLE<" in S.create_drawing()["svg"]
+    # assembly: stacked balloon and an alternate position view
+    _base_and_pin()
+    S.save_alternate_position("Out")
+    S.magnetic_mate("BaseM-1/Socket", "PinM-1/Plug")
+    S.drawing_new(sheet="A3", scale=0.5)
+    st = S.APP.asm.drawing
+    front = st["sheets"][0]["views"][0]
+    S.drawing_view_alternate_position(front["id"], "Out")
+    assert 'stroke-dasharray="6 1.2 1.2 1.2 1.2 1.2"' in S.create_drawing()["svg"]
+    from openswx import drawing_sheets as DS
+    t = DS.placement(st, front, DS.view_geometry(S.APP.asm, st, front))
+    b = S.drawing_add_stacked_balloon(front["id"], list(t(0, 10)), ["PinM-1", "SPARE"])["balloon"]
+    assert b["stack"] == ["PinM-1", "SPARE"]
+    assert ">SPARE<" in S.create_drawing()["svg"]
+
+
+
+# ---------------------------------------------------------------- analysis: nonlinear, dynamics, drop, fatigue, flow
+def _cantilever():
+    S.new_part("Beam")
+    sk = S.create_sketch("Right")["sketch"]
+    S.sketch_rectangle(sk, [-5, 0], [5, 10])
+    S.extrude(sk, depth=100)
+    S.set_material("AISI 1020")
+    faces = S.get_topology()["faces"]
+    root = [f["id"] for f in faces if f["normal"][0] < -0.99][0]
+    tip = [f["id"] for f in faces if f["normal"][0] > 0.99][0]
+    S.simulation_add_fixture(root)
+    return root, tip
+
+
+def test_nonlinear_dynamic_drop_and_fatigue_studies():
+    root, tip = _cantilever()
+    S.simulation_add_force(tip, force=[0, -100, 0])
+    lin = S.simulation_run(element_size=2.5)
+    nl = S.nonlinear_run(steps=2, element_size=2.5)  # elastic: the same as the linear study
+    assert nl["plastic_elements"] == 0 and nl["max_displacement"] == pytest.approx(lin["max_displacement"], rel=1e-3)
+    assert set(S.simulation_results()["stress"])
+    # fatigue: 100 N gives ~50 MPa, under the endurance limit 0.5 Su; ten times that does not
+    f = S.fatigue_run(cycles=1e6)
+    assert f["infinite_life"] and f["endurance_limit"] == pytest.approx(0.5 * 420.5)
+    f = S.fatigue_run(cycles=1e6, scale=10)
+    assert not f["infinite_life"] and f["damage"] > 0 and f["elements_failing"] > 0
+    assert min(min(v) for v in S.fatigue_results()["log_life"].values()) < 6
+    # dynamics: a suddenly applied load overshoots to about twice the static deflection; resonance at f1
+    st = S.step_response_run(duration=0.01, points=400, damping=0.02, modes=4, element_size=2.5)
+    assert 1.85 < st["dynamic_amplification"] < 2.0
+    f1 = st["frequencies_hz"][0]
+    h = S.harmonic_run(f1 * 0.7, f1 * 1.3, points=121, modes=4, element_size=2.5)
+    assert h["peak_frequency"] == pytest.approx(f1, rel=0.01)
+    # yielding: plastic elements, and more deflection than the linear extrapolation
+    S.simulation_clear(fixtures=False)
+    S.simulation_add_force(tip, force=[0, -2000, 0])
+    nl = S.nonlinear_run(steps=5, element_size=2.5)
+    assert nl["plastic_elements"] > 0 and nl["max_displacement"] > 20 * lin["max_displacement"] * 1.05
+    assert nl["max_von_mises"] < 20 * lin["max_von_mises"]  # beyond the plastic moment: hardening carries it
+    # drop test: a bar landing on its end, G^2 = 6 E h / (rho g L^2)
+    d = S.drop_test_run(100, [root], direction=[-1, 0, 0], element_size=2.5)
+    assert d["peak_acceleration_g"] == pytest.approx(math.sqrt(6 * 200e3 * 100 / (7.9e-9 * 9810 * 100 ** 2)), rel=0.05)
+    assert d["impact_velocity_m_s"] == pytest.approx(math.sqrt(2 * 9.81 * 0.1), rel=1e-6)
+
+
+def test_flow_costing_sustainability():
+    block()
+    with pytest.raises(S.CommandError):
+        S.costing("sheet_metal")  # not a sheet metal part
+    S.set_material("AISI 1020")
+    r = S.flow_simulation(speed=10, direction=[1, 0, 0], cells_across=16)
+    assert r["converged"] and r["min_cp"] < -0.2 and r["max_cp"] > 0.5 and r["skin_friction_drag_N"] > 0
+    assert abs(r["pressure_force_N"][0]) < 0.05 * r["dynamic_pressure_Pa"] * 60 * 20 * 1e-6  # ideal flow: no drag
+    assert set(S.flow_results()["cp"])
+    one, many = S.costing(quantity=1), S.costing(quantity=100)
+    assert many["cost_each"] < one["cost_each"] and one["removed_cm3"] == pytest.approx(104 * 64 * 24 / 1000 - 120)
+    for m in ("additive", "casting"):
+        assert S.costing(m)["cost_each"] > 0
+    s = S.sustainability_report(region="Europe")
+    assert s["mass_kg"] == pytest.approx(0.948) and s["total"]["co2"] == pytest.approx(
+        sum(p["co2"] for p in s["phases"].values()), abs=1e-3)
+    assert S.sustainability_report(recycled_fraction=1.0)["phases"]["material"]["co2"] < s["phases"]["material"]["co2"]
+
+
+def test_dimxpert_and_render_scene(tmp_path):
+    block()
+    sk = S.create_sketch(top_face())["sketch"]
+    S.sketch_circle(sk, [30, 0], 4)
+    S.sketch_circle(sk, [-30, 0], 4)
+    S.cut_extrude(sk, end_condition="ThroughAll")
+    pmi = S.dimxpert_auto()["pmi"]
+    assert [p["label"] for p in pmi if p["type"] == "datum"] == ["A", "B", "C"]
+    assert sorted(p["value"] for p in pmi if p["type"] == "size") == [20, 60, 100]
+    holes = [p for p in pmi if p["type"] == "hole"]
+    assert len(holes) == 1 and holes[0]["count"] == 2 and holes[0]["text"].startswith("2X ⌀8 H7")
+    S.set_render_scene("outdoor", exposure=1.4)
+    png = tmp_path / "logo.png"
+    from PIL import Image
+    Image.new("RGB", (8, 4), "red").save(png)
+    dec = S.add_decal(top_face(), str(png), width=30)["decal"]
+    assert dec["name"] == "Decal1" and dec["normal"][1] == pytest.approx(1)
+    p = tmp_path / "m.oswprt"
+    S.save_part(str(p))
+    S.open_part(str(p))
+    summ = S.APP.doc.summary()
+    assert len(summ["pmi"]) == len(pmi) and summ["render"]["scene"] == "outdoor"
+    assert summ["render"]["decals"][0]["image"].startswith("data:image/png;base64,")
+    S.delete_decal("Decal1")
+    S.dimxpert_clear()
+    assert S.APP.doc.summary()["pmi"] == [] and S.APP.doc.render["decals"] == []
+    S.undo()
+    assert len(S.APP.doc.pmi) == len(pmi)
+
+
+
+# ---------------------------------------------------------------- ecosystem: toolbox, PDM, eDrawings, macros
+def test_toolbox_standards():
+    cat = S.list_fasteners()
+    assert {"button_head_screw", "countersunk_screw", "dowel_pin", "ansi_hex_bolt", "ansi_washer"} <= set(cat)
+    assert cat["ansi_socket_cap_screw"]["family"] == "ANSI Inch" and "1/4-20" in cat["ansi_socket_cap_screw"]["sizes"]
+    S.new_assembly()
+    pin = S.insert_fastener("dowel_pin", "6", length=20)["component"]
+    bolt = S.insert_fastener("ansi_hex_bolt", "1/4-20", length=1.0)["component"]
+    asm = S.APP.asm
+    from openswx.features import mass_properties
+    assert mass_properties(asm._local_body(asm.component(pin)))["volume"] == pytest.approx(PI * 9 * 20, rel=1e-6)
+    bb = asm._local_body(asm.component(bolt)).bounding_box()
+    assert bb.min.Z == pytest.approx(-25.4) and bb.size.X == pytest.approx(0.4375 * 25.4 / math.cos(PI / 6), rel=1e-3)
+    with pytest.raises(S.CommandError):
+        S.insert_fastener("button_head_screw", "M24", length=30)  # not in ISO 7380
+
+
+def test_pdm_vault_workflow(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENSWX_HOME", str(tmp_path / "home"))
+    block()
+    S.APP.doc.properties["Project"] = "Gearbox"
+    p = tmp_path / "work" / "Plate.oswprt"
+    p.parent.mkdir()
+    S.save_part(str(p))
+    r = S.pdm_check_in(comment="first")
+    assert r["version"] == 1 and S.pdm_list()["files"][0]["state"] == "Work in Progress"
+    with pytest.raises(S.CommandError):
+        S.pdm_check_in(str(p))  # not checked out
+    co = S.pdm_check_out("Plate.oswprt")
+    assert Path(co["path"]).is_file() and S.APP.doc.path and Path(S.APP.doc.path).resolve() == Path(co["path"])
+    sk = S.create_sketch(top_face())["sketch"]
+    S.sketch_circle(sk, [0, 0], 5)
+    S.cut_extrude(sk, end_condition="ThroughAll")
+    S.save_part()
+    assert S.pdm_check_in(comment="hole")["version"] == 2
+    with pytest.raises(S.CommandError):
+        S.pdm_change_state("Plate.oswprt", "Released")  # must go through approval
+    S.pdm_change_state("Plate.oswprt", "Pending Approval")
+    assert S.pdm_change_state("Plate.oswprt", "Released")["revision"] == "A"
+    with pytest.raises(S.CommandError):
+        S.pdm_check_out("Plate.oswprt")  # released: locked
+    h = S.pdm_history("Plate.oswprt")
+    assert [v["comment"] for v in h["versions"]] == ["first", "hole"] and h["versions"][-1]["revision"] == "A"
+    old = S.pdm_get_version("Plate.oswprt", 1, str(tmp_path / "old"))["path"]
+    import json
+    nfeat = lambda f: len(json.loads(Path(f).read_text(encoding="utf-8"))["features"])  # noqa: E731
+    assert nfeat(old) + 2 == nfeat(co["path"])  # version 1: before the sketch and cut
+    assert [f["name"] for f in S.pdm_search("gearbox")["files"]] == ["Plate.oswprt"]
+    assert S.pdm_search("nothing-like-this")["files"] == []
+    S.pdm_change_state("Plate.oswprt", "Work in Progress")
+    S.pdm_check_out("Plate.oswprt", open=False)
+    S.pdm_undo_check_out("Plate.oswprt")
+    assert S.pdm_history("Plate.oswprt")["checked_out"] is None
+
+
+def test_edrawing_export_and_macros(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENSWX_HOME", str(tmp_path))
+    S.macro_start()
+    block()
+    S.set_material("AISI 1020")
+    S.dimxpert_auto()
+    m = S.macro_stop(str(tmp_path / "mk.py"))
+    assert S.macro_status()["recording"] is False
+    src = Path(m["path"]).read_text(encoding="utf-8")
+    assert "S.new_part(" in src and "S.extrude(" in src and "S.set_material(name='AISI 1020'" in src
+    assert "S.dimxpert_auto(" in src and "macro_" not in src.split('"""')[-1]
+    vol_before = S.get_mass_properties()["volume"]
+    S.new_part("Other")
+    S.run_macro(m["path"])
+    assert S.get_mass_properties()["volume"] == pytest.approx(vol_before) and S.APP.doc.pmi
+    out = S.export_edrawing(str(tmp_path / "plate"))
+    html = Path(out["path"]).read_text(encoding="utf-8")
+    assert out["path"].endswith(".html") and '"Material":"AISI 1020"' in html and "Datum" not in html.split("three-src")[0]
+    assert html.count("<script") == 3 and '"pmi":[{' in html
+
+
+
+def test_holes_do_not_give_spurious_modes_or_runaway_drop_nodes():
+    # cut cells around holes with only a few inside points are under-integrated: they must not carry mass
+    from build123d import Box, Cylinder, Pos, Rot
+    from openswx.fea import solve_modal
+    from openswx.fea_more import solve_drop
+    from openswx.materials import lookup
+    mat = lookup("AISI 1020")
+    solid = Pos(0, 10, 0) * Box(100, 20, 60)
+    holed = solid - Pos(30, 10, 0) * Rot(90, 0, 0) * Cylinder(4, 40) - Pos(-30, 10, 0) * Rot(90, 0, 0) * Cylinder(4, 40)
+    face = lambda b, ax, s: [f for f in b.faces() if s * list(f.normal_at(f.center()))[ax] > 0.99][0]  # noqa: E731
+    f = solve_modal(holed, mat, [face(holed, 0, -1)], 3, None)["frequencies_hz"]
+    beam = 1.875 ** 2 / (2 * PI) * math.sqrt(200e3 * 20 ** 2 / 12 / (7.9e-9 * 100 ** 4))  # Euler-Bernoulli, no holes
+    assert 0.85 * beam < f[0] < 1.02 * beam and f[1] > 1.5 * f[0]
+    plain = solve_drop(solid, mat, [face(solid, 1, -1)], 1000, (0, -1, 0))
+    r = solve_drop(holed, mat, [face(holed, 1, -1)], 1000, (0, -1, 0))
+    assert r["peak_acceleration_g"] == pytest.approx(plain["peak_acceleration_g"], rel=0.05)
+    assert r["max_displacement"] < 1.5 * plain["max_displacement"] and r["max_von_mises"] < 3 * plain["max_von_mises"]

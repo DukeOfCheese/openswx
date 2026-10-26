@@ -33,12 +33,25 @@ button { font: inherit; color: inherit; }
 .menu-root { position: relative; padding: 6px 10px; cursor: default; }
 .menu-root:hover, .menu-root.open { background: var(--hover); }
 .menu-drop { position: absolute; top: 100%; left: 0; min-width: 220px; background: #fff; border: 1px solid var(--border); box-shadow: 0 6px 18px rgba(0,0,0,.15); padding: 4px 0; display: none; z-index: 50; }
-.menu-root.open .menu-drop { display: block; }
+.menu-root.open > .menu-drop { display: block; }
 .menu-item { display: flex; justify-content: space-between; gap: 24px; padding: 5px 14px 5px 30px; white-space: nowrap; }
 .menu-item:hover { background: var(--hover); }
 .menu-item .key { color: var(--muted); }
 .menu-item.disabled { color: #aaa; }
 .menu-sep { height: 1px; background: var(--chrome-2); margin: 4px 0; }
+/* cascading submenus: open on hover beside their row (flipped left near the window edge) */
+.menu-item.has-sub { position: relative; }
+.menu-item.has-sub > .key { font-size: 10px; }
+.menu-sub { top: -5px; left: 100%; }
+.menu-sub.left { left: auto; right: 100%; }
+.menu-item.has-sub:hover > .menu-sub { display: block; }
+.menu-item.has-sub:hover { background: var(--hover); }
+/* DimXpert / PMI labels over the model */
+.pmi-label { position: absolute; transform: translate(-50%, -50%); background: rgba(255,255,255,.92); border: 1px solid #1d6fd6; color: #1d4ea0;
+  font: 11px/1.25 sans-serif; padding: 1px 5px; border-radius: 2px; pointer-events: none; white-space: nowrap; z-index: 4; }
+.pmi-label small { display: block; color: #555; font-size: 10px; }
+.pmi-label.datum { background: #1d6fd6; color: #fff; font-weight: 600; padding: 1px 6px; }
+.muted { color: #666; }
 #quickaccess { display: flex; gap: 1px; margin-left: 4px; }
 .qa { width: 26px; height: 24px; border: 1px solid transparent; background: none; border-radius: 3px; display: grid; place-items: center; cursor: pointer; padding: 0; }
 .qa:hover { background: var(--hover); border-color: #b9d1f0; }

@@ -39,6 +39,7 @@ class Application:
         self.modal_result = None
         self.buckling_result = None
         self.context: dict | None = None  # editing a part in an assembly's context: {"assembly", "component", "part"}
+        self.macro: list[dict] | None = None  # commands recorded since macro_start (None: not recording)
 
     def new_document(self, name: str | None = None) -> PartDocument:
         self._doc_counter += 1
@@ -117,6 +118,9 @@ def command(mutates: bool = True, category: str = "general", mcp: bool = True):
             if mutates and not getattr(_TL, "preview", False):
                 with APP.lock:
                     APP.bump(fn.__name__, dict(bound.arguments), True, "", origin)
+                    if APP.macro is not None and outer is None and not fn.__name__.startswith("macro_"):
+                        APP.macro.append({"command": fn.__name__,
+                                          "args": json.loads(json.dumps(dict(bound.arguments), default=str))})
             return result
         COMMANDS[fn.__name__] = {"fn": wrapper, "mutates": mutates, "category": category, "mcp": mcp,
                                  "doc": inspect.getdoc(fn) or ""}
@@ -1671,7 +1675,7 @@ def _drawing_edit(fn, annotations: bool = False):
 
 def _next_ann(st: dict, prefix: str) -> str:
     sheets = APP.active_doc.drawing.get("sheets") or [st]
-    used = {a["id"] for sh in sheets for k in ("notes", "datums", "gdt") for a in sh.get(k, [])}
+    used = {a["id"] for sh in sheets for k in ("notes", "datums", "gdt", "finishes", "welds") for a in sh.get(k, [])}
     i = 1
     while f"{prefix}{i}" in used:
         i += 1
@@ -1776,9 +1780,10 @@ def drawing_add_gdt(characteristic: Literal["straightness", "flatness", "circula
 
 @command(category="drawing")
 def drawing_edit_annotation(id: str, x: float | None = None, y: float | None = None, text: str | None = None) -> dict:
-    """Move an annotation (note, datum, GD&T frame or balloon) or change a note's / balloon's text."""
+    """Move an annotation (note, datum, GD&T frame, surface finish or weld symbol, balloon) or change a note's /
+    balloon's text."""
     def f(st):
-        for k in ("notes", "datums", "gdt", "balloons"):
+        for k in ("notes", "datums", "gdt", "finishes", "welds", "balloons"):
             for a in st.get(k, []):
                 if a["id"] == id:
                     if x is not None:
@@ -1794,9 +1799,9 @@ def drawing_edit_annotation(id: str, x: float | None = None, y: float | None = N
 
 @command(category="drawing")
 def drawing_delete_annotation(id: str) -> dict:
-    """Delete a note, datum, GD&T frame or balloon from the drawing."""
+    """Delete a note, datum, GD&T frame, surface finish or weld symbol, or balloon from the drawing."""
     def f(st):
-        for k in ("notes", "datums", "gdt", "balloons"):
+        for k in ("notes", "datums", "gdt", "finishes", "welds", "balloons"):
             before = len(st.get(k, []))
             st[k] = [a for a in st.get(k, []) if a["id"] != id]
             if len(st[k]) != before:
@@ -3023,11 +3028,14 @@ def list_fasteners() -> dict:
 
 
 @command(category="assembly")
-def insert_fastener(kind: Literal["hex_bolt", "socket_cap_screw", "hex_nut", "washer"], size: str,
-                    length: float | None = None, position: Vec3 | None = None, rotation_deg: Vec3 | None = None) -> dict:
-    """Insert a standard ISO fastener (hex bolt ISO 4017, socket cap screw ISO 4762, hex nut ISO 4032, washer
-    ISO 7089) into the active assembly. Screws point down -Z from the head underside at the origin; mate it
-    concentric + coincident to place it."""
+def insert_fastener(kind: str, size: str, length: float | None = None, position: Vec3 | None = None,
+                    rotation_deg: Vec3 | None = None) -> dict:
+    """Insert a standard fastener into the active assembly (Toolbox; list_fasteners for kinds and sizes).
+    ISO: hex_bolt (4017), socket_cap_screw (4762), button_head_screw (7380), countersunk_screw (10642),
+    set_screw (4026), hex_nut (4032), thin_nut (4035), washer (7089), lock_washer (DIN 127), dowel_pin (8734,
+    size = diameter); lengths in mm. ANSI inch: ansi_hex_bolt, ansi_socket_cap_screw, ansi_hex_nut,
+    ansi_washer (sizes like '1/4-20', '#10-24'); lengths in inches. Screws point down -Z from the head
+    underside at the origin; mate it concentric + coincident to place it."""
     from .hardware import make_fastener
     part = make_fastener(kind, size, length)
     comp = APP.asm.insert(part, None, position or [0, 0, 0], rotation_deg or [0, 0, 0], None)
@@ -3100,8 +3108,8 @@ def smart_fasteners(component: str, kind: Literal["hex_bolt", "socket_cap_screw"
 
 @command(mutates=False, category="assembly")
 def check_interference() -> dict:
-    """Interference Detection: volumes where components overlap."""
-    shapes = APP.asm.world_shapes()
+    """Interference Detection: volumes where components overlap (envelopes are left out)."""
+    shapes = [x for x in APP.asm.world_shapes() if not getattr(x[0], "envelope", False)]
     hits = []
     for i in range(len(shapes)):
         for j in range(i + 1, len(shapes)):
@@ -4594,3 +4602,7 @@ def get_view_image(view: Literal["isometric", "front", "back", "top", "bottom", 
     png = render_png(APP.doc, view=view, width=width, height=height, edges=show_edges)
     import base64
     return {"png_base64": base64.b64encode(png).decode(), "view": view, "width": width, "height": height}
+
+
+# more commands (flex, mold tools, library features, ...) register with the same registry
+from .commands_more import *  # noqa: E402,F401,F403

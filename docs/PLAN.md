@@ -594,3 +594,29 @@ comparing with the part's own Parasolid body (read exactly by openswx/parasolid.
 ## Progress log
 - 2026-10-19: RE findings (docs/re/README.md). venv with build123d 0.13 / OCP, mcp, fastapi.
 - 2026-10-19: Phase 4 backlog pass: B1-B11 implemented (see Phase 4 list; remainders listed in Next steps).
+
+## Remaining-parity pass (2026-10-26, user: "continue and implement all")
+Done (backend + tests + UI; commands in `commands_more.py`, builders in `advanced.py`):
+- [x] Part: Flex / Deform / Freeform (NURBS pole mapping), conic and curvature-continuous fillets, FilletXpert,
+      mold tools (parting line, shut-off and parting surfaces, tooling split), Insert Part / Mirror Part,
+      cosmetic threads, Ruled / Radiate / Extend / Untrim / Flatten / Filled-from-edges surfaces,
+      library features and the Design Library, Hole Series.
+- [x] Assembly: SmartMates, connection points + Magnetic Mates, Mate References, Alternate Positions,
+      Envelopes, SpeedPak, Large Assembly Mode, Defeature, Pack and Go, routing (pipe, cable), weld beads.
+- [x] Drawings: surface finish and weld symbols, stacked balloons, cosmetic thread display, layers,
+      editable / saved sheet formats, alternate position views.
+- [x] Analysis (`fea_more.py`, `analysis_more.py`): nonlinear (bilinear plasticity), harmonic and transient
+      dynamics (modal superposition), drop test (energy method), fatigue (S-N, Goodman, Miner), flow
+      (potential flow on a voxel grid: Cp, lift, skin-friction drag; no separation / pressure drag),
+      Costing, Sustainability, DimXpert auto dimension scheme (PMI saved with the part), photo rendering
+      (PBR, procedural environments, floor, shadows) and decals.
+- [x] Ecosystem (`ecosystem.py`): PDM vault (check in/out, versions, revisions, WIP / approval / released
+      workflow, search, where used), eDrawings-style single-file HTML viewer with section / measure / markup,
+      Toolbox ISO + ANSI inch (14 kinds), macro record / run as Python.
+- [x] UI: menu bar uses cascading hover submenus; PropertyManagers for the new features; Mold Tools, MBD and
+      Render Tools tabs.
+- [x] Fixed: sliver cut cells (< 10% inside) carried mass with under-integrated stiffness, giving spurious
+      low modes in frequency studies (and runaway nodes under inertial loads) on parts with holes.
+Limits (honest): flow is ideal-flow only; costing / sustainability use generic rates; routing has no
+fittings library; PDM is a shared-folder vault (no server, no permissions); rendering is real-time PBR,
+not path traced.

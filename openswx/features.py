@@ -2914,3 +2914,12 @@ def _mass_properties(shape: Shape, density_kg_m3: float) -> dict:
         "edges": len(shape.edges()),
         "vertices": len(shape.vertices()),
     }
+
+
+# advanced features (flex, mold tools, insert part, cosmetic threads, more surfaces) register themselves here
+from . import advanced as _advanced  # noqa: E402
+
+BUILDERS.update(_advanced.BUILDERS)
+NAME_PREFIX.update(_advanced.NAME_PREFIX)
+_filled_from_sketch = BUILDERS["filled_surface"]
+BUILDERS["filled_surface"] = lambda c, p, n: (_advanced.build_filled_surface_edges if p.get("edges") else _filled_from_sketch)(c, p, n)

@@ -943,6 +943,23 @@ export class PropertyManager {
         r.append(x); box.append(r);
       });
       col.append(box); row.append(col);
+    } else if (f.type === "text") {
+      const col = el("div", ""); col.style.cssText = "display:flex;flex-direction:column;gap:2px;flex:1;min-width:0";
+      const line = el("div", ""); line.style.cssText = "display:flex;gap:4px";
+      const inp = el("input"); inp.type = "text"; inp.value = v[f.key] ?? ""; inp.style.cssText = "flex:1;min-width:0";
+      inp.onchange = () => { v[f.key] = inp.value; this.changed(); };
+      line.append(inp);
+      if (f.browse && this.opts.browse) { // a file path: Browse... opens the file dialog (desktop) or asks for the path
+        const b = el("button", "pm-icobtn", "…"); b.title = "Browse";
+        b.onclick = async () => { const p = await this.opts.browse(f.browse); if (p) { inp.value = p; v[f.key] = p; this.changed(); } };
+        line.append(b);
+      }
+      col.append(el("label", "", escapeHtml(f.label)), line); row.append(col);
+    } else if (f.type === "file") { // read into a data: URL
+      const col = el("div", ""); col.style.cssText = "display:flex;flex-direction:column;gap:2px;flex:1;min-width:0";
+      const inp = el("input"); inp.type = "file"; if (f.accept) inp.accept = f.accept;
+      inp.onchange = () => { const file = inp.files[0]; if (!file) return; const rd = new FileReader(); rd.onload = () => { v[f.key] = rd.result; v[`${f.key}_name`] = file.name; this.render(); this.changed(); }; rd.readAsDataURL(file); };
+      col.append(el("label", "", escapeHtml(f.label) + (v[`${f.key}_name`] ? `: ${escapeHtml(v[`${f.key}_name`])}` : "")), inp); row.append(col);
     } else if (f.type === "table") {
       const col = el("div", ""); col.style.cssText = "display:flex;flex-direction:column;gap:2px;flex:1;min-width:0";
       const ta = el("textarea"); ta.rows = 6; ta.spellcheck = false; ta.style.cssText = "width:100%;font:12px monospace;resize:vertical";

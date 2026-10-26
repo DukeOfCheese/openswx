@@ -454,8 +454,14 @@ def render_sheet(doc, st: dict, sheet: dict, cache: dict | None = None) -> str:
             out.append(f'<text x="{v["x"]:.2f}" y="{v["y"]:.2f}" font-size="3" fill="#c00" text-anchor="middle">'
                        f'{escape(v["id"])}: {escape(str(exc))}</text>')
     out += _sheet_tables(doc, st, sheet, W, H, margin, cache)
-    out += D._annotations(sheet)
-    out += _title_block(doc, sheet, W, H, margin, title_h, st.get("title"))
+    from . import drawing_more as DM
+    out += DM.annotations(st, sheet)
+    if st.get("format"):  # a sheet format (title-block template) chosen for the drawing
+        vals = DM.title_fields(doc, sheet, st.get("title"), D._scale_label(float(sheet.get("scale") or 1.0)),
+                               sheet.get("projection", "third"))
+        out += DM.title_block_svg(st["format"], vals, W, H, margin)
+    else:
+        out += _title_block(doc, sheet, W, H, margin, title_h, st.get("title"))
     out.append("</svg>")
     return "\n".join(out)
 
@@ -484,12 +490,16 @@ def _render_view(doc, st, v, cache) -> list[str]:
         out += _center_marks(st, v, g, t)
     if v.get("centerlines") and v["kind"] in ("model", "projected", "auxiliary"):
         out += _centerlines(doc, st, v, g, t)
+    from . import drawing_more as DM
+    if v["kind"] in ("model", "projected", "auxiliary", "section"):
+        out += DM.thread_marks(doc, st, v, t, frame, to2d, view_scale(st, v))
+    out += DM.alternate_phantom(doc, st, v, t, frame, _project)
     out += clip_end
     out += _break_lines(v, g, t, hw, hh)
     out += _render_balloons(doc, sheet_of(st, v["id"]), v, t)
     if v.get("dims") and getattr(doc, "kind", "part") == "part" and v["kind"] in ("model", "projected", "auxiliary"):
         out += _model_dims(doc, g["frame"], t)
-    dims = _render_dims(st, sheet_of(st, v["id"]), v, g, t)
+    dims = DM.layered_dims(st, sheet_of(st, v["id"]), v, lambda sh: _render_dims(st, sh, v, g, t))
     out += dims
     out += _child_marks(doc, st, v, t, cache)
     label = v.get("label") or _default_label(st, v)
@@ -884,7 +894,13 @@ def _render_balloons(doc, sheet, v, t) -> list[str]:
             out.append(f'<line x1="{sx:.3f}" y1="{sy:.3f}" x2="{px:.3f}" y2="{py:.3f}" stroke="#000" stroke-width="0.18"/>')
             out.append(f'<circle cx="{px:.3f}" cy="{py:.3f}" r="0.6" fill="#000"/>')
         out.append(f'<circle cx="{bx:.3f}" cy="{by:.3f}" r="{r}" fill="#fff" stroke="#000" stroke-width="0.25"/>')
-        out.append(f'<text x="{bx:.3f}" y="{by + 1.3:.3f}" font-size="3.6" text-anchor="middle">{escape(text)}</text></g>')
+        out.append(f'<text x="{bx:.3f}" y="{by + 1.3:.3f}" font-size="3.6" text-anchor="middle">{escape(text)}</text>')
+        if b.get("stack"):  # a stacked balloon: the other items touch the first
+            from .drawing_more import stacked_svg
+            out += stacked_svg(b, {c: str(n) for c, n in items.items()})
+            out.append("</g>")
+        else:
+            out[-1] += "</g>"
     return out
 
 
@@ -1050,7 +1066,7 @@ def bom_rows(doc, tb: dict) -> list[dict]:
     """The BOM's rows: {"item", "part", "part_number", "description", "qty"} - parts grouped by source, in the
     table's own order (tb["order"]) then as they come, with the user's part number / description overrides."""
     from collections import Counter
-    counts = Counter((c.link or c.name.rsplit("-", 1)[0]) for c in doc.components)
+    counts = Counter((c.link or c.name.rsplit("-", 1)[0]) for c in doc.components if not getattr(c, "envelope", False))
     order = [p for p in tb.get("order", []) if p in counts] + [p for p in counts if p not in tb.get("order", [])]
     over = tb.get("rows", {})
     out = []

@@ -17,7 +17,9 @@ for pkg in ("build123d", "OCP", "webview", "uvicorn", "mcp", "ezdxf", "ocpsvg", 
     hidden += h
 hidden += ["openswx.desktop", "openswx.web_server", "openswx.mcp_server", "openswx.assembly", "openswx.drawing",
            "openswx.sldprt", "openswx.render", "openswx.equations", "openswx.sw_tree", "openswx.sw_sketch",
-           "openswx.sw_rebuild", "openswx.drawing_sheets", "openswx.fileassoc", "openswx.sw_drawing"]
+           "openswx.sw_rebuild", "openswx.drawing_sheets", "openswx.fileassoc", "openswx.sw_drawing",
+           "openswx.advanced", "openswx.commands_more", "openswx.drawing_more", "openswx.fea_more",
+           "openswx.analysis_more", "openswx.ecosystem"]
 
 a = Analysis([str(ROOT / "packaging" / "entry.py")], pathex=[str(ROOT)], datas=datas, binaries=binaries,
              hiddenimports=hidden, excludes=["tkinter", "matplotlib", "pytest", "jedi", "parso"], noarchive=False)

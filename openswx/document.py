@@ -100,6 +100,7 @@ class PartDocument:
             "counters": self.counters, "next_id": self.next_id,
             "variables": self.variables, "configurations": self.configurations, "active_config": self.active_config,
             "folders": self.folders, "design_table": self.design_table, "named_views": getattr(self, "named_views", {}),
+            "pmi": getattr(self, "pmi", []), "render": getattr(self, "render", {}),
         }
 
     def load_dict(self, d: dict) -> None:
@@ -123,6 +124,8 @@ class PartDocument:
         self.folders = d.get("folders", [])
         self.design_table = d.get("design_table")
         self.named_views = d.get("named_views", {})
+        self.pmi = d.get("pmi", [])
+        self.render = d.get("render", {})
         self.rebuild()
 
     def save(self, path: str | None = None) -> str:
@@ -721,7 +724,8 @@ class PartDocument:
             "configurations": list(self.configurations), "active_config": self.active_config,
             "flattened": getattr(self, "flattened", False), "sheet_metal": self.ctx.sheet is not None,
             "global_variables": self.variables, "folders": self.folders, "design_table": self.design_table is not None,
-            "named_views": getattr(self, "named_views", {}),
+            "named_views": getattr(self, "named_views", {}), "pmi": getattr(self, "pmi", []),
+            "render": getattr(self, "render", {}),
             "bodies": mp["bodies"], "volume_mm3": round(mp["volume"], 6),
             "errors": {k: v["error"] for k, v in self.state.items() if v.get("error")},
         }

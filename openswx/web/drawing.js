@@ -17,6 +17,9 @@ const HINT = "Drag views or annotations to move them; right-click a view or anno
 const TOOL_HINT = {
   note: "Click where the note goes (Shift+click a second point first to add a leader).", datum: "Click where the datum symbol goes.",
   gdt: "Click where the feature control frame goes.", model: "Click where the model view goes.",
+  finish: "Click where the surface finish symbol's tip goes (Shift+click a leader point first).",
+  weld: "Shift+click the joint (arrow point), then click where the reference line starts.",
+  stacked: "Click a part in a view, then where the balloon stack goes.", altpos: "Click an assembly view.",
   projected: "Click a view, then click beside it (right, left, above or below) where the projected view goes.",
   section: "Click the start of the cutting line on a view, then its end.",
   detail: "Click the centre of the detail circle on a view, then a point on the circle.",
@@ -70,6 +73,12 @@ export class DrawingEditor {
     B("note", "Note", () => this.setTool("note"), "Click the sheet to place a note");
     B("datum", "Datum Feature", () => this.setTool("datum"), "Click to place a datum symbol");
     B("gdt", "Geometric Tolerance", () => this.setTool("gdt"), "Click to place a feature control frame");
+    B("finish", "Surface Finish", () => this.setTool("finish"), "Click to place a surface finish symbol (Shift+click first for a leader)");
+    B("weldment", "Weld Symbol", () => this.setTool("weld"), "Shift+click the joint, then click where the reference line goes");
+    B("note", "Stacked Balloon", () => this.setTool("stacked"), "Click a part in a view, then where the balloon stack goes", this.layout);
+    B("explode", "Alt. Position View", () => this.setTool("altpos"), "Click an assembly view to show an alternate position over it in phantom lines", this.layout);
+    B("properties", "Layers", () => this.layersDialog(), "Drawing layers: colour and visibility of annotations");
+    B("edit", "Sheet Format", () => this.sheetFormatDialog(), "Use, reset or save the sheet format (title block)", this.layout);
     this.miBtn = B("smart_dim", "Model Items", () => this.toggleModelItems(), "Show the driving sketch dimensions");
     bar.append(el("span", "dw-sep"));
     this.sheetSel = el("select", "dw-sel"); for (const s of SHEET_SIZES) this.sheetSel.append(new Option(`Sheet ${s}`, s));
@@ -196,9 +205,15 @@ export class DrawingEditor {
     if (!this.svg || e.button !== 0) return;
     const at = this.mm(e);
     if (this.tool) {
-      if (["note", "datum", "gdt"].includes(this.tool)) {
+      if (["note", "datum", "gdt", "finish", "weld"].includes(this.tool)) {
         if (e.shiftKey) { this.leader = at; this.hint.textContent = "Leader point set; now click where the text goes."; return; }
         return this.place(this.tool, at);
+      }
+      if (this.tool === "stacked") return this.balloonClick(e, at, true);
+      if (this.tool === "altpos") {
+        const id = this.viewAt(e);
+        if (!id) { this.hint.textContent = "Click on an assembly view."; return; }
+        this.setTool(null); return this.altPositionView(id);
       }
       if (this.tool === "dim") return this.dimClick(e, at);
       if (this.tool === "callout") return this.calloutClick(e, at);
@@ -325,8 +340,18 @@ export class DrawingEditor {
     this.hint.textContent = "Now click where the callout goes.";
   }
 
-  balloonClick(e, at) {
+  balloonClick(e, at, stacked = false) {
     const p = this.pick;
+    if (p && stacked) {
+      this.pick = null; this.setTool(null);
+      const comps = (this.app.model?.components || []).map((c) => c.name);
+      this.app.modal("Stacked Balloon", `<div class="field"><label>More items in the stack (component names or text, comma separated)</label>
+        <input id="dwst" value="" list="dwstl" style="width:100%"><datalist id="dwstl">${comps.map((c) => `<option value="${escapeHtml(c)}">`).join("")}</datalist></div>
+        <div class="field"><label>Stack direction</label><select id="dwsd"><option value="down">Down</option><option value="right">Right</option></select></div>`, () =>
+        this.cmd("drawing_add_stacked_balloon", { view: p.view, point: p.at, x: at[0], y: at[1], direction: document.getElementById("dwsd").value,
+          items: document.getElementById("dwst").value.split(",").map((s) => s.trim()).filter(Boolean) }), "note");
+      return;
+    }
     if (p) { this.setTool("balloon"); return this.cmd("drawing_add_balloon", { view: p.view, point: p.at, x: at[0], y: at[1] }); }
     const view = this.viewAt(e);
     if (!view) { this.hint.textContent = "Click on a part in a view first. " + TOOL_HINT.balloon; return; }
@@ -508,8 +533,66 @@ export class DrawingEditor {
         return this.cmd("drawing_add_gdt", { characteristic: q("dwc").value, tolerance: parseFloat(q("dwt").value), x: at[0], y: at[1], leader,
           diameter: q("dwd").checked, modifier: q("dwm").value || null, datums: q("dwr").value.split(",").map((s) => s.trim()).filter(Boolean) });
       }, "gdt");
+    } else if (tool === "finish") {
+      this.app.modal("Surface Finish", `<div class="field"><label>Symbol</label><select id="dwfp"><option value="required">Machining required</option>
+        <option value="any">Basic (any process)</option><option value="prohibited">Machining prohibited</option></select></div>
+        <div class="field"><label>Roughness (Ra, e.g. 1.6 or Rz 6.3)</label><input id="dwfr" value="1.6"></div>
+        <div class="field"><label>Lay direction</label><select id="dwfl"><option value="">None</option>${["=", "⊥", "X", "M", "C", "R", "P"].map((s) => `<option>${s}</option>`).join("")}</select></div>`, () => {
+        const q = (id) => document.getElementById(id).value;
+        return this.cmd("drawing_add_surface_finish", { x: at[0], y: at[1], process: q("dwfp"), ra: q("dwfr") || null, lay: q("dwfl") || null, leader });
+      }, "finish");
+    } else if (tool === "weld") {
+      const arrow = leader || [at[0] - 15, at[1] + 12];
+      this.app.modal("Weld Symbol", `<div class="field"><label>Weld</label><select id="dwwt">${[["fillet", "Fillet"], ["v_groove", "V groove"], ["square", "Square groove"], ["bevel", "Bevel groove"],
+        ["u_groove", "U groove"], ["j_groove", "J groove"], ["plug", "Plug / slot"], ["spot", "Spot"]].map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></div>
+        <div class="field"><label>Side</label><select id="dwws"><option value="arrow">Arrow side</option><option value="other">Other side</option><option value="both">Both sides</option></select></div>
+        <div class="field"><label>Size</label><input id="dwwz" value="5"></div><div class="field"><label>Length (- pitch)</label><input id="dwwl" value=""></div>
+        <label class="pm-check"><input id="dwwa" type="checkbox"> Weld all around</label><label class="pm-check"><input id="dwwf" type="checkbox"> Field weld</label>
+        <div class="field"><label>Process (tail)</label><input id="dwwp" value=""></div>`, () => {
+        const q = (id) => document.getElementById(id);
+        return this.cmd("drawing_add_weld_symbol", { x: at[0], y: at[1], leader: arrow, type: q("dwwt").value, side: q("dwws").value, size: q("dwwz").value || null,
+          length: q("dwwl").value || null, all_around: q("dwwa").checked, field: q("dwwf").checked, process: q("dwwp").value || null });
+      }, "weldment");
     }
     this.setTool(null);
+  }
+
+  async altPositionView(view) {
+    const names = Object.keys(this.app.model?.alternate_positions || {});
+    if (!names.length) return this.app.toast("The assembly has no alternate positions (Insert > Alternate Position).", "err");
+    this.app.modal("Alternate Position View", `<div class="field"><label>Position</label><select id="dwap"><option value="">(none)</option>${names.map((n) => `<option>${escapeHtml(n)}</option>`).join("")}</select></div>`,
+      () => this.cmd("drawing_view_alternate_position", { view, position: document.getElementById("dwap").value || null }), "explode");
+  }
+
+  layersDialog() {
+    const layers = this.state?.layers || {};
+    const rows = Object.entries(layers).map(([n, l]) => `<tr><td>${escapeHtml(n)}</td><td><input type="color" data-lc="${escapeHtml(n)}" value="${l.color}"></td>
+      <td><input type="checkbox" data-lv="${escapeHtml(n)}" ${l.visible ? "checked" : ""}></td></tr>`).join("");
+    this.app.modal("Layers", `<table class="dw-bom"><tr><th>Layer</th><th>Colour</th><th>Show</th></tr>${rows || "<tr><td colspan=3>No layers yet.</td></tr>"}</table>
+      <div class="field"><label>New layer</label><input id="dwln" placeholder="Name"></div>
+      <div class="field"><label>Put annotations on a layer (ids: Note1, Dim2, Weld1 ...)</label><input id="dwli" placeholder="Note1, Note2"> <select id="dwll"><option value="">(no layer)</option>${Object.keys(layers).map((n) => `<option>${escapeHtml(n)}</option>`).join("")}</select></div>`, async () => {
+      const q = (id) => document.getElementById(id);
+      for (const [n] of Object.entries(layers)) {
+        await this.app.run("drawing_add_layer", { name: n, color: document.querySelector(`[data-lc="${CSS.escape(n)}"]`).value, visible: document.querySelector(`[data-lv="${CSS.escape(n)}"]`).checked }).catch(() => {});
+      }
+      if (q("dwln").value.trim()) await this.app.run("drawing_add_layer", { name: q("dwln").value.trim() }).catch(() => {});
+      const items = q("dwli").value.split(",").map((s) => s.trim()).filter(Boolean);
+      if (items.length) await this.app.run("drawing_set_layer", { items, layer: q("dwll").value || null }).catch(() => {});
+      await this.load();
+    }, "properties");
+  }
+
+  async sheetFormatDialog() {
+    const f = (await this.app.api("/api/command", { name: "list_sheet_formats", args: {} })).result || { presets: {}, saved: {} };
+    const opts = [...Object.keys(f.presets || {}).map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)} (preset)</option>`),
+      ...Object.keys(f.saved || {}).map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`)].join("");
+    this.app.modal("Sheet Format", `<div class="field"><label>Use</label><select id="dwsf"><option value="">Standard title block</option>${opts}</select></div>
+      <div class="field"><label>Save the current format as (optional)</label><input id="dwss" placeholder="Name"></div>`, async () => {
+      const v = document.getElementById("dwsf").value, save = document.getElementById("dwss").value.trim();
+      await this.app.run("drawing_set_sheet_format", v ? { preset: v } : {}).catch(() => {});
+      if (save) await this.app.run("drawing_save_sheet_format", { name: save }).catch(() => {});
+      await this.load();
+    }, "edit");
   }
 
   noteDialog(at, note = null, leader = null) {

@@ -159,7 +159,14 @@ def make_drawing(doc, sheet: str = "A3", projection: str = "third", scale: float
         out += _dim_v(tf("top"), boxes["top"], size["top"][1])
     if state.get("model_items") and getattr(doc, "kind", "part") == "part":
         out += _model_items(doc, body, {n: tf(n) for n in shown}, shown)
-    out += _annotations(state)
+    from . import drawing_more as DM
+    out += DM.annotations(state, state)
+    if state.get("format"):  # a sheet format (title-block template)
+        vals = DM.title_fields(doc, {"name": "1", "size": sheet}, state.get("title"), _scale_label(scale), projection)
+        out += DM.title_block_svg(state["format"], vals, W, H, margin)
+        out.append("</svg>")
+        return {"svg": "\n".join(out), "scale": scale, "scale_label": _scale_label(scale), "sheet": sheet,
+                "views": shown, "projection": projection}
     # title block
     tb_w, x0, y0 = 170, W - margin - 170, H - margin - title_h
     mat = getattr(doc, "material", {}).get("name") or "<not specified>"
