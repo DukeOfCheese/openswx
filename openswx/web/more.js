@@ -275,7 +275,8 @@ export function lineChart(series, { xlabel = "", ylabel = "", w = 380, h = 190 }
     <text x="12" y="${(h - B) / 2}" text-anchor="middle" transform="rotate(-90 12 ${(h - B) / 2})">${escapeHtml(ylabel)}</text></svg>`;
 }
 
-const kv = (rows) => `<div class="kv">${rows.filter((r) => r && r[1] !== undefined && r[1] !== null).map(([k, v]) => `<div>${escapeHtml(k)}</div><div>${typeof v === "number" ? (+v.toPrecision(5)).toLocaleString() : escapeHtml(String(v))}</div>`).join("")}</div>`;
+const kvNum = (v) => v !== 0 && Math.abs(v) < 1e-3 ? v.toExponential(3) : (+v.toPrecision(5)).toLocaleString();  // (small forces would show as 0)
+const kv = (rows) => `<div class="kv">${rows.filter((r) => r && r[1] !== undefined && r[1] !== null).map(([k, v]) => `<div>${escapeHtml(k)}</div><div>${typeof v === "number" ? kvNum(v) : escapeHtml(String(v))}</div>`).join("")}</div>`;
 const rgbRamp = (t) => { t = Math.max(0, Math.min(1, t)); return t < 0.25 ? [0, 4 * t, 1] : t < 0.5 ? [0, 1, 2 - 4 * t] : t < 0.75 ? [4 * t - 2, 1, 0] : [1, 4 - 4 * t, 0]; };
 const css = (c) => `rgb(${c.map((x) => Math.round(x * 255)).join(",")})`;
 
@@ -315,7 +316,7 @@ function pbrFor(hex, mat) {
 const MIXIN = {
   // ---------------------------------------------------------------- generic command form
   /** fields: [key, label, type ("number"|"text"|"vec"|"list"|"points"|"select"|"check"), default, options] */
-  cmdForm(title, cmd, fields, { ic = "properties", fixed = {}, note = "" } = {}) {
+  cmdForm(title, cmd, fields, { ic = "properties", fixed = {}, note = "", xf = (x) => x } = {}) {
     const id = (k) => `cf_${k}`;
     const html = (note ? `<p class="muted">${escapeHtml(note)}</p>` : "") + fields.map(([k, label, type, def, opts]) => {
       if (type === "check") return `<label class="pm-check"><input id="${id(k)}" type="checkbox" ${def ? "checked" : ""}> ${escapeHtml(label)}</label>`;
@@ -339,7 +340,7 @@ const MIXIN = {
     let done;
     const p = new Promise((resolve) => { done = resolve; });
     // resolve after the modal has closed, so a follow-up (results) modal is not closed with it
-    this.modal(title, html, async () => { const res = await this.run(cmd, read()); setTimeout(() => done(res.result)); }, ic);
+    this.modal(title, html, async () => { const res = await this.run(cmd, xf(read())); setTimeout(() => done(res.result)); }, ic);
     const cancel = document.querySelector("#modal-box .mb-foot .btn:not(.primary)");
     if (cancel) cancel.addEventListener("click", () => done(null));
     return p;
@@ -400,11 +401,58 @@ const MIXIN = {
     this.vp.setLegend({ title: "Life (log10 cycles)", unit: "12 = infinite", min: lo, max: hi, color: (t) => css(rgbRamp(1 - t)) });
   },
 
-  async flowDialog() {
-    const r = await this.cmdForm("Flow Simulation", "flow_simulation", [["speed", "Free-stream speed (m/s)", "number", 10], ["direction", "Flow direction x, y, z", "vec", "1, 0, 0"],
-      ["fluid", "Fluid", "select", "air", [["air", "Air"], ["water", "Water"]]], ["cells_across", "Cells across the part", "number", 20]],
-    { ic: "sim_run", note: "External potential flow: pressure coefficient and velocity on the surface, skin-friction drag estimate. Ideal flow - no separation or wake." });
-    if (r) this.showResult("Flow Simulation - Results", r, "", "sim_run", () => this.flowPlot());
+  flowDialog() {
+    const kinds = [["external", "External flow - Navier-Stokes (drag, lift, wake)"], ["internal", "Internal flow - Navier-Stokes (pressure drop through a passage)"],
+      ["potential", "External flow - ideal (potential) flow, quick first look"]];
+    this.modal("Flow Simulation", `<p class="muted">Study type</p>${kinds.map(([v, l], i) => `<label class="pm-check"><input type="radio" name="fsk" value="${v}" ${i ? "" : "checked"}> ${escapeHtml(l)}</label>`).join("")}`,
+      () => { const k = document.querySelector("input[name=fsk]:checked")?.value; setTimeout(() => this.flowStudy(k)); }, "sim_run");
+  },
+
+  async flowStudy(kind) {
+    if (kind === "potential") {
+      const r = await this.cmdForm("Flow Simulation - Potential Flow", "flow_simulation", [["speed", "Free-stream speed (m/s)", "number", 10], ["direction", "Flow direction x, y, z", "vec", "1, 0, 0"],
+        ["fluid", "Fluid", "select", "air", [["air", "Air"], ["water", "Water"]]], ["cells_across", "Cells across the part", "number", 20]],
+      { ic: "sim_run", note: "Ideal flow: pressure coefficient and velocity on the surface, skin-friction drag estimate. No separation, wake or pressure drag." });
+      if (r) this.showResult("Flow Simulation - Results", r, "", "sim_run", () => this.flowPlot());
+      return;
+    }
+    const ext = kind === "external";
+    const fields = ext
+      ? [["speed", "Free-stream speed (m/s)", "number", 10], ["direction", "Flow direction x, y, z", "vec", "1, 0, 0"], ["fluid", "Fluid", "select", "air", [["air", "Air"], ["water", "Water"]]]]
+      : [["axis", "Flow along (in at the low end)", "select", "X", ["X", "Y", "Z"]], ["speed", "Mean inlet velocity (m/s)", "number", 1], ["fluid", "Fluid", "select", "water", [["water", "Water"], ["air", "Air"]]]];
+    fields.push(["cells_across", ext ? "Cells across the part (accuracy vs time)" : "Cells across the inlet", "number", 16], ["max_seconds", "Time limit (s)", "number", 300]);
+    const r = await this.cmdForm(ext ? "Flow Simulation - External" : "Flow Simulation - Internal", ext ? "cfd_external" : "cfd_internal", fields,
+      { ic: "sim_run", note: "Lattice Boltzmann Navier-Stokes solver on a voxel grid: separation and wakes included. Runs up to the time limit." });
+    if (!r) return;
+    const shown = ext ? { reynolds: r.reynolds, drag_N: r.drag_N, drag_coefficient: r.drag_coefficient, lift_side_force_N: r.lift_side_force_N, frontal_area_mm2: r.frontal_area_mm2, min_cp: r.min_cp, max_cp: r.max_cp, max_velocity: r.max_velocity }
+      : { reynolds: r.reynolds, pressure_drop_Pa: r.pressure_drop_Pa, flow_rate_l_min: r.flow_rate_l_min, inlet_area_mm2: r.inlet_area_mm2, max_velocity: r.max_velocity };
+    Object.assign(shown, { method: r.method, cells: r.cells, steps: r.steps, converged: r.converged });
+    const warn = r.warning ? `<p class="muted">⚠ ${escapeHtml(r.warning)}</p>` : "";
+    this.showResult("Flow Simulation - Results", shown, warn + (r.history?.length ? lineChart([{ points: r.history.map((v, i) => [i * 25, v]) }], { xlabel: "step", ylabel: ext ? "drag coefficient" : "pressure drop (Pa)" }) : ""),
+      "sim_run", () => this.cfdPlot());
+  },
+
+  /** Surface pressure (external flow) on the model and the mid-plane speed slice in a window. */
+  async cfdPlot() {
+    const r = await this.evalCall("cfd_results"); if (!r) return;
+    if (r.cp) {
+      this.vp.setDeformation(null); this.vp.setFaceGeometry(null);
+      const all = Object.values(r.cp).flat(), lo = Math.min(...all), hi = Math.max(...all);
+      this.vp.setAnalysis(Object.fromEntries(Object.entries(r.cp).map(([id, v]) => [id, v.map((x) => rgbRamp((x - lo) / ((hi - lo) || 1)))])));
+      this.vp.setLegend({ title: "Pressure coefficient Cp", unit: `U = ${r.speed} m/s, q = ${r.dynamic_pressure_Pa.toFixed(1)} Pa`, min: lo, max: hi, color: (t) => css(rgbRamp(t)) });
+    }
+    const s = r.slice, rows = s.speed, H = rows.length, Wd = rows[0].length;
+    const vals = rows.flat().filter((v) => v !== null && !isNaN(v)), mx = Math.max(...vals) || 1;
+    const cv = document.createElement("canvas"); cv.width = Wd; cv.height = H;
+    const g = cv.getContext("2d"), img = g.createImageData(Wd, H);
+    rows.forEach((row, j) => row.forEach((v, i) => {
+      const k = ((H - 1 - j) * Wd + i) * 4, c = v === null || isNaN(v) ? [90, 90, 90] : rgbRamp(v / mx).map((x) => Math.round(x * 255));
+      img.data[k] = c[0]; img.data[k + 1] = c[1]; img.data[k + 2] = c[2]; img.data[k + 3] = 255;
+    }));
+    g.putImageData(img, 0, 0);
+    // (opened after the results box, which closes once this returns)
+    setTimeout(() => this.modal("Flow - Speed on the Mid Plane", `<img src="${cv.toDataURL()}" style="width:100%;image-rendering:pixelated;border:1px solid var(--border)">
+      <p class="muted">Speed 0 (blue) to ${mx.toPrecision(3)} m/s (red); grey: the part. Flow from left to right.</p>`, null, "sim_run"));
   },
 
   async flowPlot() {
@@ -589,6 +637,36 @@ const MIXIN = {
       ["max_fillet_radius", "Remove fillets up to R (mm, blank: auto)", "number", ""]], { ic: "trash", note: "A simplified copy (new document) without small holes and fillets, for sharing." });
   },
 
+  async pipeSizes() {
+    if (!this._pipeCat) this._pipeCat = (await this.run("list_pipe_standards", {})).result;
+    return this._pipeCat.sizes.map((s) => [s.size, `NPS ${s.size}  (OD ${s.od})`]);
+  },
+
+  /** Routing > Pipe from the piping library: standard sizes, elbows at the corners, end flanges. */
+  async pipeRouteDialog() {
+    const sizes = await this.pipeSizes();
+    const r = await this.cmdForm("Routing - Pipe", "route_pipe_standard",
+      [["points", "Route points x, y, z (one per line or ; between)", "points", "0, 0, 0; 500, 0, 0; 500, 400, 0"],
+        ["size", "Nominal pipe size", "select", "2", sizes], ["schedule", "Schedule", "select", "40", ["40", "80"]],
+        ["elbows", "Elbows", "select", "long", [["long", "Long radius (1.5 D)"], ["short", "Short radius (1.0 D)"]]],
+        ["bend_radius", "Custom bend radius (mm, blank: standard elbow)", "number", ""],
+        ["flanges", "Weld-neck flanges", "select", "both", [["both", "Both ends"], ["start", "Start"], ["end", "End"], ["none", "None"]]]],
+      { ic: "sweep", note: "ASME B36.10 pipe, B16.9 elbows, B16.5 class 150 flanges (nominal sizes). Each part becomes a virtual component listed in the BOM." });
+    if (r) this.showResult("Route - Cut List", { pipes: r.cut_list.length, total_pipe_length_mm: r.pipe_length, elbows: r.elbows, flanges: r.flanges },
+      `<table class="kv">${r.parts.map((p) => `<tr><td>${escapeHtml(p.component)}</td><td>${escapeHtml(p.description)}</td></tr>`).join("")}</table>`, "sweep");
+  },
+
+  async fittingDialog() {
+    const sizes = await this.pipeSizes();
+    await this.cmdForm("Insert Fitting", "insert_fitting",
+      [["kind", "Fitting", "select", "elbow", [["elbow", "Elbow (B16.9)"], ["tee", "Tee, equal (B16.9)"], ["reducer", "Reducer, concentric (B16.9)"], ["cap", "Cap (B16.9)"], ["flange", "Weld-neck flange, class 150 (B16.5)"]]],
+        ["size", "Nominal pipe size", "select", "2", sizes], ["small_size", "Reducer small end", "select", "1", sizes],
+        ["schedule", "Schedule", "select", "40", ["40", "80"]], ["angle", "Elbow angle (deg)", "number", 90],
+        ["elbow_radius", "Elbow radius", "select", "long", [["long", "Long"], ["short", "Short"]]],
+        ["position", "Connection point x, y, z (tee: centre)", "vec", "0, 0, 0"], ["direction", "Pipe axis direction", "vec", "0, 0, 1"],
+        ["turn_direction", "Turn / branch direction", "vec", "1, 0, 0"]], { ic: "sweep" });
+  },
+
   routeDialog(kind) {
     const pipe = kind === "pipe";
     return this.cmdForm(pipe ? "Routing - Pipe" : "Routing - Cable", pipe ? "route_pipe" : "route_cable",
@@ -694,6 +772,8 @@ const MIXIN = {
     if (r) { this.toast(`Macro ran ${r.result.commands} commands.`); this.vp.zoomFit(); }
   },
 };
+
+export { kv, rgbRamp, css };
 
 export function installMore(App) {
   for (const [k, fn] of Object.entries(MIXIN)) App.prototype[k] = fn;

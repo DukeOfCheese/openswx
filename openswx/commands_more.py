@@ -361,7 +361,8 @@ def hole_series(position: Vec3, direction: Vec3, diameters: list[float],
 # ====================================================================== assemblies: smart / magnetic mates, mate references
 __all__ += ["smart_mate", "connection_point", "mate_reference", "magnetic_mate", "magnetic_snap", "apply_mate_references",
             "save_alternate_position", "show_alternate_position", "delete_alternate_position", "set_envelope",
-            "set_speedpak", "large_assembly_mode", "defeature", "pack_and_go", "route_pipe", "route_cable", "weld_bead"]
+            "set_speedpak", "large_assembly_mode", "defeature", "pack_and_go", "route_pipe", "route_cable", "weld_bead",
+            "list_pipe_standards", "route_pipe_standard", "insert_fitting"]
 
 
 @command(category="assembly")
@@ -635,7 +636,7 @@ def pack_and_go(folder: str, prefix: str = "", suffix: str = "", zip_file: str |
 
 
 # ====================================================================== routing, weld beads
-def _virtual_component(shape, base: str, description: str) -> dict:
+def _virtual_component(shape, base: str, description: str, properties: dict | None = None) -> dict:
     """Add a shape to the active assembly as a virtual (embedded) part component, fixed where it is."""
     from .document import PartDocument
     from .features import encode_shape
@@ -643,6 +644,8 @@ def _virtual_component(shape, base: str, description: str) -> dict:
     n = 1 + sum(1 for c in asm.components if c.name.rsplit("-", 1)[0].startswith(base))
     doc = PartDocument(f"{base}{n}")
     doc.properties["Description"] = description
+    for k, v in (properties or {}).items():
+        doc.properties[k] = str(v)
     doc.add_feature("import", {"brep": encode_shape(shape)})
     comp = asm.insert(doc, None, fixed=True)
     return {"component": comp.name, "volume": shape.volume, "assembly": asm.summary()}
@@ -700,6 +703,89 @@ def route_pipe(points: list[Vec3], outer_diameter: float, wall_thickness: float,
     out = _virtual_component(shape, "Pipe", f"Pipe OD {outer_diameter:g} x {wall_thickness:g}, length {path.length:.1f}")
     out["length"] = path.length
     return out
+
+
+@command(mutates=False, category="assembly")
+def list_pipe_standards() -> dict:
+    """The piping library: standard pipe sizes (NPS) with OD and schedule 40 / 80 walls, and the B16.9
+    elbows, tees, reducers, caps and B16.5 class 150 weld-neck flanges available per size."""
+    from . import piping
+    return piping.catalog()
+
+
+def _pipe_props(q: dict) -> dict:
+    props = {"Size": f"NPS {q['size']}", "Schedule": q["schedule"], "OD": f"{q['od']:g}", "Wall": f"{q['wall']:g}",
+             "Fitting": q["kind"]}
+    if q.get("length") is not None:
+        props["Length"] = f"{q['length']:.1f}"
+    if q.get("angle") is not None:
+        props["Angle"] = f"{q['angle']:.1f}"
+    return props
+
+
+@command(category="assembly")
+def route_pipe_standard(points: list[Vec3], size: str, schedule: Literal["40", "80"] = "40",
+                        elbows: Literal["long", "short"] = "long", bend_radius: float | None = None,
+                        flanges: Literal["both", "start", "end", "none"] = "both") -> dict:
+    """Routing > Pipe from the piping library: a route of standard pipe (NPS size, schedule 40 / 80) through
+    points (assembly coordinates, mm). Every corner gets a butt-weld elbow of the corner's angle (B16.9 long or
+    short radius, or bend_radius in mm), the straight runs are cut to length between the fittings, and class 150
+    weld-neck flanges go on the chosen ends. Each pipe, elbow and flange is a virtual component with Size,
+    Schedule, Length / Angle properties for the BOM; the result lists them with the cut list."""
+    from . import piping
+    ends = {"both": ("start", "end"), "start": ("start",), "end": ("end",), "none": ()}[flanges]
+    try:
+        parts = piping.layout(points, str(size), str(schedule), bend_radius if bend_radius else elbows, ends)
+    except ValueError as exc:
+        raise DocumentError(str(exc)) from None
+    made = []
+    for q in parts:
+        base = {"pipe": "Pipe", "elbow": "Elbow", "flange": "Flange"}[q["kind"]]
+        r = _virtual_component(q["shape"], base, q["description"], _pipe_props(q))
+        made.append({"component": r["component"], "kind": q["kind"], "description": q["description"],
+                     **({"length": round(q["length"], 2)} if "length" in q else {}),
+                     **({"angle": round(q["angle"], 2)} if "angle" in q else {})})
+    cut = [m["length"] for m in made if m["kind"] == "pipe"]
+    return {"parts": made, "cut_list": cut, "pipe_length": round(sum(cut), 2),
+            "elbows": sum(m["kind"] == "elbow" for m in made), "flanges": sum(m["kind"] == "flange" for m in made),
+            "assembly": APP.asm.summary()}
+
+
+@command(category="assembly")
+def insert_fitting(kind: Literal["elbow", "tee", "reducer", "cap", "flange"], size: str, position: Vec3,
+                   direction: Vec3 = (0, 0, 1), turn_direction: Vec3 | None = None, schedule: Literal["40", "80"] = "40",
+                   angle: float = 90.0, elbow_radius: Literal["long", "short"] = "long", small_size: str | None = None) -> dict:
+    """Insert one fitting from the piping library into the assembly as a virtual component. position is the
+    fitting's connection end (for a tee: its centre) and direction the way it runs from there (the pipe's
+    axis); turn_direction is where an elbow turns to / a tee's branch points (square to direction). angle for
+    elbows; small_size for a reducer's small end."""
+    from . import piping
+    size, schedule = str(size), str(schedule)
+    try:
+        if kind == "elbow":
+            shape, R, t = piping.elbow_shape(size, schedule, angle, elbow_radius)
+            desc = f"Elbow {angle:g} deg {'LR' if elbow_radius == 'long' else 'SR'} NPS {size} sch {schedule}"
+        elif kind == "tee":
+            shape, _ = piping.tee_shape(size, schedule)
+            desc = f"Tee equal NPS {size} sch {schedule}"
+        elif kind == "reducer":
+            if not small_size:
+                raise ValueError("a reducer needs small_size")
+            shape, _ = piping.reducer_shape(size, str(small_size), schedule)
+            desc = f"Reducer concentric NPS {size} x {small_size} sch {schedule}"
+        elif kind == "cap":
+            shape, _ = piping.cap_shape(size, schedule)
+            desc = f"Cap NPS {size} sch {schedule}"
+        else:
+            shape, _ = piping.flange_shape(size, schedule)
+            desc = f"Flange WN class 150 NPS {size}"
+        spec = piping.pipe(size, schedule)
+    except ValueError as exc:
+        raise DocumentError(str(exc)) from None
+    placed = piping.frame(position, direction, turn_direction) * shape
+    props = _pipe_props({"size": size, "schedule": schedule, "od": spec["od"], "wall": spec["wall"], "kind": kind,
+                         **({"angle": angle} if kind == "elbow" else {})})
+    return _virtual_component(placed, kind.capitalize(), desc, props)
 
 
 @command(category="assembly")
@@ -923,7 +1009,8 @@ def drawing_view_alternate_position(view: str, position: str | None) -> dict:
 
 # ====================================================================== analysis: nonlinear, dynamics, drop, fatigue
 __all__ += ["nonlinear_run", "harmonic_run", "step_response_run", "drop_test_run", "fatigue_run", "fatigue_results",
-            "flow_simulation", "flow_results", "costing", "sustainability_report", "dimxpert_auto", "dimxpert_clear",
+            "flow_simulation", "flow_results", "cfd_external", "cfd_internal", "cfd_results",
+            "costing", "sustainability_report", "dimxpert_auto", "dimxpert_clear",
             "set_render_scene", "add_decal", "delete_decal"]
 
 
@@ -1079,6 +1166,70 @@ def flow_results() -> dict:
         raise DocumentError("run the flow simulation first")
     mesh = _sim_doc().mesh()
     return {"faces": mesh["faces"], "cp": flow_surface_values(cached[1], mesh), **_public(cached[1])}
+
+
+def _cfd_body():
+    from .session import _sim_doc
+    doc = _sim_doc()
+    if doc.body is None:
+        raise DocumentError("the document has no body")
+    return doc
+
+
+@command(mutates=False, category="simulation")
+def cfd_external(speed: float = 10.0, direction: Vec3 = (1, 0, 0), fluid: Literal["air", "water"] = "air",
+                 cells_across: int = 16, max_seconds: float = 300.0) -> dict:
+    """Flow Simulation (Navier-Stokes, external): the part in a free stream of `speed` m/s along `direction`,
+    solved with the lattice Boltzmann method on a voxel grid (cells_across: cells over the part's size square
+    to the flow). Drag and lift (forces in N and coefficients on the frontal area), surface pressure
+    coefficient, wake slice; laminar flows are within ~10 % of reference drag, high Reynolds numbers are a
+    coarse large-eddy estimate (see `warning`). cfd_results plots the pressure and the speed slice."""
+    from .cfd import external_flow
+    doc = _cfd_body()
+    if speed <= 0:
+        raise DocumentError("speed must be positive")
+    try:
+        r = external_flow(doc.body, direction, speed, fluid, cells_across, budget=max_seconds)
+    except ValueError as exc:
+        raise DocumentError(str(exc)) from exc
+    APP.cfd_result = (doc.revision, r)
+    return {"study": "cfd_external", **_public(r)}
+
+
+@command(mutates=False, category="simulation")
+def cfd_internal(axis: Literal["X", "Y", "Z"] = "X", speed: float = 1.0, fluid: Literal["air", "water"] = "water",
+                 cells_across: int = 16, max_seconds: float = 300.0) -> dict:
+    """Flow Simulation (Navier-Stokes, internal, like FloXpress): fluid through the part's internal passage
+    along `axis` - in at the low end, out at the high end - at a mean inlet velocity of `speed` m/s. Pressure
+    drop between the end faces, flow rate, Reynolds number and a speed slice (cfd_results); laminar pipe flow
+    matches Hagen-Poiseuille within ~3 %."""
+    from .cfd import internal_flow
+    doc = _cfd_body()
+    if speed <= 0:
+        raise DocumentError("speed must be positive")
+    try:
+        r = internal_flow(doc.body, axis, speed, fluid, cells_across, budget=max_seconds)
+    except ValueError as exc:
+        raise DocumentError(str(exc)) from exc
+    APP.cfd_result = (doc.revision, r)
+    return {"study": "cfd_internal", **_public(r)}
+
+
+@command(mutates=False, category="simulation", mcp=False)
+def cfd_results() -> dict:
+    """The last cfd_external / cfd_internal study for the UI: per display-mesh vertex pressure coefficient
+    (external flow) and the mid-plane speed slice."""
+    from .cfd import surface_values
+    doc = _cfd_body()
+    cached = getattr(APP, "cfd_result", None)
+    if not cached or cached[0] != doc.revision:
+        raise DocumentError("run the flow simulation first")
+    r = cached[1]
+    out = {**_public(r), "slice": r["_slice"]}
+    if "_surface" in r:
+        mesh = doc.mesh()
+        out.update(faces=mesh["faces"], cp=surface_values(r, mesh))
+    return out
 
 
 @command(mutates=False, category="evaluate")
@@ -1321,14 +1472,9 @@ def pdm_where_used(name: str) -> dict:
 
 
 # ====================================================================== eDrawings-style export
-@command(mutates=False, category="file")
-def export_edrawing(path: str) -> dict:
-    """Publish an eDrawings-style viewer: one self-contained .html file (no install needed; opens in any
-    browser) with the model, its properties and PMI, rotate / pan / zoom, standard views, section, measure,
-    component visibility and markup (pen and notes, saved as PNG / JSON)."""
-    from .ecosystem import viewer_html
+def viewer_payload(doc) -> dict:
+    """The model for the single-file HTML viewer: faces / edges (per component in an assembly), properties, PMI."""
     from .features import mass_properties
-    doc = APP.active_doc
     if doc.body is None:
         raise DocumentError("the document has no body")
     mesh = doc.mesh()
@@ -1350,15 +1496,30 @@ def export_edrawing(path: str) -> dict:
         props.update({"Material": mat.get("name") or "-", "Mass": f"{mp['mass'] / 1000:.4g} kg",
                       "Volume": f"{mp['volume']:.6g} mm³"})
     props.update({k: str(v) for k, v in (getattr(doc, "properties", {}) or {}).items()})
-    payload = {"name": doc.name, "units": getattr(doc, "units", "mm"), "color": mat.get("color"), "faces": faces,
-               "edges": edges, "properties": props, "components": [c.name for c in doc.components] if asm else [],
-               "pmi": [] if asm else list(getattr(doc, "pmi", []) or [])}
+    return {"name": doc.name, "units": getattr(doc, "units", "mm"), "color": mat.get("color"), "faces": faces,
+            "edges": edges, "properties": props, "components": [c.name for c in doc.components] if asm else [],
+            "pmi": [] if asm else list(getattr(doc, "pmi", []) or [])}
+
+
+def write_viewer(path: str, title: str, payload: dict) -> Path:
+    from .ecosystem import viewer_html
     three = (Path(__file__).parent / "web" / "vendor" / "three.module.min.js").read_text(encoding="utf-8")
     p = Path(path)
     if p.suffix.lower() not in (".html", ".htm"):
         p = p.with_suffix(".html")
-    p.write_text(viewer_html(doc.name, payload, three), encoding="utf-8")
-    return {"path": str(p.resolve()), "faces": len(faces), "size_bytes": p.stat().st_size}
+    p.write_text(viewer_html(title, payload, three), encoding="utf-8")
+    return p
+
+
+@command(mutates=False, category="file")
+def export_edrawing(path: str) -> dict:
+    """Publish an eDrawings-style viewer: one self-contained .html file (no install needed; opens in any
+    browser) with the model, its properties and PMI, rotate / pan / zoom, standard views, section, measure,
+    component visibility and markup (pen and notes, saved as PNG / JSON)."""
+    doc = APP.active_doc
+    payload = viewer_payload(doc)
+    p = write_viewer(path, doc.name, payload)
+    return {"path": str(p.resolve()), "faces": len(payload["faces"]), "size_bytes": p.stat().st_size}
 
 
 # ====================================================================== macros

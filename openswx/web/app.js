@@ -5,6 +5,7 @@ import { PropertyManager, SPECS, UNITS, el, escapeHtml } from "./propman.js";
 import { Sketcher } from "./sketcher.js";
 import { DrawingEditor } from "./drawing.js";
 import { MORE_FEATURE_TO_SPEC, MORE_SPECS, MORE_TYPE_ICON, installMore, menuTree, renderMenu } from "./more.js";
+import { installMfg } from "./mfg.js";
 
 const $ = (s) => document.querySelector(s);
 const TYPE_ICON = { sketch: "sketch_item", extrude: "extrude", cut_extrude: "cut_extrude", revolve: "revolve", cut_revolve: "cut_revolve",
@@ -191,7 +192,10 @@ class App {
       ["Mirror Components...", "", () => this.mirrorComponentsDialog()],
       ["Assembly Feature > Hole...", "", () => this.asmCutDialog("hole")], ["Assembly Feature > Extruded Cut...", "", () => this.asmCutDialog("extrude")],
       ["Assembly Feature > Hole Series...", "", () => this.holeSeriesDialog()], ["Assembly Feature > Weld Bead...", "", () => this.feature("weld_bead")],
-      ["Routing > Pipe...", "", () => this.routeDialog("pipe")], ["Routing > Cable / Wire...", "", () => this.routeDialog("cable")], "-",
+      ["Routing > Pipe (Standard)...", "", () => this.pipeRouteDialog()], ["Routing > Tube (Custom Size)...", "", () => this.routeDialog("pipe")],
+      ["Routing > Insert Fitting...", "", () => this.fittingDialog()], ["Routing > Cable / Wire...", "", () => this.routeDialog("cable")],
+      ["Routing > Electrical Connector...", "", () => this.connectorDialog()], ["Routing > Harness Route Segment...", "", () => this.harnessRouteDialog()],
+      ["Routing > From-To Wire List...", "", () => this.fromToDialog()], ["Routing > Build Harness", "", () => this.harnessBuild()], "-",
       ["Exploded View...", "", () => this.explodeDialog()], ["Alternate Position...", "", () => this.altPositionsDialog()]];
     const M = {
       File: () => [["New Part...", "Ctrl+N", () => this.newPart()], ["New Assembly...", "", () => this.newAssembly()], ["Open...", "Ctrl+O", () => this.openFile()],
@@ -231,6 +235,17 @@ class App {
         ["Simulation > Drop Test...", "", () => this.dropTestDialog()], ["Simulation > Fatigue...", "", () => this.fatigueDialog()],
         ["Simulation > Hide Results", "", () => this.simPlot(null)],
         ["Flow Simulation...", "", () => this.flowDialog()], "-",
+        ...(asm() ? [["Electrical > Connector...", "", () => this.connectorDialog()], ["Electrical > Route Segment...", "", () => this.harnessRouteDialog()],
+          ["Electrical > From-To List...", "", () => this.fromToDialog()], ["Electrical > Build Harness", "", () => this.harnessBuild()],
+          ["Electrical > Formboard Drawing...", "", () => this.formboardSave()], ["Electrical > Clear", "", () => this.run("electrical_clear", {})],
+          ["Composer > Steps from Exploded View...", "", () => this.composerAuto()], ["Composer > Add Step...", "", () => this.composerStep()],
+          ["Composer > Publish Instructions...", "", () => this.composerExport()], ["Composer > Clear Steps", "", () => this.run("composer_clear", {})]]
+          : [["CAM > Generate Toolpaths...", "", () => this.camDialog()], ["CAM > Show Toolpaths", "", () => this.camShow()],
+            ["CAM > Hide Toolpaths", "", () => this.camHide()], ["CAM > Save G-code...", "", () => this.camGcode()],
+            ["Plastics > Fill Analysis...", "", () => this.plasticsDialog()], ["Plastics > Fill Time", "", () => this.plasticsPlot("fill_time")],
+            ["Plastics > Pressure at End of Fill", "", () => this.plasticsPlot("pressure")], ["Plastics > Wall Thickness", "", () => this.plasticsPlot("thickness")],
+            ["Plastics > Weld Lines", "", () => this.plasticsPlot("weld")], ["Plastics > Sink Marks", "", () => this.plasticsPlot("sink")],
+            ["Plastics > Hide Results", "", () => this.plasticsPlot(null)], ["Inspection...", "", () => this.inspectionDialog()]]), "-",
         ["DimXpert > Auto Dimension Scheme...", "", () => this.dimxpertDialog()], ["DimXpert > Show / Hide", "", () => this.togglePMI()],
         ["DimXpert > Delete Scheme", "", () => this.run("dimxpert_clear")],
         ["Render Tools > Render...", "", () => this.renderDialog()], ["Render Tools > Decal...", "", () => this.feature("add_decal")],
@@ -370,6 +385,13 @@ class App {
         B("trash", "Delete Scheme", () => this.run("dimxpert_clear"))] }], [B("export", "Publish<br>eDrawings", () => this.publishEDrawing())]],
       "Render Tools": [[B("appearance", "Final<br>Render", () => this.renderDialog()), B("appearance", "Edit<br>Decal", () => this.feature("add_decal")),
         B("appearance", "Edit<br>Appearance", () => this.appearanceDialog())]],
+      Manufacturing: [[B("cut_extrude", "CAM<br>Toolpaths", () => this.camDialog()), { stack: [B("eye", "Show Toolpaths", () => this.camShow()),
+          B("eye", "Hide Toolpaths", () => this.camHide()), B("export", "Save G-code", () => this.camGcode())] }],
+        [B("sim_run", "Plastics<br>Fill", () => this.plasticsDialog()), { stack: [B("sim_stress", "Fill Time", () => this.plasticsPlot("fill_time")),
+          B("sim_stress", "Pressure", () => this.plasticsPlot("pressure")), B("measure", "Wall Thickness", () => this.plasticsPlot("thickness"))] },
+        { stack: [B("sim_stress", "Weld Lines", () => this.plasticsPlot("weld")), B("sim_stress", "Sink Marks", () => this.plasticsPlot("sink")),
+          B("eye", "Hide Results", () => this.plasticsPlot(null))] }],
+        [B("check", "Inspection", () => this.inspectionDialog()), B("drawing", "Make<br>Drawing", () => this.makeDrawing())]],
     };
     if (this.model?.kind === "assembly") {
       const simTab = tabs.Simulation.slice(0, 2); // structural study works on bonded assemblies too
@@ -390,9 +412,15 @@ class App {
           { stack: [B("eye", "Envelope", () => this.compToggle("set_envelope", "envelope", "Envelope")), B("part", "SpeedPak", () => this.compToggle("set_speedpak", "speedpak", "SpeedPak")),
             B("part", "Large Assembly Mode", () => this.run("large_assembly_mode", { on: !this.model.large_assembly_mode }))] },
           { stack: [B("trash", "Defeature", () => this.defeatureDialog()), B("save", "Pack and Go", () => this.packAndGoDialog()), B("folder", "Design Library", () => this.designLibraryDialog())] }],
-        [{ stack: [B("sweep", "Route Pipe", () => this.routeDialog("pipe")), B("sweep", "Route Cable", () => this.routeDialog("cable"))] },
+        [{ stack: [B("sweep", "Route Pipe", () => this.pipeRouteDialog()), B("sweep", "Insert Fitting", () => this.fittingDialog()), B("sweep", "Route Cable", () => this.routeDialog("cable"))] },
           { stack: [B("weldment", "Weld Bead", () => this.feature("weld_bead")), B("hole", "Hole Series", () => this.holeSeriesDialog())] }]];
       tabs.Simulation = simTab;
+      tabs.Electrical = [[B("sweep", "Connector", () => this.connectorDialog()), B("sweep", "Route<br>Segment", () => this.harnessRouteDialog()),
+        B("properties", "From-To<br>List", () => this.fromToDialog())], [B("sweep", "Build<br>Harness", () => this.harnessBuild()),
+        { stack: [B("drawing", "Formboard Drawing", () => this.formboardSave()), B("trash", "Clear Electrical", () => this.run("electrical_clear", {}))] }]];
+      tabs.Composer = [[B("explode", "Exploded<br>View", () => this.explodeDialog()), B("explode", "Steps from<br>Explode", () => this.composerAuto()),
+        B("properties", "Add<br>Step", () => this.composerStep())], [B("export", "Publish<br>Instructions", () => this.composerExport()),
+        B("trash", "Clear<br>Steps", () => this.run("composer_clear", {}))]];
       tabs.Evaluate = [[B("measure", "Measure", () => this.measure()), B("mass", "Mass<br>Properties", () => this.massProps()), B("drawing", "Make<br>Drawing", () => this.makeDrawing()),
         B("properties", "Bill of<br>Materials", () => this.bomDialog()), B("interference", "Clearance<br>Verification", () => this.clearanceDialog())],
         [B("export", "Publish<br>eDrawings", () => this.publishEDrawing()), B("appearance", "Final<br>Render", () => this.renderDialog())]];
@@ -2710,4 +2738,5 @@ function massHtml(mp, full = false) {
 }
 
 installMore(App);
+installMfg(App);
 window.app = new App();

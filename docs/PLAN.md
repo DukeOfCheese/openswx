@@ -437,7 +437,8 @@ SOLIDWORKS, in the order they will be worked:
       (pan cross head: same volume, 0.39 mm off; nafems_ic43: same volume, area differs; aw_spider: an
       inverted (negative volume) body; bowl bottom: Cavity not supported; center: fillets after imported
       bosses); none exact yet. A 29-part spread of exact parts is unchanged (all exact).
-Out of scope: PDM, rendering (Visualize), CAM, costing, plastics / flow simulation.
+Out of scope at the time: PDM, rendering (Visualize), CAM, costing, plastics / flow simulation (all added later,
+see the passes below).
 
 ## Feature history from .sldprt (standalone, no SOLIDWORKS at runtime)
 Goal: rebuild an editable openswx feature tree from a part's `Contents/Config-<n>-ResolvedFeatures` stream.
@@ -617,6 +618,88 @@ Done (backend + tests + UI; commands in `commands_more.py`, builders in `advance
       Render Tools tabs.
 - [x] Fixed: sliver cut cells (< 10% inside) carried mass with under-integrated stiffness, giving spurious
       low modes in frequency studies (and runaway nodes under inertial loads) on parts with holes.
-Limits (honest): flow is ideal-flow only; costing / sustainability use generic rates; routing has no
+Limits (honest, updated below): costing / sustainability use generic rates; flow was ideal-flow only and routing had no
 fittings library; PDM is a shared-folder vault (no server, no permissions); rendering is real-time PBR,
 not path traced.
+- [x] Installer layout (2026-10-26, user: "not have the _internal folder at all?"): the installer is per
+      user and puts only two launchers (packaging/launcher.cs, ~13 KB each, compiled by build.py with the
+      Windows .NET Framework csc) in the install folder; the PyInstaller runtime (exe + _internal) goes to
+      %LOCALAPPDATA%\openswx\runtime (HKCU\Software\openswx\RuntimeDir; OPENSWX_RUNTIME overrides). The
+      CLI launcher passes arguments, exit code and stdio through (MCP works through it). One-file
+      PyInstaller builds were rejected: they unpack ~400 MB to temp on every start. The portable zip keeps
+      the plain onedir layout. Verified: silent install, launch from AppData, MCP initialize, clean uninstall.
+
+## Follow-up pass (2026-10-26, user approved: more exact rebuilds, .slddrw, a real flow solver, fittings)
+- [x] Navier-Stokes flow (openswx/cfd.py; cfd_external / cfd_internal / cfd_results; Flow Simulation dialog
+      asks for external NS, internal NS or the old potential flow): lattice Boltzmann D3Q19 on the voxel grid,
+      He-Luo incompressible equilibrium (a long passage's pressure drop no longer changes the velocities),
+      TRT collision with the magic parameter 3/16 for laminar flow, regularised collision + Smagorinsky
+      (Hou) when the grid is under-resolved (plain TRT went unstable at Re 1e4), half-way bounce-back walls,
+      momentum-exchange forces, inlet velocity trimmed until the measured entry flux matches (an equilibrium
+      inlet loses ~10 % along the wall), convergence = window means half a flow-through apart (six close
+      readings stopped runs while the drag was still drifting). Kernel by explicit direction sums and
+      slice streaming: ~10x faster than the first version. Measured: pipe Re 10 within 1.5-3 % of
+      Hagen-Poiseuille + entrance loss (umax / U = 2.00); sphere Cd at Re 20 +5 % (Clift 2.73), Re 100 +10 %;
+      open (zero-gradient) sides beat free-stream sides (blockage: +40 % at 1 D margins). At Re 1e4 the
+      coarse LES gives sphere Cd 0.7-0.9 for 0.4: results carry a `warning` there. Under 10 cells across the
+      wall is too coarse (Cd 0.8 at 8 cells). test_cfd_pipe_flow_and_sphere_drag.
+- [x] Piping library (openswx/piping.py; list_pipe_standards, route_pipe_standard, insert_fitting; Insert >
+      Routing > Pipe (Standard) / Insert Fitting): NPS 1/4-12 sch 40 / 80 (B36.10), B16.9 long / short radius
+      elbows at any corner angle, equal tees, concentric reducers, caps, B16.5 class 150 weld-neck flanges
+      (nominal values, for layout and BOM). A route cuts its runs to length between the fittings (corner:
+      R tan(angle / 2) each side; flange: its length) and refuses runs too short for them; every part is a
+      virtual component with Size / Schedule / Length / Angle properties. test_piping_library_route_and_fittings.
+- [x] Parasolid reader: a face whose loops are vertex-less rings on a closed but not periodic B-spline
+      surface (an extruded closed spline, e.g. foot_board's 0.38 mm wall) lost a loop in ShapeFix and came out
+      with zero area, so the whole body was invalid; such surfaces are made periodic first, and ShapeFix adds
+      the seam (test_parasolid_band_of_ring_loops_on_closed_bspline). Corpus re-read: 752 of 841 stored
+      bodies valid (736 in the first read); bearing.sldprt's new volume (1.06e6 mm3) is confirmed by voxel
+      classification - the first read's 1.67e5 was the wrong one.
+- [~] Feature history: annotation-only feature types (sketch pictures, weld symbols, plane sections, sheet
+      metal tables / templates) are skipped instead of failing; the parts whose stored body became valid
+      re-run: +2 exact (nafems_freq_test14, tutor1). The rest of those failures are individual (foot_board:
+      later bosses / patterns misplaced under a Scale; wheel, cam2: other features). No full re-survey.
+- [ ] .slddrw: dimension positions, balloons, GD&T not decoded. The samples hold 16 dimensions in 3
+      drawings; the doubles near the display texts are model-space values (5, 95, 100 for box.slddrw), so
+      positions need SOLIDWORKS-made test drawings (dev oracle) to pin down. Not started.
+
+## Manufacturing and documentation pass (2026-10-27, user: "continue with any remaining features")
+Commands in `commands_mfg.py`; UI in `web/mfg.js` (Tools > CAM / Plastics / Inspection on parts, Tools > Electrical /
+Composer and Insert > Routing on assemblies; Manufacturing, Electrical and Composer ribbon tabs).
+- [x] CAM (`cam.py`; cam_generate / cam_gcode / cam_toolpaths): 3-axis, setup from any of +-X/Y/Z. The part is a
+      height map from the tessellation; Z-level roughing (zig-zag + contour, `leave` on walls and floors), wall and
+      floor finishing (floors from the upward planar B-rep faces, so they are cut exactly), drilling of B-rep holes
+      along the tool axis (faces grouped by axis + radius, reachable from above; G81 / G83 peck past 3 D; the mill
+      leaves them alone). Tool centre kept r + leave + one cell from material: the raster cell is the precision.
+      Marching-squares contours (climb), Douglas-Peucker, greedy linking with feed links that stay in the cleared
+      area. Posts: fanuc, linuxcnc, grbl. Feeds from material cutting speed / chip load. Stock-removal simulation on
+      the raster: no gouge on the test block; only the pocket's inside corners keep material (the tool radius).
+      Limits: flat end mills only, no rest machining, adaptive clearing, 3D finishing of curved floors (they are
+      stepped at the levels), 4/5-axis or turning.
+- [x] Plastics (`plastics.py`; plastics_fill / plastics_results): voxel Hele-Shaw / Darcy fill with permeability
+      t^2 / 12 eta from the local wall thickness (exact B-rep chords on the three axes through each cell centre,
+      1/t^2 = sum 1/chord^2 - the first version used the voxel fractions and read a 2 mm wall as 1.75 mm), power-law
+      melt with eta at the wall shear rate (reproduces power-law slit flow exactly), front advanced by the fluxes into
+      it, time from the volume in the cavity (dropping overflow first made a 1 s fill take 1.64 s). Measured: line-
+      gated 100 x 20 x 2 plate within 0.2 % of 12 eta Q L / W t^3 (Newtonian) and of the power-law formula, fill time
+      0.99 s for 1 s. Weld lines: neighbours on either side flowing at each other (> ~45 deg); air traps: small
+      pieces of unfilled space the melt closes in, and the last place to fill when it is inside the outline (a thick
+      rim racing round a thin panel). Clamp force, cooling time (slab), sink risk (> 1.5 x nominal), short shot over
+      the machine limit, freeze-time warning. 8 generic materials. Limits: isothermal (no frozen layer, no packing,
+      warpage or fibre orientation); the chord thickness over-reads wall junctions.
+- [x] Inspection (`inspection.py`; inspection_characteristics / _set / _settings / _report): numbered
+      characteristics from the drawing's dimensions, GD&T frames and surface finishes plus the PMI (sizes, H7 holes,
+      positions), ISO 2768 f/m/c/v general tolerances for untoleranced ones (linear, radius, angle by leg length),
+      overrides, measured values with pass / fail, stable numbering, sheet zones (ISO 5457), inspection balloons on
+      the drawing sheets, AS9102-style forms 1-3 (HTML) and CSV.
+- [x] Electrical (`electrical.py`; electrical_connector / _route_segment / _wires / _import_wires / _harness /
+      _formboard / _clear / _info): connectors on components (connection point, else centre), routes joined into a
+      network, wires routed by shortest path with breakouts, length = path x (1 + slack) + end allowance, resistance and
+      voltage drop (AWG and metric copper tables), bundle diameters (1.15 sqrt(sum OD^2)), the harness as one virtual
+      component, wire BOM, pin checks, flattened formboard SVG with the wire and connector tables. Limits: no
+      schematic editor, no splices / multi-core cables, no terminal or connector library.
+- [x] Composer (composer_auto / _add_step / _steps / _clear / _export): steps from the exploded view (assembly
+      instructions or disassembly) or by hand (offsets, hidden, see-through, view, note), published in the
+      single-file HTML viewer with Play / previous / next animation (`viewer_payload` / `write_viewer` now shared
+      with eDrawings export).
+- Not done: Cloud (3DEXPERIENCE-style collaboration) - out of scope for a local app; PDM covers check-in / out.

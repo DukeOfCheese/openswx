@@ -28,7 +28,9 @@ SKIP = {"moRefPlane_c", "moRefAxis_c", "moRefPoint_c", "moCoordSys_c", "moSensor
 # features that change faces but not the solid (split lines): left out and reported
 # base bodies that are not editable in SOLIDWORKS either: imported, or derived / mirrored from another part
 FIXED_BASE = {"moBaseBody_c", "moStock_c", "moMirrorStock_c"}
-NEUTRAL = {"moPLine_c", "moCosmeticThread_c", "moConnectionPoint_c", "moRoutePoint_c"}  # (no geometry)
+NEUTRAL = {"moPLine_c", "moCosmeticThread_c", "moConnectionPoint_c", "moRoutePoint_c",  # (no geometry)
+           "moSketchBitmap_c", "moWeldSymbol_c", "moCosmeticWeldBeadSymbol_c", "moPlaneSection_c",
+           "moSMEnvTableFeat_c", "moTemplateSheetMetal_c"}
 TOL = 1e-3  # mm, point on the stored body's boundary
 MATCH = 1e-3  # relative volume / area agreement for accepting the rebuild
 

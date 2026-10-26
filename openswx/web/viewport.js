@@ -29,7 +29,7 @@ export class Viewport {
     this.target = new THREE.Vector3();
     this.viewHeight = 200;
     this.groups = {};
-    for (const g of ["body", "edges", "sketch", "planes", "refs", "preview", "temp", "origin"]) {
+    for (const g of ["body", "edges", "sketch", "planes", "refs", "preview", "temp", "origin", "overlay"]) {
       this.groups[g] = new THREE.Group(); this.scene.add(this.groups[g]);
     }
     this.faces = new Map(); this.edges = new Map(); this.sketchEnts = []; this.planeObjs = new Map(); this.refObjs = new Map();
@@ -345,6 +345,23 @@ export class Viewport {
         obj = new THREE.Line(geo, mat); if (it.dashed) obj.computeLineDistances();
       }
       obj.renderOrder = 10; this.groups.temp.add(obj);
+    }
+    this.dirty = true;
+  }
+
+  // result overlays that stay until cleared (CAM toolpaths, plastics markers): {pts, color, dashed, point, size, onTop}
+  setOverlay(items) {
+    this._clear(this.groups.overlay);
+    for (const it of items || []) {
+      const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(it.pts, 3));
+      let obj;
+      if (it.point) obj = new THREE.Points(geo, new THREE.PointsMaterial({ color: it.color ?? COL.hover, size: it.size ?? 8, sizeAttenuation: false, depthTest: !it.onTop }));
+      else {
+        const mat = it.dashed ? new THREE.LineDashedMaterial({ color: it.color ?? 0x888888, dashSize: 1.5, gapSize: 1.5, depthTest: !it.onTop })
+          : new THREE.LineBasicMaterial({ color: it.color ?? 0x2f7be0, depthTest: !it.onTop });
+        obj = new THREE.Line(geo, mat); if (it.dashed) obj.computeLineDistances();
+      }
+      obj.renderOrder = 8; this.groups.overlay.add(obj);
     }
     this.dirty = true;
   }

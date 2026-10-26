@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import threading
 import webbrowser
@@ -85,8 +86,9 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"removed": fileassoc.unregister()}, indent=1))
             return 0
         exe = a.exe
-        if not exe and getattr(sys, "frozen", False):  # the windowed app beside openswx-cli.exe
-            gui = Path(sys.executable).with_name("openswx.exe")
+        if not exe and getattr(sys, "frozen", False):  # the windowed app beside openswx-cli.exe (or its launcher)
+            launcher = os.environ.get("OPENSWX_LAUNCHER_DIR")
+            gui = Path(launcher) / "openswx.exe" if launcher else Path(sys.executable).with_name("openswx.exe")
             exe = str(gui if gui.exists() else Path(sys.executable))
         if not exe:
             print("pass --exe (the program files should open with) when running from source", file=sys.stderr)

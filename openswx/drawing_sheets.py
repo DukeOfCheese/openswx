@@ -456,6 +456,9 @@ def render_sheet(doc, st: dict, sheet: dict, cache: dict | None = None) -> str:
     out += _sheet_tables(doc, st, sheet, W, H, margin, cache)
     from . import drawing_more as DM
     out += DM.annotations(st, sheet)
+    if (st.get("inspection") or {}).get("balloons"):
+        from .inspection import balloon_svg
+        out += balloon_svg(st, sheet, "\n".join(out))
     if st.get("format"):  # a sheet format (title-block template) chosen for the drawing
         vals = DM.title_fields(doc, sheet, st.get("title"), D._scale_label(float(sheet.get("scale") or 1.0)),
                                sheet.get("projection", "third"))

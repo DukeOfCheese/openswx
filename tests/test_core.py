@@ -3785,3 +3785,240 @@ def test_holes_do_not_give_spurious_modes_or_runaway_drop_nodes():
     r = solve_drop(holed, mat, [face(holed, 1, -1)], 1000, (0, -1, 0))
     assert r["peak_acceleration_g"] == pytest.approx(plain["peak_acceleration_g"], rel=0.05)
     assert r["max_displacement"] < 1.5 * plain["max_displacement"] and r["max_von_mises"] < 3 * plain["max_von_mises"]
+
+
+def test_piping_library_route_and_fittings():
+    from openswx import piping
+    p = piping.pipe("2", "40")
+    assert (p["od"], p["wall"]) == (60.3, 3.91)
+    el, R, t = piping.elbow_shape("2", "40", 90)
+    assert (R, t) == (76.0, pytest.approx(76.0))  # B16.9 long radius: centre-to-end 1.5 x NPS
+    assert el.volume == pytest.approx(PI / 4 * (p["od"] ** 2 - p["id"] ** 2) * R * PI / 2, rel=1e-6)
+    bb = el.bounding_box()  # enters along +Z at the origin, leaves along +X at (R, 0, R)
+    assert (bb.min.Z, bb.max.X) == (pytest.approx(0, abs=1e-6), pytest.approx(R, abs=1e-6))
+    for shape, _ in (piping.tee_shape("2", "40"), piping.reducer_shape("4", "2", "40"), piping.cap_shape("2", "40"),
+                     piping.flange_shape("2", "40")):
+        assert shape.is_valid and shape.volume > 0
+    S.new_assembly("Skid")
+    route = [[0, 0, 0], [500, 0, 0], [500, 400, 0], [500, 400, 300]]
+    r = S.route_pipe_standard(route, "2")
+    # each run loses an elbow's centre-to-end (76) per corner and a flange's length (62) per flanged end
+    assert r["cut_list"] == [pytest.approx(500 - 62 - 76), pytest.approx(400 - 2 * 76), pytest.approx(300 - 76 - 62)]
+    assert (r["elbows"], r["flanges"]) == (2, 2)
+    assert [x["kind"] for x in r["parts"]] == ["flange", "pipe", "elbow", "pipe", "elbow", "pipe", "flange"]
+    parts = sum(q["shape"].volume for q in piping.layout(route, "2"))
+    assert S.get_mass_properties()["volume"] == pytest.approx(parts, rel=1e-6)  # parts only touch: no overlap
+    with pytest.raises(Exception, match="shorter than its fittings"):
+        S.route_pipe_standard([[0, 0, 0], [100, 0, 0], [100, 50, 0]], "2")
+    tee = S.insert_fitting("tee", "2", [0, 0, 600], [0, 0, 1], [1, 0, 0])
+    assert tee["component"].startswith("Tee")
+    assert len(S.list_pipe_standards()["sizes"]) == 16
+
+
+def test_parasolid_band_of_ring_loops_on_closed_bspline():
+    # an XT face between two vertex-less loops on a closed (not periodic) B-spline surface needs no seam in
+    # Parasolid; OCC does, and ShapeFix only adds one on a periodic surface (foot_board.sldprt's 0.38 mm wall)
+    from OCP.BRep import BRep_Builder
+    from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeEdge
+    from OCP.GeomConvert import GeomConvert
+    from OCP.Geom import Geom_Circle
+    from OCP.ShapeFix import ShapeFix_Face
+    from OCP.TopoDS import TopoDS, TopoDS_Face, TopoDS_Wire
+    from OCP.gp import gp_Ax2, gp_Circ, gp_Dir, gp_Pnt, gp_Vec
+    from build123d import Shape
+    from openswx.parasolid import _Builder
+    circ = GeomConvert.CurveToBSplineCurve_s(Geom_Circle(gp_Circ(gp_Ax2(gp_Pnt(0, 0, 0), gp_Dir(0, 0, 1)), 10.0)))
+    circ.SetNotPeriodic()  # closed, not periodic: as XT stores it
+    surf = _Builder._bspline_extrusion(circ, (0, 0, 1), 100.0)
+    assert surf.IsUClosed() and not surf.IsUPeriodic()
+    b = BRep_Builder()
+    wires = []
+    for z, rev in ((0.0, False), (5.0, True)):
+        e = BRepBuilderAPI_MakeEdge(circ.Translated(gp_Vec(0, 0, z))).Edge()
+        w = TopoDS_Wire()
+        b.MakeWire(w)
+        b.Add(w, TopoDS.Edge(e.Reversed()) if rev else e)
+        wires.append(w)
+
+    def band(s):
+        f = TopoDS_Face()
+        b.MakeFace(f, s, 1e-7)
+        for w in wires:
+            b.Add(f, w)
+        fx = ShapeFix_Face(f)
+        fx.Perform()
+        return abs(Shape.cast(fx.Face()).area)
+    assert all(_Builder._ring(w) for w in wires)
+    assert band(surf) < 1e-6  # (as read before: one loop dropped, a zero-area face)
+    # (OCC's default area integration is ~0.3 % off on rational B-spline faces)
+    assert band(_Builder._periodic(surf)) == pytest.approx(2 * PI * 10 * 5, rel=1e-2)
+
+
+def test_cfd_pipe_flow_and_sphere_drag():
+    from build123d import Cylinder, Rot, Sphere
+    from openswx.cfd import external_flow, internal_flow
+    # laminar pipe flow (Re 10): Hagen-Poiseuille plus the entrance loss (K ~ 1.25), parabolic profile
+    pipe = Rot(0, 90, 0) * (Cylinder(8, 60) - Cylinder(5, 62))
+    r = internal_flow(pipe, "X", 0.001, "water", cells_across=10)
+    D = 2 * math.sqrt(r["inlet_area_mm2"] / PI) * 1e-3
+    expected = 32 * 1e-3 * 0.060 * 0.001 / D ** 2 + 1.25 * 998 * 0.001 ** 2 / 2
+    assert r["converged"] and r["pressure_drop_Pa"] == pytest.approx(expected, rel=0.05)
+    assert r["max_velocity"] == pytest.approx(2 * 0.001, rel=0.03)
+    # sphere at Re 20: the standard drag curve (Clift et al.) gives Cd = 2.73
+    nu = 1.81e-5 / 1.204
+    s = external_flow(Sphere(5), (1, 0, 0), 20 * nu / 0.010, "air", cells_across=12)
+    assert s["converged"] and s["warning"] is None
+    assert s["drag_coefficient"] == pytest.approx(24 / 20 * (1 + 0.1935 * 20 ** 0.6305), rel=0.12)
+    assert abs(s["lift_coefficients"][0]) < 0.05 and s["max_cp"] > 0.9  # (viscous stagnation: over 1 at Re 20)
+    S.new_part("Duct")
+    sk = S.create_sketch("Right")["sketch"]
+    S.sketch_circle(sk, [0, 0], 8)
+    S.sketch_circle(sk, [0, 0], 5)
+    S.extrude(sk, depth=60)
+    with pytest.raises(Exception, match="passage"):
+        S.cfd_internal(axis="Y", speed=0.001)
+
+
+def _pocket_block():
+    S.new_part("Block")
+    sk = S.create_sketch("Front")["sketch"]
+    S.sketch_rectangle(sk, [0, 0], [60, 40])
+    S.extrude(sk, depth=20)
+    sk = S.create_sketch("Front")["sketch"]
+    S.sketch_rectangle(sk, [15, 10], [45, 30])
+    S.cut_extrude(sk, depth=8, reverse=True)
+    sk = S.create_sketch("Front")["sketch"]
+    S.sketch_circle(sk, [6, 20], 3)
+    S.sketch_circle(sk, [54, 20], 3)
+    S.cut_extrude(sk, end_condition="Through All", reverse=True)
+
+
+def test_cam_toolpaths_gcode_and_stock_check(tmp_path):
+    _pocket_block()
+    r = S.cam_generate(setup="-Z", tool_diameter=6, leave=0.3)
+    assert [h["diameter"] for h in r["holes"]] == [6.0, 6.0] and all(h["through"] for h in r["holes"])
+    assert [o["kind"] for o in r["operations"]] == ["rough", "finish", "drill"]
+    v = r["verification"]
+    assert v["gouge_mm"] <= r["precision_mm"]  # the tool never enters the part
+    assert v["area_over_0.1mm_pct"] < 1.0  # only the pocket's inside corners keep material (the tool radius)
+    assert -9.0 in r["levels"]  # the pocket floor is a cutting level (stock top 1 mm above the part)
+    g = S.cam_gcode(post="fanuc", path=str(tmp_path / "block"))
+    text = Path(g["path"]).read_text()
+    assert g["path"].endswith(".nc") and "T1 M6" in text and "T2 M6" in text and "G43" in text
+    assert "G83 X7 Y21 Z-23.8 R0 Q6" in text and "X55 Y21" in text  # peck drilling through, both holes
+    grbl = S.cam_gcode(post="grbl")["gcode"]
+    assert "G83" not in grbl and "M0" in grbl and "M6" not in grbl
+    tp = S.cam_toolpaths()
+    assert len(tp["paths"]) == 3 and tp["paths"][2]["feed"][0][:3] == pytest.approx([6, 20, -1])  # R plane, part coords
+    with pytest.raises(Exception, match="stepover"):
+        S.cam_generate(tool_diameter=6, stepover=6)
+
+
+def test_plastics_fill_matches_slit_flow_and_finds_weld_lines():
+    from build123d import Align, Box, Cylinder, Pos
+    from openswx.plastics import fill, material
+    plate = Box(100, 20, 2, align=(Align.MIN, Align.MIN, Align.MIN))
+    gate = [f for f in plate.faces() if abs(f.center().X) < 1e-6][0]
+    # a line gate along the end: 1-D slit flow, dp = 12 eta Q L / (W t^3) (Newtonian) or the power-law form
+    r = fill(plate, [gate], material("ABS", newtonian=True), fill_time=1.0)
+    assert r["nominal_wall_mm"] == pytest.approx(2.0, abs=0.02)
+    assert r["max_injection_pressure_MPa"] == pytest.approx(12 * 200 * 4e-6 * 0.1 / (0.02 * 0.002 ** 3) / 1e6, rel=0.02)
+    assert r["fill_time_s"] == pytest.approx(1.0, abs=0.03) and r["weld_line_cells"] == 0 and not r["air_traps"]
+    m = material("ABS")
+    n = m["n"]
+    expected = m["consistency"] / 0.001 * ((2 * n + 1) / n * 0.1 / 0.001) ** n * 0.1 / 1e6
+    assert fill(plate, [gate], m, fill_time=1.0)["max_injection_pressure_MPa"] == pytest.approx(expected, rel=0.02)
+    holed = plate - Pos(40, 10, 1) * Cylinder(4, 4)
+    w = fill(holed, [gate], m, fill_time=1.0)
+    assert w["weld_line_cells"] > 0 and all(p[0] > 44 for p in w["weld_lines"])  # behind the hole
+    assert not fill(plate, [(0, 10, 1)], m, fill_time=1.0)["air_traps"]  # ends at the outline: the parting line vents it
+    # race-tracking: the melt runs round a thick rim and closes in the thin panel, trapping air inside it
+    frame = Box(60, 60, 3, align=(Align.MIN,) * 3) - Pos(6, 6, 1) * Box(48, 48, 3, align=(Align.MIN,) * 3)
+    traps = fill(frame, [(0, 30, 1.5)], m, fill_time=1.0)["air_traps"]
+    assert len(traps) == 1 and 40 < traps[0][0] < 54 and traps[0][2] < 1
+    short = fill(plate, [gate], material("PC"), fill_time=0.05, max_pressure_MPa=50)
+    assert short["short_shot"] and short["filled_pct"] < 100 and "short shot" in short["warnings"][0]
+    S.new_part("Lid")
+    sk = S.create_sketch("Front")["sketch"]
+    S.sketch_rectangle(sk, [0, 0], [60, 40])
+    S.extrude(sk, depth=2)
+    p = S.plastics_fill(gates=[[0, 20, 1]], material="PP")
+    assert p["filled_pct"] == 100 and p["clamp_force_tonne"] > 0 and p["cooling_time_s"] > 0
+
+
+def test_inspection_characteristics_results_and_report(tmp_path):
+    _pocket_block()
+    v = S.drawing_new(sheet="A3")["views"][0]
+    S.drawing_dimension_value(v, "60")
+    S.drawing_dimension_value(v, "40")
+    S.drawing_dimension_value(v, "⌀6")
+    S.drawing_add_gdt("flatness", 0.05, 200, 60)
+    S.dimxpert_auto()
+    chars = S.inspection_characteristics()["characteristics"]
+    req = {c["source"]: c["requirement"] for c in chars}
+    assert [c["number"] for c in chars] == list(range(1, len(chars) + 1))
+    assert req["Dim1"].startswith("60 ±0.3") and "ISO 2768-m" in req["Dim1"]  # 30-120 mm, class m
+    assert req["Dim3"].startswith("⌀6 ±0.1") and req["GTol1"] == "Flatness 0.05"
+    assert any(c["designator"] == "Position" for c in chars)
+    S.inspection_set(1, measured=[60.05, 59.9])
+    S.inspection_set("Dim2", measured=[40.6])
+    S.inspection_settings(general_tolerance="f", part_number="P-100")
+    out = S.inspection_characteristics()
+    c1 = out["characteristics"][0]
+    assert c1["source"] == "Dim1" and c1["max"] == pytest.approx(60.15) and c1["result"] == "pass"
+    assert out["summary"]["failed"] == 1 and out["summary"]["status"] == "fail"
+    S.drawing_delete_dimension("Dim1")  # numbers stay with their characteristics
+    assert S.inspection_characteristics()["characteristics"][0]["source"] == "Dim2"
+    html = Path(S.inspection_report(str(tmp_path / "fai"))["path"]).read_text(encoding="utf-8")
+    assert "Form 3" in html and "P-100" in html and "FAIL" in html
+    csv_text = Path(S.inspection_report(str(tmp_path / "fai"), format="csv")["path"]).read_text(encoding="utf-8")
+    assert csv_text.splitlines()[0].startswith("Char No.")
+    svg = S.export_drawing(str(tmp_path / "d.svg"))["path"]
+    assert Path(svg).read_text(encoding="utf-8").count("insp-balloon") >= 3
+
+
+def test_electrical_harness_and_composer(tmp_path):
+    def box(name, w, h, d):
+        S.new_part(name)
+        sk = S.create_sketch("Front")["sketch"]
+        S.sketch_rectangle(sk, [0, 0], [w, h])
+        S.extrude(sk, depth=d)
+    box("Plate", 300, 200, 5)
+    for n in ("ConnA", "ConnB", "ConnC"):
+        box(n, 20, 10, 10)
+    S.new_assembly("Rig")
+    S.insert_component("Plate", [0, 0, 0])
+    S.insert_component("ConnA", [20, 20, 5])
+    S.insert_component("ConnB", [260, 20, 5])
+    S.insert_component("ConnC", [140, 170, 5])
+    S.electrical_connector("J1", "ConnA-1", pins=4)  # at the centre (30, 25, 10)
+    S.electrical_connector("J2", "ConnB-1", pins=4)
+    S.electrical_connector("J3", "ConnC-1", pins=2)
+    S.electrical_route_segment([[30, 40, 20], [150, 40, 20], [270, 40, 20]])
+    S.electrical_route_segment([[150, 40, 20], [150, 160, 20]])
+    S.electrical_wires([{"id": "W1", "from": "J1-1", "to": "J2-1", "gauge": "20 AWG", "color": "RD"},
+                        {"id": "W2", "from": "J1-2", "to": "J2-2", "gauge": "20 AWG", "color": "BK"},
+                        {"id": "W3", "from": "J1-3", "to": "J3-1", "gauge": "24 AWG", "color": "BU"}])
+    h = S.electrical_harness(current=2.0)
+    w1 = next(w for w in h["wires"] if w["id"] == "W1")
+    breakout = math.sqrt(15 ** 2 + 10 ** 2)
+    assert w1["length"] == pytest.approx((240 + 2 * breakout) * 1.05 + 50, abs=0.1)
+    assert w1["voltage_drop_V"] == pytest.approx(2.0 * 33.3 * w1["length"] / 1e6, rel=1e-3)
+    trunk = [s for s in h["segments"] if set(s["wires"]) == {"W1", "W2", "W3"}]
+    assert trunk and trunk[0]["diameter"] == pytest.approx(1.15 * math.sqrt(2 * 1.5 ** 2 + 1.1 ** 2), abs=1e-3)
+    assert h["component"].startswith("Harness") and not h["warnings"]
+    svg = Path(S.electrical_formboard(str(tmp_path / "harness"))["path"]).read_text(encoding="utf-8")
+    assert "formboard" in svg and "J3" in svg and "W3" in svg
+    S.electrical_wires([{"id": "W9", "from": "J3-3", "to": "J1-4"}])
+    with pytest.raises(Exception, match="pins 1-2"):
+        S.electrical_harness()
+    S.explode_step(["ConnA-1"], [0, 0, 1], 60)
+    S.explode_step(["ConnB-1", "ConnC-1"], [0, 0, 1], 100)
+    assert S.composer_auto("assembly")["steps"] == ["Parts", "Install ConnB-1, ConnC-1", "Install ConnA-1"]
+    steps = S.composer_steps()["steps"]
+    assert steps[0]["offsets"]["ConnB-1"] == [0.0, 0.0, 100.0] and steps[2]["offsets"] == {}
+    S.composer_add_step("See through", explode_steps=1, transparent=["Plate-1"])
+    html = Path(S.composer_export(str(tmp_path / "rig"))["path"]).read_text(encoding="utf-8")
+    assert '"steps":' in html and "See through" in html and "splay" in html
+    saved = S.APP.asm.to_dict()
+    assert saved["electrical"]["connectors"]["J1"]["pins"] == 4 and len(saved["composer"]["steps"]) == 4

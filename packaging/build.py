@@ -3,7 +3,8 @@ portable zip.
 
     .venv\\Scripts\\python packaging\\build.py [--skip-app] [--zip]
 
-Outputs in dist-new\\: openswx\\ (the app folder), openswx-setup-<version>.exe and/or
+Outputs in dist-new\\: openswx\\ (the app folder), openswx-setup-<version>.exe (installs two small launchers;
+the app folder itself goes to %LOCALAPPDATA%\\openswx\\runtime) and/or
 openswx-<version>-win64.zip (unzip anywhere and run openswx.exe; `openswx-cli register-file-types` adds
 the file associations the installer would).
 """
@@ -28,6 +29,18 @@ def version() -> str:
     return m.group(1) if m else "0.0.0"
 
 
+def build_launchers() -> None:
+    """The installer's openswx.exe / openswx-cli.exe (packaging/launcher.cs): they start the runtime in AppData.
+    Compiled with the C# compiler of the .NET Framework that ships with Windows."""
+    csc = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Microsoft.NET" / "Framework64" / "v4.0.30319" / "csc.exe"
+    out = ROOT / "build-new" / "launcher"
+    out.mkdir(parents=True, exist_ok=True)
+    src, ico = ROOT / "packaging" / "launcher.cs", ROOT / "packaging" / "openswx.ico"
+    for name, opts in (("openswx.exe", ["/target:winexe", "/r:System.Windows.Forms.dll"]),
+                       ("openswx-cli.exe", ["/target:exe", "/define:CLI"])):
+        subprocess.run([str(csc), "/nologo", *opts, f"/win32icon:{ico}", f"/out:{out / name}", str(src)], check=True)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-app", action="store_true", help="reuse dist-new\\openswx instead of rebuilding it")
@@ -42,6 +55,7 @@ def main() -> int:
     ver = version()
     iscc = next((p for p in ISCC if p.exists()), None)
     if iscc:
+        build_launchers()
         subprocess.run([str(iscc), f"/DAppVersion={ver}", str(ROOT / "packaging" / "openswx.iss")], check=True, cwd=ROOT)
         print(f"installer: {DIST / f'openswx-setup-{ver}.exe'}")
     if a.zip or not iscc:

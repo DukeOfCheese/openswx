@@ -4606,3 +4606,4 @@ def get_view_image(view: Literal["isometric", "front", "back", "top", "bottom", 
 
 # more commands (flex, mold tools, library features, ...) register with the same registry
 from .commands_more import *  # noqa: E402,F401,F403
+from .commands_mfg import *  # noqa: E402,F401,F403

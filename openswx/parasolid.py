@@ -1079,6 +1079,8 @@ class _Builder:
         surf = self.surface(sidx) if sidx else None
         if surf is None:
             return self._filled_face(wires)
+        if any(self._ring(w) for w in wires):
+            surf = self._periodic(surf)
         # XT loops keep the face on their left seen from the face normal; OCC reads wires against the
         # surface's natural normal, so build on the natural side and flip the whole face afterwards
         flip = (fr["sense"] != self.node(sidx)[1].get("sense", "+")) != (sidx in self.flipped)
@@ -1089,6 +1091,38 @@ class _Builder:
         if flip:
             face.Reverse()
         return face
+
+    @staticmethod
+    def _ring(wire) -> bool:
+        """A loop of one closed edge with no vertex of its own (XT needs no seam on a closed surface)."""
+        from OCP.BRep import BRep_Tool
+        from OCP.TopAbs import TopAbs_EDGE
+        from OCP.TopExp import TopExp_Explorer
+        from OCP.TopoDS import TopoDS
+        ex, edges = TopExp_Explorer(wire, TopAbs_EDGE), []
+        while ex.More():
+            edges.append(TopoDS.Edge(ex.Current()))
+            ex.Next()
+        return len(edges) == 1 and BRep_Tool.IsClosed_s(edges[0])
+
+    @staticmethod
+    def _periodic(surf):
+        """A B-spline surface closed but not periodic, made periodic: ShapeFix only adds the seam a band of
+        ring loops needs on a periodic surface (else it drops a loop and leaves a zero-area face)."""
+        from OCP.Geom import Geom_BSplineSurface
+        if not isinstance(surf, Geom_BSplineSurface):
+            return surf
+        out = surf
+        for closed, periodic, make in (("IsUClosed", "IsUPeriodic", "SetUPeriodic"),
+                                       ("IsVClosed", "IsVPeriodic", "SetVPeriodic")):
+            if getattr(out, closed)() and not getattr(out, periodic)():
+                try:
+                    cp = out.Copy()
+                    getattr(cp, make)()
+                    out = cp
+                except Exception:  # (poles that only nearly meet: left as it is)
+                    pass
+        return out
 
     def _filled_face(self, wires):
         from OCP.BRepFill import BRepFill_Filling

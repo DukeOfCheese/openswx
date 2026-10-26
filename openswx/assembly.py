@@ -109,7 +109,8 @@ class AssemblyDocument:
                 "mates": self.mates, "features": self.features, "explode": self.explode, "drawing": self.drawing, "study": self.study,
                 "named_views": getattr(self, "named_views", {}),
                 "alternate_positions": getattr(self, "alternate_positions", {}),
-                "large_assembly_mode": getattr(self, "large_assembly_mode", False), "render": getattr(self, "render", {})}
+                "large_assembly_mode": getattr(self, "large_assembly_mode", False), "render": getattr(self, "render", {}),
+                "electrical": getattr(self, "electrical", {}), "composer": getattr(self, "composer", {})}
 
     def load_dict(self, d: dict) -> None:
         if d.get("format") != FORMAT:
@@ -130,6 +131,8 @@ class AssemblyDocument:
         self.study = d.get("study", {"fixtures": [], "loads": [], "element_size": None})
         self.named_views = d.get("named_views", {})
         self.render = d.get("render", {})
+        self.electrical = d.get("electrical", {})
+        self.composer = d.get("composer", {})
         self.solve()
 
     def save(self, path: str | None = None) -> str:

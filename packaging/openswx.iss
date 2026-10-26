@@ -1,8 +1,10 @@
 ; Inno Setup script: a Windows installer for the PyInstaller build (dist-new\openswx or dist\openswx).
-; Build:  .venv\Scripts\pyinstaller packaging\openswx.spec --noconfirm --distpath dist-new --workpath build-new
-;         "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" packaging\openswx.iss
+; Build:  .venv\Scripts\python packaging\build.py   (the app, the launchers, then ISCC on this script)
 ; Output: dist-new\openswx-setup-<version>.exe
-; Installs per machine (or per user when not elevated), adds Start menu / optional desktop shortcuts and the
+; Installs per user. The install folder ({userpf}\openswx by default) holds only two small launchers
+; (packaging\launcher.cs, compiled by build.py into build-new\launcher); the PyInstaller runtime (its exe and
+; _internal) goes to %LOCALAPPDATA%\openswx\runtime, which the launchers find through
+; HKCU\Software\openswx\RuntimeDir. Adds Start menu / optional desktop shortcuts and the
 ; same file associations as `openswx-cli register-file-types` (.oswprt / .oswasm open in openswx; it is
 ; offered in "Open with" for SOLIDWORKS and neutral CAD files). Uninstall removes all of it.
 
@@ -11,16 +13,19 @@
   #define AppVersion "0.1.0"
 #endif
 #define SourceDir "..\dist-new\openswx"
+#define LauncherDir "..\build-new\launcher"
+#define RuntimeDir "{localappdata}\openswx\runtime"
 
 [Setup]
 AppId={{8C5E1E42-3F7B-4C1A-9B8E-0A5D2F7C61B3}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=openswx contributors
-DefaultDirName={autopf}\{#AppName}
+DefaultDirName={userpf}\{#AppName}
 DefaultGroupName={#AppName}
+; per user: the runtime lives in this user's AppData
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
+UninstallFilesDir={#RuntimeDir}\uninstall
 ChangesAssociations=yes
 OutputDir=..\dist-new
 OutputBaseFilename=openswx-setup-{#AppVersion}
@@ -36,8 +41,17 @@ WizardStyle=modern
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "assoc"; Description: "Open .oswprt and .oswasm files with openswx"; GroupDescription: "File associations:"
 
+[InstallDelete]
+; an upgrade replaces the runtime as a whole (no stale modules from the previous version)
+Type: filesandordirs; Name: "{#RuntimeDir}\_internal"
+
 [Files]
-Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#LauncherDir}\openswx.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#LauncherDir}\openswx-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\*"; DestDir: "{#RuntimeDir}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{#RuntimeDir}"
 
 [Icons]
 Name: "{group}\openswx"; Filename: "{app}\openswx.exe"
@@ -45,6 +59,8 @@ Name: "{group}\Uninstall openswx"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\openswx"; Filename: "{app}\openswx.exe"; Tasks: desktopicon
 
 [Registry]
+; where the launchers find the runtime
+Root: HKCU; Subkey: "Software\openswx"; ValueType: string; ValueName: "RuntimeDir"; ValueData: "{#RuntimeDir}"; Flags: uninsdeletekey
 ; openswx's own formats
 Root: HKA; Subkey: "Software\Classes\.oswprt"; ValueType: string; ValueName: ""; ValueData: "openswx.Part"; Flags: uninsdeletevalue; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\openswx.Part"; ValueType: string; ValueName: ""; ValueData: "openswx Part"; Flags: uninsdeletekey; Tasks: assoc

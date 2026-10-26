@@ -245,8 +245,9 @@ VIEWER = r"""<!doctype html>
 <div id="bar"><b>__TITLE__</b>
 <button data-v="iso">Iso</button><button data-v="front">Front</button><button data-v="top">Top</button><button data-v="right">Right</button><button id="fit">Fit</button>
 <span class="sep"></span><button id="sec">Section</button><button id="meas">Measure</button>
+<span id="stepbar" hidden><span class="sep"></span><button id="sprev">&#9664;</button><button id="splay">Play</button><button id="snext">&#9654;</button></span>
 <span class="sep"></span><button id="pen">Pen</button><button id="txt">Note</button><button id="clr">Clear markup</button><button id="png">Save image</button><button id="js">Save markup</button></div>
-<div id="side"><div id="props"></div><div id="comps"></div><div id="secbox" hidden><h3>Section</h3>
+<div id="side"><div id="steps"></div><div id="props"></div><div id="comps"></div><div id="secbox" hidden><h3>Section</h3>
 <label><select id="secax"><option>X</option><option>Y</option><option selected>Z</option></select><input id="secpos" type="range" min="0" max="1000" value="500" style="flex:1"></label></div></div>
 <div id="view"><canvas id="ink"></canvas></div><div id="status">Drag: rotate · Right-drag: pan · Wheel: zoom</div>
 <script type="text/plain" id="three-src">__THREE__</script>
@@ -354,5 +355,33 @@ document.querySelectorAll("[data-c]").forEach((cb) => cb.onchange = () => { if (
 const pmiEls = (M.pmi || []).map((p) => { const d = document.createElement("div"); d.className = "pmi"; d.textContent = p.text + (p.position ? "  " + p.position : ""); view.append(d); return [d, new THREE.Vector3(...p.anchor)]; });
 function place() { const w = view.clientWidth, h = view.clientHeight; for (const [d, p] of pmiEls) { const q = p.clone().project(camera); d.style.left = (q.x + 1) / 2 * w + "px"; d.style.top = (1 - q.y) / 2 * h + "px"; d.hidden = q.z > 1; } }
 sizeInk(); setView("iso"); redrawInk();
+// Composer: steps move components (offsets from the assembled position), hide them or make them see-through
+if (M.steps && M.steps.length) {
+  document.getElementById("stepbar").hidden = false;
+  const stepsEl = document.getElementById("steps"); let cur = 0, anim = 0, playing = null;
+  meshes.forEach((m) => m.userData.opacity = m.material.opacity);
+  stepsEl.innerHTML = "<h3>Steps</h3>" + M.steps.map((s, i) => `<label data-s="${i}" style="cursor:pointer"><b>${i + 1}.</b>&nbsp;${esc(s.name)}</label>`).join("") + '<p id="snote" style="color:var(--muted);white-space:pre-wrap"></p>';
+  function go(i) {
+    cur = Math.max(0, Math.min(M.steps.length - 1, i)); const s = M.steps[cur], from = {}, to = {};
+    for (const [k, g] of Object.entries(groups)) { from[k] = g.position.clone(); to[k] = new THREE.Vector3(...((s.offsets || {})[k] || [0, 0, 0])); g.visible = !(s.hidden || []).includes(k); }
+    for (const m of meshes) { const see = (s.transparent || []).includes(m.userData.component); m.material.transparent = see || m.userData.opacity < 1; m.material.opacity = see ? 0.3 : m.userData.opacity; m.material.needsUpdate = true; }
+    if (s.view && VIEWS[s.view]) { const [az, el] = VIEWS[s.view]; rot.setFromEuler(new THREE.Euler(-el, az, 0, "YXZ")); }
+    stepsEl.querySelectorAll("[data-s]").forEach((l) => l.style.color = +l.dataset.s === cur ? "var(--accent)" : "");
+    document.getElementById("snote").textContent = s.note || "";
+    const t0 = performance.now(); cancelAnimationFrame(anim);
+    const tick = (t) => { const k = Math.min(1, (t - t0) / 700), e = k * k * (3 - 2 * k);
+      for (const [n, g] of Object.entries(groups)) g.position.lerpVectors(from[n], to[n], e);
+      draw(); if (k < 1) anim = requestAnimationFrame(tick); };
+    anim = requestAnimationFrame(tick);
+  }
+  stepsEl.querySelectorAll("[data-s]").forEach((l) => l.onclick = () => go(+l.dataset.s));
+  document.getElementById("sprev").onclick = () => go(cur - 1);
+  document.getElementById("snext").onclick = () => go(cur + 1);
+  document.getElementById("splay").onclick = (e) => {
+    if (playing) { clearInterval(playing); playing = null; e.target.textContent = "Play"; return; }
+    e.target.textContent = "Pause"; if (cur >= M.steps.length - 1) go(0);
+    playing = setInterval(() => { if (cur >= M.steps.length - 1) { clearInterval(playing); playing = null; e.target.textContent = "Play"; } else go(cur + 1); }, 1800); };
+  go(0);
+}
 </script></body></html>
 """
