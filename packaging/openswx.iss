@@ -62,15 +62,15 @@ Name: "{autodesktop}\openswx"; Filename: "{app}\openswx.exe"; Tasks: desktopicon
 ; where the launchers find the runtime
 Root: HKCU; Subkey: "Software\openswx"; ValueType: string; ValueName: "RuntimeDir"; ValueData: "{#RuntimeDir}"; Flags: uninsdeletekey
 ; openswx's own formats
-Root: HKA; Subkey: "Software\Classes\.oswprt"; ValueType: string; ValueName: ""; ValueData: "openswx.Part"; Flags: uninsdeletevalue; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\.oswprt"; ValueType: string; ValueName: ""; ValueData: "openswx.Part"; Flags: uninsdeletevalue uninsdeletekeyifempty; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\openswx.Part"; ValueType: string; ValueName: ""; ValueData: "openswx Part"; Flags: uninsdeletekey; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\openswx.Part\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"",0"; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\openswx.Part\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"" ""%1"""; Tasks: assoc
-Root: HKA; Subkey: "Software\Classes\.oswasm"; ValueType: string; ValueName: ""; ValueData: "openswx.Assembly"; Flags: uninsdeletevalue; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\.oswasm"; ValueType: string; ValueName: ""; ValueData: "openswx.Assembly"; Flags: uninsdeletevalue uninsdeletekeyifempty; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\openswx.Assembly"; ValueType: string; ValueName: ""; ValueData: "openswx Assembly"; Flags: uninsdeletekey; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\openswx.Assembly\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"",0"; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\openswx.Assembly\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"" ""%1"""; Tasks: assoc
-Root: HKA; Subkey: "Software\Classes\.oswdrw"; ValueType: string; ValueName: ""; ValueData: "openswx.Drawing"; Flags: uninsdeletevalue; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\.oswdrw"; ValueType: string; ValueName: ""; ValueData: "openswx.Drawing"; Flags: uninsdeletevalue uninsdeletekeyifempty; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\openswx.Drawing"; ValueType: string; ValueName: ""; ValueData: "openswx Drawing"; Flags: uninsdeletekey; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\openswx.Drawing\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"",0"; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\openswx.Drawing\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"" ""%1"""; Tasks: assoc
@@ -78,12 +78,12 @@ Root: HKA; Subkey: "Software\Classes\openswx.Drawing\shell\open\command"; ValueT
 Root: HKA; Subkey: "Software\Classes\openswx.File"; ValueType: string; ValueName: ""; ValueData: "CAD file (openswx)"; Flags: uninsdeletekey
 Root: HKA; Subkey: "Software\Classes\openswx.File\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"",0"
 Root: HKA; Subkey: "Software\Classes\openswx.File\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"" ""%1"""
-Root: HKA; Subkey: "Software\Classes\.sldprt\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue
-Root: HKA; Subkey: "Software\Classes\.sldasm\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue
-Root: HKA; Subkey: "Software\Classes\.step\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue
-Root: HKA; Subkey: "Software\Classes\.stp\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue
-Root: HKA; Subkey: "Software\Classes\.x_t\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue
-Root: HKA; Subkey: "Software\Classes\.x_b\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\.sldprt\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue uninsdeletekeyifempty
+Root: HKA; Subkey: "Software\Classes\.sldasm\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue uninsdeletekeyifempty
+Root: HKA; Subkey: "Software\Classes\.step\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue uninsdeletekeyifempty
+Root: HKA; Subkey: "Software\Classes\.stp\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue uninsdeletekeyifempty
+Root: HKA; Subkey: "Software\Classes\.x_t\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue uninsdeletekeyifempty
+Root: HKA; Subkey: "Software\Classes\.x_b\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue uninsdeletekeyifempty
 Root: HKA; Subkey: "Software\Classes\Applications\openswx.exe"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "openswx"; Flags: uninsdeletekey
 Root: HKA; Subkey: "Software\Classes\Applications\openswx.exe\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"" ""%1"""
 
