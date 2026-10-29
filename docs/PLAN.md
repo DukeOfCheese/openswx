@@ -703,3 +703,44 @@ Composer and Insert > Routing on assemblies; Manufacturing, Electrical and Compo
       single-file HTML viewer with Play / previous / next animation (`viewer_payload` / `write_viewer` now shared
       with eDrawings export).
 - Not done: Cloud (3DEXPERIENCE-style collaboration) - out of scope for a local app; PDM covers check-in / out.
+
+## Interop, naming and speed pass (2026-10-29, user: "commit, fix the rebuilding of feature history, opening solidworks drawings, importing assemblies, persistent naming, opening speed then fix the installer")
+- [x] Feature history (sw_rebuild.py): the child's budget now follows the isolation timeout (it was 150 s inside a
+      115 s kill, so the budget never acted); past 60 % of it the remaining features come in as their stored
+      contribution, past 85 % the rest of the part at once, so a slow part opens with its rebuilt features editable.
+      An imported contribution that is every difference between the part and the stored body carries the stored
+      body as its result (`result` + `base` key: volume, face / edge counts, bounding box - not the area, which
+      OCC integrates differently once a shape is written and read); it is used while the body before it is
+      unchanged, sparing fuses that took the kernel minutes (Locklever: timeout -> 70 s). The child regenerates
+      the saved history and requires the same body (a sketch edited for a later feature had left an earlier one
+      built on a state the history no longer gives); open_part checks the regenerated volume too. Inside-out
+      bodies are rejected (the mesh volume is unsigned). Arcs whose two possible sweeps both lie on the stored
+      boundary (one on a face in the sketch plane) are decided a little way off the plane (slots: holder,
+      straight / angular slot). Full survey of all 841 parts (isolated rebuild, 115 s, as the app runs it):
+      525 exact, 363 fully parametric (previous full survey on the code before this pass: 473 / 360; 489 / 362
+      was the best partial count). Failures: ~90 body mismatch, 48 over time, 20 inexact, the rest individual.
+- [x] Persistent naming (naming.py): after every feature the body's faces are named - a face on the surface of an
+      earlier face keeps its name (booleans trim faces, not surfaces), new faces of sketch features are named
+      after the sketch entity they were swept from or as caps, others (fillets, shells) after the named faces
+      they meet; split faces get #k in a fixed order. face_ref / edge_ref record the names (an edge: the faces on
+      either side) and resolve_face / resolve_edge find them by name before geometry. Test: a fillet on the high
+      step of a stepped block stays on it when the steps swap heights (by geometry alone it moved to the other
+      block). About 1 ms per face.
+- [x] Assembly import: mates on straight edges and vertices (new mate entities `line` and `vertex`, residuals for
+      coincident / distance / parallel / perpendicular with planes, axes, lines and vertices) chosen from the saved
+      pose - the file names a face for them, so its edges and vertices are candidates and the first pair on which
+      the mate holds is taken; distance / angle values must be among the doubles in the mate's record. Mates to
+      the assembly's own planes / origin import against a fixed `(assembly)` frame instead of fixing the part.
+      40 small sample assemblies: 125 of 155 mates imported (81 %; 54 % before). Left: in-place mates (no
+      entities), a few unresolvable faces, ball valve (a part's ShapeFix hangs in the reader).
+- [x] Opening speed: disk cache (cache.py; %LOCALAPPDATA%\openswx\cache, 1 GB, OPENSWX_CACHE=off) of part bodies
+      and rebuilt histories keyed by the file bytes and the reader code: reopening Jet (sprinkler) 13.7 s -> 0.5 s.
+      Persistent-name strings no longer nest (an imported 300-face body named in 7 s instead of hanging). Blend
+      seam placement uses ShapeAnalysis_Surface on ~16 points per curve.
+- [~] .slddrw: feature control frames (<IGTOL-..> tag, tolerance, diameter zone, position) come in with the sheets
+      (one sample has one with a tolerance). Not decoded: datum references (no sample has one), balloons (no
+      sample has one), dimension text positions (need SOLIDWORKS-made test drawings; not run: the user stopped
+      the SOLIDWORKS oracle).
+- [x] Installer: rebuilt with the new modules; silent install, MCP (364 tools, a .sldprt opened with its history
+      through the installed runtime) and uninstall verified. Uninstall now also removes the emptied
+      .oswprt / .oswasm / .oswdrw keys (uninsdeletekeyifempty). Desktop launch not re-tested here.

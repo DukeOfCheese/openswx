@@ -630,6 +630,13 @@ def _orient_arcs(sk: dict, oracle: "_Oracle") -> None:
         if s != e:
             P = sk["points"]
             here, there = oracle.on_boundary(mid(P[c], P[s], P[e])), oracle.on_boundary(mid(P[c], P[e], P[s]))
+            if here and there:  # (both on a face lying in the sketch plane: the side the feature swept stays on
+                # the boundary a little way off the plane)
+                n = Vector(*map(float, R @ np.array([0.0, 0.0, 1.0])))
+
+                def swept(q):
+                    return any(oracle.on_boundary(q + n * d) for d in (0.05, -0.05))
+                here, there = swept(mid(P[c], P[s], P[e])), swept(mid(P[c], P[e], P[s]))
             if there and not here:
                 s, e = e, s
         out.append((c, s, e))
