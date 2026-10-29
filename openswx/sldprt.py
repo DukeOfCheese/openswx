@@ -154,6 +154,19 @@ def _active_config(streams: dict) -> int | None:
 
 
 def read_sldprt(path: str, config: int | None = None):
+    """B-rep geometry of a .sldprt without SOLIDWORKS: (build123d shape in mm, notes). Results are kept in the
+    disk cache (openswx/cache.py), so a part read before opens at once."""
+    from . import cache
+    k = cache.key(path, "sldprt-body", config)
+    hit = cache.get_shape("body", k)
+    if hit is not None:
+        return hit[0], hit[1].get("notes", [])
+    shape, notes = _read_sldprt(path, config)
+    cache.put_shape("body", k, shape, {"notes": notes})
+    return shape, notes
+
+
+def _read_sldprt(path: str, config: int | None = None):
     """B-rep geometry of a .sldprt without SOLIDWORKS: (build123d shape in mm, notes).
 
     Reads the Parasolid partition of `Contents/Config-<n>-Partition` (the lowest n unless `config` is
@@ -314,7 +327,7 @@ def assembly_mates(path: str, config: int = 0) -> list[dict]:
         if m.group(1):
             cls = m.group(1).decode()
             if cls.startswith("moMate") and not cls.endswith(("Data_c", "HelpData_c")):
-                cur = {"class": cls, "type": _MATE_TYPES.get(cls), "name": None, "refs": []}
+                cur = {"class": cls, "type": _MATE_TYPES.get(cls), "name": None, "refs": [], "_at": m.start()}
                 mates.append(cur)
                 pending = None
             elif "Ref" in cls and not cls.endswith("Data_c"):  # the kind of the entity the next reference names
@@ -349,9 +362,21 @@ def assembly_mates(path: str, config: int = 0) -> list[dict]:
             # taken from SOLIDWORKS' default mate name when it has one, else from the previous mate
             cls = next((c for prefix, c in _NAME_CLASS if text.startswith(prefix) and text[len(prefix):].isdigit()),
                        cur["class"])
-            cur = {"class": cls, "type": _MATE_TYPES.get(cls), "name": text, "refs": []}
+            cur = {"class": cls, "type": _MATE_TYPES.get(cls), "name": text, "refs": [], "_at": m.start()}
             mates.append(cur)
             pending = None
+    # the numbers in each mate's record (its value is among them: metres / radians; which one is not decoded)
+    import numpy as np
+    for i, mt in enumerate(mates):
+        a, b = mt.pop("_at"), (mates[i + 1]["_at"] if i + 1 < len(mates) else len(raw))
+        vals = set()
+        for k in range(8):
+            chunk = raw[a + k:b]
+            arr = np.frombuffer(chunk[:len(chunk) // 8 * 8], "<f8")
+            with np.errstate(invalid="ignore", over="ignore"):
+                ok = np.isfinite(arr) & (np.abs(arr) > 1e-7) & (np.abs(arr) < 10.0)
+            vals.update(float(v) for v in arr[ok])
+        mt["numbers"] = sorted(vals)
     # two 2-entity mates whose boundary was missed come out as one mate with four references: split them
     # (the first pair keeps the tagged class, the second takes the class its default name implies)
     out = []

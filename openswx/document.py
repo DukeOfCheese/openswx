@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .equations import (FEATURE_DIMS, EquationError, Evaluator, feature_param_path, get_path, is_expr, parse_target,
                         set_path)
+from . import naming
 from .features import BUILDERS, NAME_PREFIX, Ctx, FeatureError, mass_properties
 from .geom import edge_info, face_info, tessellate
 from .sketch import Sketch, SketchError
@@ -678,7 +679,14 @@ class PartDocument:
                     bodies.append((f["name"], ctx.body))
                     continue
                 reuse = False
+                before = ctx.body
                 BUILDERS[f["type"]](ctx, params, f["name"])
+                if ctx.body is not None and ctx.body is not before:  # persistent face names (openswx/naming.py)
+                    sks = [(s, *ctx.sketches[s]) for s in consumed_sketches(f) if s in ctx.sketches]
+                    try:
+                        naming.register(ctx.body, naming.name_faces(ctx.body, before, f["name"], sks))
+                    except Exception:  # (unnamed faces are found by geometry, as before)
+                        pass
                 if f["type"] == "sketch":  # keep solved geometry, preserve expressions
                     _keep_solved(f, params["sketch"], ev)
                 state[f["name"]] = {"status": "ok", **ctx.info.get(f["name"], {})}

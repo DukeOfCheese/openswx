@@ -62,11 +62,17 @@ def face_normal(face: Face, at=None) -> Vector:
         return face.normal_at(face.center()).normalized()
 
 
-def face_ref(face: Face) -> dict:
-    """Persistent reference: a point on the face, the normal there, and the surface type."""
+def face_ref(face: Face, body: Shape | None = None) -> dict:
+    """Persistent reference: the face's name (openswx/naming.py), a point on the face, the normal there, and the
+    surface type."""
+    from .naming import label_of_face
     p, _ = closest_point(face, face.center())
-    return {"kind": "face", "point": tup(p), "normal": tup(face_normal(face, p)), "type": geom_name(face),
-            "area": round(face.area, 6)}
+    ref = {"kind": "face", "point": tup(p), "normal": tup(face_normal(face, p)), "type": geom_name(face),
+           "area": round(face.area, 6)}
+    label = label_of_face(face, body)
+    if label:
+        ref["label"] = label
+    return ref
 
 
 def _adjacent_signature(shape: Shape, edge: Edge) -> list[str]:
@@ -89,13 +95,23 @@ def edge_ref(edge: Edge, shape: Shape | None = None) -> dict:
         ref["radius"] = round(edge.radius, 6)
     if shape is not None:
         ref["adjacent"] = _adjacent_signature(shape, edge)
+        from .naming import edge_faces
+        faces = edge_faces(shape, edge)
+        if faces:
+            ref["faces"] = faces
     return ref
 
 
 def resolve_face(shape: Shape, ref: dict, tol: float = 1e-3) -> Face:
     """Exact match first (point lies on the face with the same normal); if the model changed, fall back
-    to the nearest face of the same surface type and orientation (handles moved faces after edits)."""
+    to the nearest face of the same surface type and orientation (handles moved faces after edits). A named
+    reference finds its face by name first (the name survives edits that move the face)."""
     p, n = vec(ref["point"]), vec(ref.get("normal", (0, 0, 0)))
+    if ref.get("label"):
+        from .naming import find_face
+        hit = find_face(shape, ref["label"], p)
+        if hit is not None:
+            return hit
     best, best_score, fallback, fb_d = None, float("inf"), None, float("inf")
     for f in shape.faces():
         q, d = closest_point(f, p)
@@ -116,6 +132,11 @@ def resolve_face(shape: Shape, ref: dict, tol: float = 1e-3) -> Face:
 
 def resolve_edge(shape: Shape, ref: dict, tol: float = 1e-2) -> Edge:
     p = vec(ref["point"])
+    if ref.get("faces"):  # named: the edge between those two faces
+        from .naming import find_edge
+        hit = find_edge(shape, ref["faces"], p)
+        if hit is not None:
+            return hit
     t = vec(ref.get("tangent", (0, 0, 0)))
     adj = ref.get("adjacent")
     best, best_d, fallback, fb_score = None, float("inf"), None, float("inf")

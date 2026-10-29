@@ -9,6 +9,7 @@ import functools
 import inspect
 import json
 import math
+import re
 import threading
 import time
 from pathlib import Path
@@ -181,7 +182,7 @@ def _face(doc: PartDocument, sel) -> dict:
         raise DocumentError("the part has no body yet")
     faces = doc.body.faces()
     try:
-        return face_ref(faces[int(str(sel).replace("Face", ""))])
+        return face_ref(faces[int(str(sel).replace("Face", ""))], doc.body)
     except (ValueError, IndexError):
         raise DocumentError(f"unknown face {sel!r}; call get_topology for current face ids") from None
 
@@ -300,15 +301,32 @@ def open_part(path: str, history: bool = True) -> dict:
                         "notes": notes, "solidworks_file": {k: v for k, v in info.items() if k != "streams"}}
         history_error = None
         if ext == ".sldprt" and history:
-            from .sw_rebuild import rebuild_isolated
+            from . import cache
+            from .sw_rebuild import RebuildError, rebuild_isolated
             doc = None
+            ck = cache.key(str(p), "sldprt-history")
             try:  # in a child process: a kernel crash while trying candidates must not take openswx down
-                data, report = rebuild_isolated(str(p))
+                hit = cache.get_json("history", ck)  # (rebuilt before: the result, or why it was not rebuilt)
+                if hit is not None and not hit.get("ok"):
+                    raise RebuildError(hit["error"])
+                if hit is not None:
+                    data, report = hit["data"], hit["report"]
+                else:
+                    try:
+                        data, report = rebuild_isolated(str(p))
+                    except RebuildError as exc:  # (not when it ran out of time or crashed: that can go otherwise)
+                        if not re.search(r"took longer|crashed", str(exc)):
+                            cache.put_json("history", ck, {"ok": False, "error": str(exc)})
+                        raise
+                    cache.put_json("history", ck, {"ok": True, "data": data, "report": report})
                 doc = APP.new_document(p.stem)
                 data["name"] = doc.name
                 doc.load_dict(data)
                 if any(v.get("status") == "error" for v in doc.state.values()):
                     raise DocumentError("the rebuilt history does not regenerate")
+                if "regenerated_volume" in report and abs((doc.body.volume if doc.body is not None else 0.0)
+                                                          - report["regenerated_volume"]) > 1e-6 * max(1.0, report["regenerated_volume"]):
+                    raise DocumentError("the rebuilt history regenerates to a different body")
             except Exception as exc:  # history not understood: open the stored body instead
                 if doc is not None:
                     APP.documents.pop(doc.name, None)
@@ -442,101 +460,181 @@ def _open_sldasm_native(p: Path):
 
 
 def _import_sldasm_mates(asm, p: Path, placed: dict) -> list[str]:
-    """Rebuild the assembly's mates: each mated face is found by its SOLIDWORKS face id (FACE_ID_2001
-    attributes in the part's Parasolid data) and matched to the component's face by position; alignment and
-    distance / angle values are measured at the saved positions, which satisfy the mates. Mated components
-    are then freed (all but the first) unless solving would move anything."""
+    """Rebuild the assembly's mates. A mated entity is named in the file by a face (its SOLIDWORKS face id:
+    FACE_ID_2001 attributes in the part's Parasolid data, matched to the component's face by position), a
+    component reference plane / origin, or nothing (the assembly's own planes / origin). Mates on edges and
+    vertices name a face too, so the face's straight edges and vertices are candidates as well; the saved
+    positions satisfy every mate, so the first candidate pair (in the order the file's entity hint suggests)
+    on which the mate holds there is taken. Distance / angle values are measured there; for edges and vertices
+    the value must be one of the numbers in the mate's record (several edges of a face can hold a distance).
+    Mated components are then freed (all but the first) unless solving would move anything."""
+    import itertools
     import math
     import numpy as np
-    from .geom import face_ref
+    from .assembly import ASSEMBLY, _mate_residual, plane_ref
+    from .geom import edge_ref, face_ref
     from .sldprt import assembly_mates, face_geometry, match_face_ref, part_face_ids
     try:
         mates = assembly_mates(str(p))
     except Exception as exc:
         return [f"mates not read: {exc}"]
     notes, ids_cache, done = [], {}, 0
+    frame = asm.component(ASSEMBLY)
+    SUPPORTED = ("coincident", "concentric", "parallel", "perpendicular", "distance", "angle", "tangent")
 
-    def resolve(ref):
-        name = ref["component"]
-        if name not in placed:
-            return None
-        key, R, t = placed[name]
-        if ref["kind"] == "refgeom":  # the component's Front / Top / Right plane
-            from .assembly import plane_ref
-            pr = plane_ref(ref.get("name", ""))
-            if pr is None:
-                return None
-            return {"component": name, "plane": pr}, R @ np.array(pr["point"]) + t, R @ np.array(pr["normal"]), "PLANE"
+    def local_face(ref):
+        key, R, t = placed[ref["component"]]
         if key not in ids_cache:
             ids_cache[key] = part_face_ids(*key)
         hit = match_face_ref(ids_cache[key], ref["numbers"])
         hit = face_geometry(hit) if hit is not None else None
         if hit is None:
             return None
-        comp = asm.component(name)
-        c0, n0 = np.array(hit["center"]), np.array(hit["normal"])
+        c0 = np.array(hit["center"])
         best, bd = None, 1e-3
-        for f in asm._local_body(comp).faces():
+        for f in asm._local_body(asm.component(ref["component"])).faces():
             fc = f.center()
             d = float(np.linalg.norm(np.array([fc.X, fc.Y, fc.Z]) - c0))
             if d < bd:
                 best, bd = f, d
-        if best is None:
+        return best
+
+    def origin(comp):
+        return ({"component": comp.name, "vertex": [0.0, 0.0, 0.0]}, (comp, "vertex", np.zeros(3), np.zeros(3), 0.0))
+
+    def std_plane(comp, nm):
+        pr = plane_ref(nm)
+        if pr is None:
             return None
-        return {"component": name, "face": face_ref(best)}, R @ c0 + t, R @ n0, hit["type"]
+        return ({"component": comp.name, "plane": pr}, (comp, "plane", np.array(pr["point"], float), np.array(pr["normal"], float), 0.0))
+
+    def candidates(ref):
+        """(mate entity reference, entity as the solver sees it) for what a SOLIDWORKS reference may name."""
+        name = ref["component"]
+        if name not in placed:
+            return []
+        comp = asm.component(name)
+        if ref["kind"] == "refgeom":
+            nm = ref.get("name", "")
+            if nm.lower().startswith("origin"):
+                return [origin(comp)]
+            got = std_plane(comp, nm)
+            return [got] if got else []
+        face = local_face(ref)
+        if face is None:
+            return []
+        body = asm._local_body(comp)
+        out = {"face": [], "line": [], "point": []}
+        fref = {"component": name, "face": face_ref(face, body)}
+        try:
+            out["face"].append((fref, asm._resolve_entity(comp, fref)))
+        except Exception:  # (a face that is neither planar nor cylindrical)
+            pass
+        seen = []
+        for e in face.edges():
+            if e.geom_type.name.lower() == "line":
+                q, d = e.position_at(0.5), e.tangent_at(0.5)
+                out["line"].append(({"component": name, "line": edge_ref(e, body)},
+                                    (comp, "line", np.array([q.X, q.Y, q.Z]), np.array([d.X, d.Y, d.Z]), 0.0)))
+            for v in e.vertices():
+                pt = np.array([v.X, v.Y, v.Z])
+                if not any(np.allclose(pt, s, atol=1e-9) for s in seen):
+                    seen.append(pt)
+                    out["point"].append(({"component": name, "vertex": [float(x) for x in pt]}, (comp, "vertex", pt, np.zeros(3), 0.0)))
+        hint = ref.get("entity", "face")
+        return [c for k in [hint] + [k for k in ("face", "line", "point") if k != hint] for c in out[k]]
+
+    assembly_side = [std_plane(frame, n) for n in ("Front", "Top", "Right")] + [origin(frame)]
+
+    def listed(v, numbers, scale):  # a measured value among the record's numbers
+        return any(abs(abs(v) * scale - abs(n)) <= 1e-9 * max(1.0, abs(n)) for n in numbers)
+
+    def fit(typ, ca, cb, numbers):
+        """(type, value, aligned, entity a, entity b, value confirmed) when the mate holds, else None."""
+        (ra, ea), (rb, eb) = ca, cb
+        Pa, Na = ea[0].to_world(ea[2]), ea[0].dir_to_world(ea[3])
+        Pb, Nb = eb[0].to_world(eb[2]), eb[0].dir_to_world(eb[3])
+        faces_only = {ea[1], eb[1]} <= {"plane", "axis"}
+        value, aligned, sure = None, bool(np.dot(Na, Nb) > 0), True
+        if faces_only:
+            if typ == "coincident" and ea[1] == eb[1] == "axis":
+                typ = "concentric"  # coincident cylindrical faces: same axis (and radius)
+            if typ in ("coincident", "distance", "parallel") and ea[1] == eb[1] == "plane" and abs(float(np.dot(Na, Nb))) < 1 - 1e-6:
+                return None  # (non-parallel faces: the mate is on an edge or vertex of them)
+            if typ == "distance":
+                if ea[1] != "plane" or eb[1] != "plane":
+                    return None
+                # openswx measures the signed gap along entity1's normal; an aligned pair is swapped to keep it positive
+                value = float(np.dot(Pb - Pa, Na))
+                if value < 0 and aligned:
+                    (ca, ea, Pa, Na), (cb, eb, Pb, Nb) = (cb, eb, Pb, Nb), (ca, ea, Pa, Na)
+                    value = float(np.dot(Pb - Pa, Na))
+                sure = not numbers or listed(value, numbers, 1e-3)
+            elif typ == "angle":  # openswx compares cos(angle) with n1 . n2 (signed)
+                if ea[1] != "plane" or eb[1] != "plane":
+                    return None
+                value = math.degrees(math.acos(max(-1.0, min(1.0, float(np.dot(Na, Nb))))))
+                sure = (not numbers or listed(math.radians(value), numbers, 1.0)
+                        or listed(math.pi - math.radians(value), numbers, 1.0))
+        else:
+            if typ not in ("coincident", "distance", "parallel", "perpendicular"):
+                return None
+            if typ == "distance":
+                try:
+                    r = _mate_residual({"type": "distance", "value": 0.0}, ea, eb, ea[0].x, eb[0].x)
+                except Exception:
+                    return None
+                value = float(r[-1])
+                if abs(value) < 1e-9 or not listed(value, numbers, 1e-3):
+                    return None  # (which edge / vertex is meant shows only through the value)
+        mate = {"type": typ, "value": value, "aligned": aligned}
+        try:
+            if max(abs(v) for v in _mate_residual(mate, ea, eb, ea[0].x, eb[0].x)) > 1e-6:
+                return None
+        except Exception:
+            return None
+        return typ, value, aligned, ca, cb, sure
 
     mated, anchored = set(), set()
-    for m in mates:
+    expanded = []
+    for m in mates:  # a mate on more than two faces (coincident / parallel / concentric): each with the first
+        if m["type"] in ("coincident", "parallel", "concentric") and len(m["refs"]) > 2:
+            expanded += [{**m, "name": f"{m['name']}.{k}" if k > 1 else m["name"], "refs": [m["refs"][0], r]}
+                         for k, r in enumerate(m["refs"][1:], 1)]
+        else:
+            expanded.append(m)
+    for m in expanded:
         typ = m["type"]
-        geom = [r for r in m["refs"] if r["kind"] == "refgeom"]
-        if len(m["refs"]) == 1 and not geom:  # a component face mated to the assembly's own plane / origin
-            anchored.add(m["refs"][0]["component"])
-            notes.append(f"mate {m['name']}: anchors {m['refs'][0]['component']} to assembly reference geometry (kept fixed)")
-            continue
-        if geom and len(m["refs"]) == 1:  # a component's plane / origin mated to the assembly's own
-            anchored.add(geom[0]["component"])
-            notes.append(f"mate {m['name']}: anchors {geom[0]['component']} to assembly reference geometry (kept fixed)")
-            continue
-        if any(r.get("entity", "face") != "face" for r in m["refs"]):
-            notes.append(f"mate {m['name']}: mates on edges / points are not imported")
-            continue
-        if typ not in ("coincident", "concentric", "parallel", "perpendicular", "distance", "angle", "tangent") \
-                or len(m["refs"]) != 2:
+        if typ not in SUPPORTED or not 1 <= len(m["refs"]) <= 2:
             notes.append(f"mate {m['name']} ({m['class']}) not imported")
             continue
-        r1, r2 = resolve(m["refs"][0]), resolve(m["refs"][1])
-        if r1 is None or r2 is None:
+        sides = [candidates(r) for r in m["refs"]]
+        if len(sides) == 1:  # the other entity is the assembly's own plane / origin (origin to origin first)
+            sides.append(assembly_side[::-1] if sides[0][0][1][1] == "vertex" else assembly_side)
+        if not sides[0] or not sides[1]:
             notes.append(f"mate {m['name']}: a mated face could not be identified")
             continue
-        (a, c1, n1, t1), (b, c2, n2, t2) = r1, r2
-        aligned = bool(np.dot(n1, n2) > 0)
-        value = None
-        if typ == "coincident" and t1 == t2 == "CYLINDER":
-            typ = "concentric"  # coincident cylindrical faces: same axis (and radius)
-        if typ in ("coincident", "distance", "parallel") and t1 == t2 == "PLANE" and abs(float(np.dot(n1, n2))) < 1 - 1e-6:
-            # the saved pose satisfies the mate, so non-parallel faces mean the mated entities are an edge or
-            # point on these faces rather than the faces themselves
-            notes.append(f"mate {m['name']}: mates on edges / points are not imported")
+        best = None
+        for ca, cb in itertools.islice(itertools.product(*sides), 20000):
+            got = fit(typ, ca, cb, m.get("numbers", []))
+            if got and got[5]:
+                best = got
+                break
+            best = best or got
+        if best is None:
+            if len(m["refs"]) == 1:
+                anchored.add(m["refs"][0]["component"])
+                notes.append(f"mate {m['name']}: anchors {m['refs'][0]['component']} to assembly reference geometry (kept fixed)")
+            else:
+                notes.append(f"mate {m['name']}: no reading of its entities holds at the saved position (not imported)")
             continue
-        if typ == "distance":
-            if t1 != "PLANE" or t2 != "PLANE":
-                notes.append(f"mate {m['name']}: distance between non-planar faces not imported")
-                continue
-            # openswx measures the signed gap along entity1's normal; keep the sign (swap an aligned pair
-            # so the stored value is positive)
-            value = float(np.dot(c2 - c1, n1))
-            if value < 0 and aligned:
-                (a, c1, n1), (b, c2, n2) = (b, c2, n2), (a, c1, n1)
-                value = float(np.dot(c2 - c1, n1))
-        elif typ == "angle":  # openswx compares cos(angle) with n1 . n2 (signed)
-            value = math.degrees(math.acos(max(-1.0, min(1.0, float(np.dot(n1, n2))))))
+        mtype, value, aligned, (a, ea), (b, eb), _ = best
         try:
-            mate = asm.add_mate(typ, a, b, value, aligned)
+            mate = asm.add_mate(mtype, a, b, value, aligned)
         except Exception as exc:
             notes.append(f"mate {m['name']}: {exc}")
             continue
         # the saved pose satisfies every SOLIDWORKS mate: one that does not hold there was misread
-        from .assembly import _mate_residual
         ea, eb = asm._local_entity(a), asm._local_entity(b)
         try:
             bad = max(abs(v) for v in _mate_residual(mate, ea, eb, ea[0].x, eb[0].x)) > 1e-6
@@ -550,6 +648,7 @@ def _import_sldasm_mates(asm, p: Path, placed: dict) -> list[str]:
             mate["name"] = m["name"]  # keep the SOLIDWORKS mate name
         mated.update((a["component"], b["component"]))
         done += 1
+    mated.discard(ASSEMBLY)
     if done:
         before = {c.name: c.x.copy() for c in asm.components}
         ground = asm.components[0].name
@@ -571,7 +670,7 @@ def _import_sldasm_mates(asm, p: Path, placed: dict) -> list[str]:
                 c.x[:] = before[c.name]
                 c.fixed = True
             notes.append("mates imported, components kept fixed (solving them would move parts)")
-    notes.insert(0, f"{done} of {len(mates)} mates imported")
+    notes.insert(0, f"{done} of {len(expanded)} mates imported")
     return notes
 
 
@@ -590,7 +689,7 @@ def _recreate_drawing(drw: dict) -> dict:
     for v in drw["views"]:
         by_sheet.setdefault(v["sheet"], []).append(v)
     sheets = [s for s in drw["sheets"] if s in by_sheet] or drw["sheets"][:1]
-    made, scale, notes = [], fit, 0
+    made, scale, notes, gdt = [], fit, 0, 0
     for i, name in enumerate(sheets):
         views = by_sheet.get(name, [])
         placed = [v["position"] for v in views if v.get("position")]
@@ -640,7 +739,12 @@ def _recreate_drawing(drw: dict) -> dict:
             if n["sheet"] == name:
                 drawing_add_note(n["text"], n["position"][0], height - n["position"][1], size=n.get("size", 3.5))
                 notes += 1
-    return {"sheets": sheets, "views": made, "scale": scale, "notes": notes}
+        for g in drw.get("gdt", []):  # feature control frames
+            if g["sheet"] == name:
+                drawing_add_gdt(g["characteristic"], g["tolerance"], g["position"][0], height - g["position"][1],
+                                datums=g["datums"], diameter=g["diameter"])
+                gdt += 1
+    return {"sheets": sheets, "views": made, "scale": scale, "notes": notes, "gdt": gdt}
 
 
 def _origins_at(placed: list) -> None:

@@ -2448,9 +2448,59 @@ def build_import(ctx: Ctx, p: dict, name: str) -> None:
         shape = import_brep(tmp)
     finally:
         os.unlink(tmp)
+    if p.get("op") == "replace":  # the body becomes the imported one (the rest of a part read from a file)
+        ctx.body = _compound(shape.solids()) if shape.solids() else shape
+        ctx.tools[name] = []
+        return
     op = "cut" if p.get("op") == "cut" else "add"  # cut: remove the imported material (a feature read from a file)
-    apply_op(ctx, op, shape, p.get("merge", True))
-    ctx.tools[name] = [(op, shape)]
+    tools = [(op, shape)] + ([("cut", decode_shape(p["cut_brep"]))] if p.get("cut_brep") else [])
+    ctx.tools[name] = tools
+    if p.get("result") and ctx.body is not None and same_body(p.get("base"), body_key(ctx.body)):
+        # the body is the one the result was worked out from (a part read from a file, not edited since)
+        res = decode_shape(p["result"])
+        ctx.body = _compound(res.solids()) if res.solids() else res
+        return
+    for o, t in tools:
+        apply_op(ctx, o, t, p.get("merge", True))
+    if p.get("result") and (ctx.body is None or body_key(ctx.body)[0] <= 0 or not ctx.body.is_valid):
+        # (the features before it changed and the kernel could not merge the stored geometry with them)
+        raise FeatureError("the imported geometry no longer fits the features before it")
+
+
+def decode_shape(b64: str) -> Shape:
+    import os
+    import tempfile
+    fd, tmp = tempfile.mkstemp(suffix=".brep")
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(base64.b64decode(b64))
+        return import_brep(tmp)
+    finally:
+        os.unlink(tmp)
+
+
+def same_body(a, b) -> bool:
+    """Two body_key values describe the same body: the same face / edge counts, volume within 1e-6, bounding
+    box within 1e-4 mm."""
+    if not a or not b or len(a) != len(b) or len(a) != 9:
+        return False
+    return (a[1:3] == b[1:3] and abs(a[0] - b[0]) <= 1e-6 * max(1.0, abs(a[0]))
+            and all(abs(x - y) <= 1e-4 for x, y in zip(a[3:], b[3:])))
+
+
+def body_key(body) -> list[float]:
+    """A body's volume, face / edge counts and bounding box: tells whether a body is still the same one (not
+    the area: OCC's default surface integration on B-spline faces changes when a shape is written and read)."""
+    from OCP.Bnd import Bnd_Box
+    from OCP.BRepBndLib import BRepBndLib
+    from OCP.BRepGProp import BRepGProp
+    from OCP.GProp import GProp_GProps
+    g = GProp_GProps()
+    BRepGProp.VolumeProperties_s(body.wrapped, g)
+    box = Bnd_Box()
+    BRepBndLib.Add_s(body.wrapped, box, False)
+    lo, hi = box.CornerMin(), box.CornerMax()
+    return [g.Mass(), len(body.faces()), len(body.edges()), lo.X(), lo.Y(), lo.Z(), hi.X(), hi.Y(), hi.Z()]
 
 
 def encode_shape(shape: Shape) -> str:

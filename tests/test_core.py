@@ -2705,10 +2705,11 @@ def test_sldasm_native(tmp_path):
     (tmp_path / "stack.SLDASM").write_bytes(_sw_package({"swXmlContents/COMPINSTANCETREE": stack.encode(),
                                                          "Contents/Config-0-MatesList": mates}))
     r = S.open_part(str(tmp_path / "stack.SLDASM"))
-    assert r.get("notes", [r])[0] == "1 of 2 mates imported"
-    assert any("anchors cyl-1" in n for n in r["notes"])
+    assert r.get("notes", [r])[0] == "2 of 2 mates imported"
     m = S.get_model()
-    assert [(x["type"], x["aligned"]) for x in m["mates"]] == [("coincident", False)]  # top cap onto bottom cap
+    # top cap onto bottom cap; cyl-1's Front plane on the assembly's own (the "(assembly)" frame, fixed)
+    assert [(x["type"], x["aligned"]) for x in m["mates"]] == [("coincident", False), ("coincident", True)]
+    assert m["mates"][1]["b"]["component"] == "(assembly)"
     assert [c["fixed"] for c in m["components"]] == [True, False]  # the mated component is free again
     assert m["components"][1]["position"] == pytest.approx([0, 30, 0])  # and solving keeps it in place
 
@@ -4022,3 +4023,106 @@ def test_electrical_harness_and_composer(tmp_path):
     assert '"steps":' in html and "See through" in html and "splay" in html
     saved = S.APP.asm.to_dict()
     assert saved["electrical"]["connectors"]["J1"]["pins"] == 4 and len(saved["composer"]["steps"]) == 4
+
+
+def test_persistent_names_follow_moved_edges():
+    from build123d import Vector
+    from openswx.geom import edge_ref
+    from openswx.naming import labels_of
+    S.new_part("Step")
+    sk = S.create_sketch("Front")["sketch"]
+    S.sketch_rectangle(sk, [0, 0], [40, 10])
+    e1 = S.extrude(sk, depth=20)["feature"]
+    sk2 = S.create_sketch("Front")["sketch"]
+    S.sketch_rectangle(sk2, [40, 0], [50, 10])
+    e2 = S.extrude(sk2, depth=40)["feature"]
+    doc = S.APP.active_doc
+    names = set(labels_of(doc.body).values())
+    assert {"Boss-Extrude1:cap0", "Boss-Extrude2:cap+"} <= names
+    assert "Boss-Extrude2:Sketch2.Line7" not in names  # the high step's top lies on the low step's top plane: it keeps that name
+    edges = doc.body.edges()
+    i = min(range(len(edges)), key=lambda k: (edges[k].center() - Vector(45, 10, 40)).length)
+    assert edge_ref(edges[i], doc.body)["faces"] == ["Boss-Extrude1:Sketch1.Line7", "Boss-Extrude2:cap+"]
+    fil = S.fillet(3, edges=[f"Edge{i}"])["feature"]
+    # the steps swap heights: the stored edge position (z 40) is now nearest the low step's edge (z 38)
+    S.edit_feature(e1, {"depth": 38})
+    S.edit_feature(e2, {"depth": 22})
+    assert doc.state[fil]["status"] == "ok"
+    (blend,) = [f for f in doc.body.faces() if f.geom_type.name == "CYLINDER"]
+    assert blend.center().X == pytest.approx(45, abs=0.1) and blend.center().Z == pytest.approx(21.1, abs=0.1)
+
+
+def test_mates_on_edges_vertices_and_assembly_planes():
+    import numpy as np
+    from openswx.assembly import ASSEMBLY, plane_ref
+    from openswx.geom import edge_ref
+    def block(name):
+        S.new_part(name)
+        sk = S.create_sketch("Front")["sketch"]
+        S.sketch_rectangle(sk, [0, 0], [40, 20])
+        S.extrude(sk, depth=10)
+    block("A")
+    block("B")
+    S.new_assembly("EdgeAsm")
+    S.insert_component("A")
+    S.insert_component("B", position=[100, 50, 30])
+    asm = S.APP.asm
+    body = asm._local_body(asm.component("B-1"))
+    edge = next(e for e in body.edges() if e.geom_type.name == "LINE" and abs(e.length - 40) < 1e-9
+                and abs(e.center().Y - 20) < 1e-9 and abs(e.center().Z - 10) < 1e-9)
+    line = {"component": "B-1", "line": edge_ref(edge, body)}
+    # B's top front edge lies in the assembly's Top plane shifted 0 (coincident), its corner vertex on A's right face
+    asm.add_mate("coincident", line, {"component": ASSEMBLY, "plane": plane_ref("Top")})
+    a_right = {"component": "A-1", "face": S.APP.asm.face_ref_for("A-1/Face" + str(next(
+        i for i, f in enumerate(asm._local_body(asm.component("A-1")).faces())
+        if f.geom_type.name == "PLANE" and abs(f.center().X - 40) < 1e-9)))["face"]}
+    asm.add_mate("coincident", {"component": "B-1", "vertex": [0.0, 20.0, 10.0]}, a_right)
+    asm.add_mate("distance", {"component": "B-1", "vertex": [0.0, 20.0, 0.0]},
+                 {"component": ASSEMBLY, "plane": plane_ref("Front")}, value=5.0)
+    assert not asm.status["failing"]
+    R, t = asm.component("B-1").matrix()
+    p_edge = R @ np.array(tuple(edge.center())) + t
+    assert p_edge[1] == pytest.approx(0, abs=1e-6)  # the edge is in the Top plane
+    corner = R @ np.array([0.0, 20.0, 10.0]) + t
+    assert corner[0] == pytest.approx(40, abs=1e-6)  # the vertex on A's right face
+    assert (R @ np.array([0.0, 20.0, 0.0]) + t)[2] == pytest.approx(5, abs=1e-6)  # 5 mm in front of the Front plane
+    with pytest.raises(Exception, match="not defined"):
+        asm.add_mate("tangent", line, a_right)
+
+
+def test_solidworks_drawing_gdt(tmp_path, monkeypatch):
+    """A .slddrw feature control frame: the characteristic tag, its texts up to <Gtol>, then the frame's
+    position (the first sheet point after the texts that the view record before it does not also hold)."""
+    import struct
+    from openswx import sw_drawing
+    u = lambda s: b"\x00\x07" + s.encode("utf-16-le") + b"\x00\x00\x03"  # noqa: E731
+    at = lambda x, y: b"\x00" * 24 + struct.pack("<3d", x / 1000, y / 1000, -0.0)  # noqa: E731
+    definition = (u("Sheet1") + u("Drawing View1") + u("C:/x/plate.SLDPRT") + u("*Front") + at(120.0, 40.0)
+                  + u("DetailItem40") + u("<IGTOL-PARA>") + u("<MOD-DIAM>0.05") + u("<Gtol>")
+                  + at(120.0, 40.0) + at(300.0, 210.0)
+                  + u("DetailItem41") + u("<IGTOL-FLAT>") + u("<Gtol>") + at(50.0, 50.0))  # (no tolerance: left out)
+    names = b"\x01\x00" + u("Sheet1")
+    monkeypatch.setattr(sw_drawing, "read_streams", lambda p: {"Contents/Definition": definition, "SheetPreviews/SheetNames": names})
+    drw = sw_drawing.read_drawing(str(tmp_path / "plate.slddrw"))
+    assert drw["gdt"] == [{"characteristic": "parallelism", "tolerance": 0.05, "diameter": True, "datums": [],
+                           "position": (300.0, 210.0), "sheet": "Sheet1"}]
+
+
+def test_disk_cache_for_files(tmp_path, monkeypatch):
+    from build123d import Box
+    from openswx import cache
+    src = tmp_path / "part.bin"
+    src.write_bytes(b"one")
+    monkeypatch.setenv("OPENSWX_CACHE", "off")
+    assert cache.key(str(src), "x") is None  # (off: nothing is kept)
+    monkeypatch.setenv("OPENSWX_CACHE", str(tmp_path / "cache"))
+    k = cache.key(str(src), "x")
+    assert k and k != cache.key(str(src), "y") and cache.get_json("history", k) is None
+    cache.put_json("history", k, {"ok": True, "n": 3})
+    assert cache.get_json("history", k) == {"ok": True, "n": 3}
+    cache.put_shape("body", k, Box(10, 20, 30), {"notes": ["a"]})
+    shape, meta = cache.get_shape("body", k)
+    assert shape.volume == pytest.approx(6000) and meta == {"notes": ["a"]}
+    src.write_bytes(b"two")  # the file changed: a new key, nothing cached for it
+    assert cache.key(str(src), "x") != k and cache.get_json("history", cache.key(str(src), "x")) is None
+    assert cache.clear() == 3

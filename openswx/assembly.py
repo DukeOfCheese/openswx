@@ -76,6 +76,16 @@ class Component:
         return loc
 
 
+ASSEMBLY = "(assembly)"  # mate entities on the assembly's own reference planes name this component
+
+
+class _AssemblyFrame(Component):
+    """The assembly's own frame as a mate entity owner: fixed at the origin (its Front / Top / Right planes)."""
+
+    def __init__(self):
+        super().__init__(ASSEMBLY, {}, None, [0.0] * 6, True)
+
+
 def plane_ref(name: str) -> dict | None:
     """A component's standard reference plane by name ('Front', 'Top Plane', ...) as a local point + normal."""
     n = {"front": (0, 0, 1), "top": (0, 1, 0), "right": (1, 0, 0)}.get(name.lower().replace(" plane", "").strip())
@@ -168,6 +178,8 @@ class AssemblyDocument:
 
     # ------------------------------------------------------------------ editing
     def component(self, name: str) -> Component:
+        if name == ASSEMBLY:
+            return self.__dict__.setdefault("_frame", _AssemblyFrame())
         for c in self.components:
             if c.name == name:
                 return c
@@ -485,7 +497,7 @@ class AssemblyDocument:
         """Resolve a mate reference to local geometry: ('plane', p, n) or ('axis', p, d). Results are cached
         per component body and reference (resolving a face matches it against every face of the part)."""
         comp = self.component(ref["component"])
-        body = self._local_body(comp) if ("face" in ref or "edge" in ref) else None
+        body = self._local_body(comp) if ("face" in ref or "edge" in ref or "line" in ref) else None
         key = (comp.name, id(body), repr(sorted(ref.items())))
         cache = self.__dict__.setdefault("_ent_cache", {})
         hit = cache.get(key)
@@ -501,6 +513,13 @@ class AssemblyDocument:
         if "edge" in ref:  # path mates: the local edge itself
             from .geom import resolve_edge
             return comp, "edge", np.zeros(3), np.zeros(3), resolve_edge(self._local_body(comp), ref["edge"])
+        if "line" in ref:  # a straight edge: a point on it + its direction
+            from .geom import resolve_edge
+            e = resolve_edge(self._local_body(comp), ref["line"])
+            p, d = e.position_at(0.5), e.tangent_at(0.5)
+            return comp, "line", np.array([p.X, p.Y, p.Z]), np.array([d.X, d.Y, d.Z]), 0.0
+        if "vertex" in ref:  # a vertex (part coordinates)
+            return comp, "vertex", np.array(ref["vertex"], float), np.zeros(3), 0.0
         if "point" in ref:  # a connection point (magnetic mate): point + direction in the part
             return comp, "cpoint", np.array(ref["point"]["point"], float), np.array(ref["point"]["normal"], float), 0.0
         if "plane" in ref:  # a component reference plane (Front / Top / Right) given as point + normal
@@ -715,7 +734,7 @@ class AssemblyDocument:
             face = body.faces()[int(fid.replace("Face", ""))]
         except (ValueError, IndexError):
             raise DocumentError(f"unknown face {sel!r}") from None
-        return {"component": cname, "face": face_ref(face)}
+        return {"component": cname, "face": face_ref(face, body)}
 
     def mesh(self) -> dict:
         lam = getattr(self, "large_assembly_mode", False)
@@ -821,6 +840,8 @@ def _mate_residual(m, ea, eb, xa, xb, extra=None, xextra=None) -> list[float]:
         ang = math.degrees(math.acos(max(-1.0, min(1.0, float(np.dot(Na, Nb))))))
         lo, hi = float(m["value"]), float(m["value2"])
         return [(min(0.0, ang - lo) + max(0.0, ang - hi)) * math.pi / 180]
+    if ka in ("line", "vertex") or kb in ("line", "vertex"):
+        return _edge_point_residual(t, m, (ka, Pa, Na, ra), (kb, Pb, Nb, rb))
     if t == "tangent":  # planar face tangent to a cylindrical face
         if {ka, kb} != {"plane", "axis"}:
             raise DocumentError("tangent mates need one planar and one cylindrical face")
@@ -846,6 +867,43 @@ def _mate_residual(m, ea, eb, xa, xb, extra=None, xextra=None) -> list[float]:
     gap = float(np.dot(Pb - Pa, Na))
     want = 0.0 if t == "coincident" else float(m["value"]) * (-1.0 if aligned and False else 1.0)
     return r + [gap - want]
+
+
+def _edge_point_residual(t: str, m: dict, a, b) -> list[float]:
+    """Mates on straight edges ("line": point + direction) and vertices with planes, cylinder axes ("axis"),
+    edges and vertices. coincident: the entities meet (a vertex on the plane / line, a line in the plane /
+    along the line); distance: the gap is the value (signed along a plane's normal); parallel / perpendicular:
+    of the directions."""
+    order = {"plane": 0, "axis": 1, "line": 1, "vertex": 2}
+    if a[0] not in order or b[0] not in order:
+        raise DocumentError(f"{t} mates are not defined between a {a[0]} and a {b[0]}")
+    (ka, Pa, Na, _), (kb, Pb, Nb, _) = sorted([a, b], key=lambda e: order[e[0]])
+    ka = "line" if ka == "axis" else ka
+    kb = "line" if kb == "axis" else kb
+    want = float(m.get("value") or 0.0) if t == "distance" else 0.0
+    w = Pb - Pa
+
+    def off_line(v, d):  # the part of v across the line direction d
+        d = d / np.linalg.norm(d)
+        return v - d * np.dot(v, d)
+    if t in ("coincident", "distance"):
+        if ka == "plane" and kb == "vertex":
+            return [float(np.dot(w, Na)) - want]
+        if ka == "plane" and kb == "line":
+            return [float(np.dot(Nb, Na)), float(np.dot(w, Na)) - want]
+        if ka == "line" and kb == "line":
+            o = off_line(w, Na)
+            return list(np.cross(Na, Nb)) + (list(o) if t == "coincident" else [float(np.linalg.norm(o)) - want])
+        if ka == "line" and kb == "vertex":
+            o = off_line(w, Na)
+            return list(o) if t == "coincident" else [float(np.linalg.norm(o)) - want]
+        if ka == "vertex" and kb == "vertex":
+            return list(w) if t == "coincident" else [float(np.linalg.norm(w)) - want]
+    if t == "parallel" and "vertex" not in (ka, kb):
+        return [float(np.dot(Na, Nb))] if ka == "plane" and kb == "line" else list(np.cross(Na, Nb))
+    if t == "perpendicular" and "vertex" not in (ka, kb):
+        return list(np.cross(Na, Nb)) if ka == "plane" and kb == "line" else [float(np.dot(Na, Nb))]
+    raise DocumentError(f"{t} mates are not defined between a {ka} and a {kb}")
 
 
 def _spin(x, x0, axis, m=None, key="") -> float:

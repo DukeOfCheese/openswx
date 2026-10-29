@@ -43,7 +43,8 @@ _PROGRESS = [None]  # (in a rebuild_isolated child) the pipe that reports the fe
 _AVOID = [set()]  # features whose trials crashed the kernel: taken from the stored body instead
 _TRUST = [False]  # retrying with every built feature kept: a decoded profile that builds is not replaced
 _REVOLVE_AXES: list = [None]  # standard axes a revolve without a decoded sketch may turn about
-_DEADLINE = [math.inf]  # time.monotonic() when the current rebuild gives up
+_DEADLINE = [math.inf]  # time.monotonic() when the current rebuild stops trying: later features are imported
+_LUMP = [math.inf]  # time.monotonic() when the rest of the part comes in as one imported feature
 _TAGGED: list = [None]  # stored faces the feature being rebuilt made (FACE_ID), when they can be compared
 _MOVED_LATER: list = [False]  # a later feature scales / moves the body: the stored extents are not this feature's
 _LATER_SCALE: list = [1.0]  # the product of later uniform scale factors (stored extents / this = this feature's)
@@ -1313,6 +1314,24 @@ def _import_delta(doc: PartDocument, oracle: "_Oracle", path: str, config, name:
 
     def touches(sol):
         return any(sol.distance_to(Vertex(*fc.center())) < 1e-3 or sol.distance_to(fc) < 1e-3 for fc in tagged)
+    from build123d import Compound
+    real = {op: [s for s in pieces[op] if s.volume > 1e-9] for op in pieces}
+    kept = {op: [s for s in real[op] if whole or touches(s)] for op in real}
+    if cur is not None and any(kept.values()) and all(len(kept[op]) == len(real[op]) for op in real):
+        # every difference is this feature's: the result is the stored body itself. It goes with the feature
+        # (used while the body before it is unchanged), sparing a boolean that can take the kernel minutes
+        # on pieces sharing many faces with the body
+        tools = {op: (v[0] if len(v) == 1 else Compound(v)) for op, v in kept.items() if v}
+        first = "add" if "add" in tools else "cut"
+        params = {"brep": encode_shape(tools[first]), "op": first, "source": "stored body",
+                  "result": encode_shape(oracle.shape), "base": _body_key(cur)}
+        if first == "add" and "cut" in tools:
+            params["cut_brep"] = encode_shape(tools["cut"])
+        try:
+            doc.add_feature("import", params, name=name)
+        except DocumentError:
+            return None
+        return "imported"
     done = False
     for op in ("add", "cut"):
         keep = [s for s in pieces[op] if s.volume > 1e-9 and (whole or touches(s))]
@@ -1327,6 +1346,40 @@ def _import_delta(doc: PartDocument, oracle: "_Oracle", path: str, config, name:
             return "imported" if done else None
         done = True
     return "imported" if done else "present"
+
+
+def _body_key(body) -> list[float]:
+    from .features import body_key
+    return body_key(body)
+
+
+def _lump(doc: PartDocument, oracle: "_Oracle", name: str) -> str | None:
+    """The rest of the part at once: the material the part still lacks (and has too much of) as an imported
+    feature named `name`, carrying the stored body as its result (so no fuse is needed now, and edits to the
+    features before it still count)."""
+    from build123d import Compound
+    from .features import _valid, encode_shape
+    cur = doc.body
+    try:
+        pieces = {"add": oracle.shape.solids() if cur is None else _valid(oracle.shape - cur).solids(),
+                  "cut": [] if cur is None else _valid(cur - oracle.shape).solids()}
+    except Exception:
+        pieces = {"add": [], "cut": []}
+    tools = {op: [x for x in v if x.volume > 1e-9] for op, v in pieces.items()}
+    tools = {op: (v[0] if len(v) == 1 else Compound(v)) for op, v in tools.items() if v}
+    if not tools:
+        return "present" if cur is not None else None
+    first = "add" if "add" in tools else "cut"
+    params = {"brep": encode_shape(tools[first]), "op": first, "source": "stored body", "result": encode_shape(oracle.shape)}
+    if cur is not None:
+        params["base"] = _body_key(cur)
+    if first == "add" and "cut" in tools:
+        params["cut_brep"] = encode_shape(tools["cut"])
+    try:
+        doc.add_feature("import", params, name=name)
+    except DocumentError:
+        return None
+    return "imported"
 
 
 def _hole_variants(tagged: list) -> list[list[dict]]:
@@ -1481,7 +1534,11 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
     from .sw_tree import _stream, read_tree
 
     import time
-    _DEADLINE[0] = time.monotonic() + budget
+    # past 60 % of the budget the remaining features come in as their stored contribution, past 85 % all of
+    # the material still missing comes in at once (the part still opens with its rebuilt features editable)
+    _DEADLINE[0] = time.monotonic() + 0.6 * budget
+    _LUMP[0] = time.monotonic() + 0.85 * budget
+    lumped = went_late = False
     _TRUST[0] = trust_built
     tree = read_tree(path, config)
     stream = _stream(path, config)
@@ -1529,6 +1586,9 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
         angles = [math.degrees(p["value"]) for p in f["params"] if p["kind"] == "angle"]
         if name in bend_done:  # (built with the base flange before it)
             continue
+        if lumped:  # (its material came in with the lump)
+            skipped.append(name)
+            continue
         if cls == "mo3DProfileFeature_c" and sketches3d.get(name, {}).get("lines"):  # a 3D sketch of lines
             sk3 = sketches3d[name]
             P = sk3["points"]
@@ -1547,14 +1607,25 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
             continue
         if _PROGRESS[0]:  # (which feature is being tried: the parent learns it if the kernel crashes)
             _PROGRESS[0].send(("feature", name))
-        if name in _AVOID[0] and cls != "moProfileFeature_c" and f.get("id") is not None:
-            # trying this feature crashed the geometry kernel before: its contribution read off the stored body
+        late = time.monotonic() > _DEADLINE[0]
+        if (name in _AVOID[0] or late) and cls != "moProfileFeature_c" and f.get("id") is not None:
+            # trying this feature crashed the geometry kernel before, or the time for trials is up: its
+            # contribution read off the stored body
             if last_sketch is not None:
                 consumed.add(last_sketch)
                 last_sketch = None
-            got = _import_delta(doc, oracle, path, config, name, f["id"], face_cache, whole=cls in FIXED_BASE)
+            lumped = late and time.monotonic() > _LUMP[0] and first_solid is not None
+            if late:
+                _log(f"{name}: imported, out of time for trials" + (" (with the rest of the part)" if lumped else ""))
+            got = (_lump(doc, oracle_full, name) if lumped else
+                   _import_delta(doc, oracle, path, config, name, f["id"], face_cache, whole=cls in FIXED_BASE))
+            if not got and late and first_solid is not None:  # (no faces of its own: it comes in with the rest)
+                lumped = True
+                got = _lump(doc, oracle_full, name)
+            went_late = went_late or late
             if not got:
-                raise RebuildError(f"{name}: its trials crash the geometry kernel and it cannot be imported")
+                raise RebuildError(f"{name}: " + ("out of time and it cannot be imported" if late else
+                                                  "its trials crash the geometry kernel and it cannot be imported"))
             (imported if got == "imported" else skipped).append(name)
             built.append(name)
             if first_solid is None and doc.body is not None:
@@ -1904,7 +1975,7 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
                         continue
                     imported.append(name)
             except (RebuildError, DocumentError) as exc:  # decoded but not rebuilt: its contribution, read off
-                if "time budget" in str(exc) or f.get("id") is None:  # the stored body, as an imported feature
+                if f.get("id") is None:  # the stored body, as an imported feature (also when the time for trials ran out)
                     raise
                 _log(f"{name}: {exc}")
                 if any(x["name"] == name for x in doc.features):
@@ -1913,8 +1984,13 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
                     consumed.add(last_sketch)
                     last_sketch = None
                 got = _import_delta(doc, oracle, path, config, name, f["id"], face_cache)
+                if got is None and time.monotonic() > _DEADLINE[0] and first_solid is not None:
+                    # out of time and nothing of its own to import: the rest of the part comes in at once
+                    lumped = went_late = True
+                    got = _lump(doc, oracle_full, name)
                 if got is None:
                     raise
+                went_late = went_late or time.monotonic() > _DEADLINE[0]
                 if got != "imported":
                     skipped.append(name)
                     continue
@@ -1962,6 +2038,17 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
                 "stored_area": oracle.area, "deviation": dev}
     if body is None:
         raise RebuildError("the history builds no body")
+    from .features import body_key
+    if body_key(body)[0] <= 0:  # (the mesh volume below is unsigned: an inside-out body would pass it)
+        raise RebuildError("the rebuilt body is inside out")
+    if went_late and not lumped and first_solid is not None:
+        # features imported for lack of time are read off one by one; whatever they missed comes in at the end
+        vol, area = _mesh_volume(body), sum(fc.area for fc in body.faces())
+        if abs(vol - oracle.volume) > MATCH * oracle.volume or abs(area - oracle.area) > MATCH * oracle.area:
+            if _lump(doc, oracle, "Stored body (rest)") == "imported":
+                imported.append("Stored body (rest)")
+                built.append("Stored body (rest)")
+                body = doc.body
     vol = _mesh_volume(body)
     area = sum(fc.area for fc in body.faces())
     dv = abs(vol - oracle.volume) / max(oracle.volume, 1e-9)
@@ -1974,13 +2061,26 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
             "stored_area": oracle.area, "deviation": dev}
 
 
-def _rebuild_worker(path: str, config: int | None, conn, avoid: frozenset = frozenset()) -> None:
+def _rebuild_worker(path: str, config: int | None, conn, avoid: frozenset = frozenset(), budget: float = 150.0) -> None:
     try:
         from pathlib import Path
         _PROGRESS[0], _AVOID[0] = conn, set(avoid)
         doc = PartDocument(Path(path).stem)
-        report = rebuild_part(path, doc, config)
-        conn.send(("ok", doc.to_dict(), report))
+        report = rebuild_part(path, doc, config, budget)
+        data = doc.to_dict()
+        # the document as saved must regenerate to the same body (a sketch edited for a later feature can leave
+        # an earlier one built on a state the saved history no longer gives)
+        fresh = PartDocument(doc.name)
+        fresh.load_dict(data)
+        from .features import body_key
+        bad = [k for k, v in fresh.state.items() if v.get("status") == "error"]
+        here = body_key(doc.body)[0] if doc.body is not None else 0.0
+        again = body_key(fresh.body)[0] if fresh.body is not None else 0.0
+        if bad or abs(here - again) > 1e-6 * max(1.0, abs(here)):
+            raise RebuildError("the rebuilt history does not regenerate to the same body"
+                               + (f" ({', '.join(bad[:3])})" if bad else ""))
+        report["regenerated_volume"] = again
+        conn.send(("ok", data, report))
     except Exception as exc:  # reported to the parent, which falls back to the stored body
         conn.send(("error", f"{type(exc).__name__}: {exc}", None))
     finally:
@@ -2000,7 +2100,9 @@ def rebuild_isolated(path: str, config: int | None = None, timeout: float = 300.
     deadline = time.monotonic() + timeout
     while True:
         parent, child = ctx.Pipe(duplex=False)
-        proc = ctx.Process(target=_rebuild_worker, args=(path, config, child, frozenset(avoid)), daemon=True)
+        # (the child's own budget leaves time for its start-up, the final comparison and the result transfer)
+        budget = max(5.0, 0.85 * (deadline - time.monotonic()) - 5.0)
+        proc = ctx.Process(target=_rebuild_worker, args=(path, config, child, frozenset(avoid), budget), daemon=True)
         proc.start()
         # the child end stays open here until the child is done: on Windows the child copies the handle out of
         # this process after it starts, and closing it first can leave the child unconnected (it then hangs).

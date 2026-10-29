@@ -139,10 +139,60 @@ def _notes(d: bytes, toks: list, after: int, sheet_at: list, sheets: list[str], 
     return out
 
 
+# feature control frames: the characteristic tag (<IGTOL-STRAIGHT>, ...) then the frame's texts up to <Gtol>
+_GTOL = {"STRAIGHT": "straightness", "FLAT": "flatness", "CIRC": "circularity", "CYL": "cylindricity",
+         "LPROF": "profile_line", "SPROF": "profile_surface", "PROFILE": "profile_surface", "PERP": "perpendicularity",
+         "ANGULAR": "angularity", "ANG": "angularity", "PARA": "parallelism", "POS": "position", "TP": "position",
+         "CONC": "concentricity", "SYM": "symmetry", "CRUNOUT": "circular_runout", "RUNOUT": "circular_runout",
+         "TRUNOUT": "total_runout"}
+
+
+def _triples(d: bytes, a: int, b: int) -> list[tuple[int, float, float]]:
+    """(offset, x, y) of the (x, y, 0) doubles in d[a:b] that lie on a sheet (metres, from the lower left)."""
+    out = []
+    for k in range(max(a, 0), min(b, len(d) - 24)):
+        x, y, z = struct.unpack_from("<3d", d, k)
+        if 0.001 < x < 1.3 and 0.001 < y < 1.3 and abs(z) < 1e-9:
+            out.append((k, x, y))
+    return out
+
+
+def _gdt(d: bytes, toks: list, sheet_at: list, sheets: list[str]) -> list[dict]:
+    """Feature control frames: the characteristic, the tolerance (a diameter zone after <MOD-DIAM>) and the frame's
+    position (datum references are not decoded: no sample frame has one) - the first sheet point written after its texts that is not also written before
+    them (those belong to the drawing view the frame sits in)."""
+    out = []
+    for i, (o, s) in enumerate(toks):
+        m = re.fullmatch(r"<I?GTOL-([A-Z]+)>", s)
+        if not m:
+            continue
+        kind = _GTOL.get(m.group(1))
+        tol, diameter = None, False
+        for _, t in toks[i + 1:i + 12]:
+            if t == "<Gtol>" or re.fullmatch(r"DetailItem\d+|<I?GTOL-[A-Z]+>", t):
+                break
+            diameter = diameter or "<MOD-DIAM>" in t
+            v = re.sub(r"<[^>]*>", "", t).strip()
+            if tol is None and re.fullmatch(r"\d*\.?\d+", v):
+                tol = float(v)
+        if kind is None or tol is None:
+            continue
+        before = {(round(x, 9), round(y, 9)) for _, x, y in _triples(d, o - 3000, o)}
+        pos = next(((x, y) for _, x, y in _triples(d, o + 20, o + 3000) if (round(x, 9), round(y, 9)) not in before), None)
+        if pos is None:
+            continue
+        sheet = next((n for p, n in reversed(sheet_at) if p < o), sheets[0])
+        out.append({"characteristic": kind, "tolerance": tol, "diameter": diameter, "datums": [],
+                    "position": (round(pos[0] * 1000, 3), round(pos[1] * 1000, 3)), "sheet": sheet})
+    return out
+
+
 def read_drawing(path: str) -> dict:
     """{"models": [paths as written], "sheets": [names], "sheet_size": "A3" | ... | None,
     "views": [{"name", "orientation" | None, "sheet", "position": (x, y) sheet mm from the lower left, "scale"}],
-    "notes": [{"text", "position", "sheet", "size"?}]} (position and scale when the view record gives them)."""
+    "notes": [{"text", "position", "sheet", "size"?}],
+    "gdt": [{"characteristic", "tolerance", "diameter", "datums", "position", "sheet"}]} (position and scale when the
+    view record gives them)."""
     st = read_streams(path)
     d = st.get("Contents/Definition", b"")
     toks = list(_strings(d))
@@ -190,7 +240,8 @@ def read_drawing(path: str) -> dict:
             models.insert(0, first)
     size = _sheet_size(d)
     notes = _notes(d, toks, records[0][0], sheet_at, sheets, size) if records else []
-    return {"models": models, "sheets": sheets, "views": views, "sheet_size": size, "notes": notes}
+    gdt = _gdt(d, toks, sheet_at, sheets) if records else []
+    return {"models": models, "sheets": sheets, "views": views, "sheet_size": size, "notes": notes, "gdt": gdt}
 
 
 def find_model(path: str, models: list[str]) -> Path | None:

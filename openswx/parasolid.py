@@ -718,20 +718,23 @@ class _Builder:
         """Move the u-seam of a periodic blend tube into the widest gap between the blend's boundary points
         (chart points of the intersection curves that lie on it), so the blend face does not straddle it."""
         import math
-        from OCP.GeomAPI import GeomAPI_ProjectPointOnSurf
+        from OCP.ShapeAnalysis import ShapeAnalysis_Surface
         if not s.IsUPeriodic():
             return s
+        sas = ShapeAnalysis_Surface(s)  # (GeomAPI_ProjectPointOnSurf can take minutes on these fine pipe surfaces)
         us = []
         for t, r in self.nodes.values():
             if t != 38:
                 continue
             on = any(si == idx or (self.node(si)[0] == 59 and self.node(si)[1].get("blend") == idx) for si in r["surface"])
-            if on:
-                for h in self.node(r["chart"])[1]["hvec"]:
+            if on:  # (about 16 points per curve: enough to see where the boundary runs; projecting onto the
+                # pipe surface is slow, and charts can hold hundreds of points)
+                pts = [h for h in self.node(r["chart"])[1]["hvec"] if h]
+                for h in pts[::max(1, len(pts) // 16)] + pts[-1:]:
                     if h:
-                        pr = GeomAPI_ProjectPointOnSurf(self._pnt(h), s)
-                        if pr.NbPoints() and pr.LowerDistance() < 1e-3:
-                            us.append(pr.LowerDistanceParameters()[0])
+                        uv = sas.ValueOfUV(self._pnt(h), 1e-4)
+                        if sas.Gap() < 1e-3:
+                            us.append(uv.X())
         if len(us) < 2:
             return s
         u0, per = s.Bounds()[0], s.UPeriod()
