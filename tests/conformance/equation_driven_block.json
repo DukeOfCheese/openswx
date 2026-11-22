@@ -1,0 +1,101 @@
+{
+ "name": "equation_driven_block",
+ "description": "a dimensioned 30 x 15 rectangle extruded to the global variable h = w / 2 = 15",
+ "kind": "part",
+ "commands": [
+  {
+   "name": "set_global_variable",
+   "args": {
+    "name": "w",
+    "expression": 30
+   }
+  },
+  {
+   "name": "set_global_variable",
+   "args": {
+    "name": "h",
+    "expression": "\"w\" / 2"
+   }
+  },
+  {
+   "name": "create_sketch",
+   "args": {
+    "plane": "Top"
+   }
+  },
+  {
+   "name": "sketch_rectangle",
+   "args": {
+    "sketch": "Sketch1",
+    "corner1": [
+     0,
+     0
+    ],
+    "corner2": [
+     10,
+     10
+    ]
+   }
+  },
+  {
+   "name": "sketch_dimension",
+   "args": {
+    "sketch": "Sketch1",
+    "kind": "length",
+    "refs": [
+     "Line5"
+    ],
+    "value": 30
+   }
+  },
+  {
+   "name": "sketch_dimension",
+   "args": {
+    "sketch": "Sketch1",
+    "kind": "length",
+    "refs": [
+     "Line6"
+    ],
+    "value": 15
+   }
+  },
+  {
+   "name": "extrude",
+   "args": {
+    "sketch": "Sketch1",
+    "depth": 8
+   }
+  },
+  {
+   "name": "set_equation",
+   "args": {
+    "target": "D1@Boss-Extrude1",
+    "expression": "\"h\""
+   }
+  }
+ ],
+ "expect": {
+  "volume": 6749.999999999977,
+  "surface_area": 2249.9999999999955,
+  "faces": 6,
+  "edges": 12,
+  "vertices": 8,
+  "bodies": 1,
+  "bounding_box": {
+   "min": [
+    -9.999999958788752,
+    0.0,
+    -12.49999998543676
+   ],
+   "max": [
+    20.000000041211255,
+    15.0,
+    2.5000000145632097
+   ]
+  }
+ },
+ "tolerance": {
+  "relative": 1e-06,
+  "absolute": 1e-06
+ }
+}

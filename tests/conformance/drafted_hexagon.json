@@ -1,0 +1,57 @@
+{
+ "name": "drafted_hexagon",
+ "description": "a hexagon (inscribed r 20) extruded 15 with 5 degrees of draft",
+ "kind": "part",
+ "commands": [
+  {
+   "name": "create_sketch",
+   "args": {
+    "plane": "Top"
+   }
+  },
+  {
+   "name": "sketch_polygon",
+   "args": {
+    "sketch": "Sketch1",
+    "center": [
+     0,
+     0
+    ],
+    "radius": 20,
+    "sides": 6
+   }
+  },
+  {
+   "name": "extrude",
+   "args": {
+    "sketch": "Sketch1",
+    "depth": 15,
+    "draft": 5
+   }
+  }
+ ],
+ "expect": {
+  "volume": 14437.189861091825,
+  "surface_area": 3665.371850526555,
+  "faces": 8,
+  "edges": 18,
+  "vertices": 12,
+  "bodies": 1,
+  "bounding_box": {
+   "min": [
+    -17.32050817568878,
+    -1e-07,
+    -20.0000001
+   ],
+   "max": [
+    17.320508175688772,
+    15.0000001,
+    20.0000001
+   ]
+  }
+ },
+ "tolerance": {
+  "relative": 1e-06,
+  "absolute": 1e-06
+ }
+}

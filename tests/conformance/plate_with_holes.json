@@ -1,0 +1,115 @@
+{
+ "name": "plate_with_holes",
+ "description": "120 x 60 x 10 plate with four diameter-8 through holes",
+ "kind": "part",
+ "commands": [
+  {
+   "name": "create_sketch",
+   "args": {
+    "plane": "Top"
+   }
+  },
+  {
+   "name": "sketch_rectangle",
+   "args": {
+    "sketch": "Sketch1",
+    "corner1": [
+     0,
+     0
+    ],
+    "corner2": [
+     120,
+     60
+    ]
+   }
+  },
+  {
+   "name": "extrude",
+   "args": {
+    "sketch": "Sketch1",
+    "depth": 10
+   }
+  },
+  {
+   "name": "create_sketch",
+   "args": {
+    "plane": "Top"
+   }
+  },
+  {
+   "name": "sketch_circle",
+   "args": {
+    "sketch": "Sketch2",
+    "center": [
+     12,
+     12
+    ],
+    "radius": 4
+   }
+  },
+  {
+   "name": "sketch_circle",
+   "args": {
+    "sketch": "Sketch2",
+    "center": [
+     108,
+     12
+    ],
+    "radius": 4
+   }
+  },
+  {
+   "name": "sketch_circle",
+   "args": {
+    "sketch": "Sketch2",
+    "center": [
+     108,
+     48
+    ],
+    "radius": 4
+   }
+  },
+  {
+   "name": "sketch_circle",
+   "args": {
+    "sketch": "Sketch2",
+    "center": [
+     12,
+     48
+    ],
+    "radius": 4
+   }
+  },
+  {
+   "name": "cut_extrude",
+   "args": {
+    "sketch": "Sketch2",
+    "end_condition": "ThroughAllBoth"
+   }
+  }
+ ],
+ "expect": {
+  "volume": 69989.38070170255,
+  "surface_area": 18603.185789489246,
+  "faces": 10,
+  "edges": 24,
+  "vertices": 16,
+  "bodies": 1,
+  "bounding_box": {
+   "min": [
+    0.0,
+    0.0,
+    -60.0
+   ],
+   "max": [
+    120.0,
+    10.0,
+    0.0
+   ]
+  }
+ },
+ "tolerance": {
+  "relative": 1e-06,
+  "absolute": 1e-06
+ }
+}

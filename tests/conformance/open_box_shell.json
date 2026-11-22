@@ -1,0 +1,67 @@
+{
+ "name": "open_box_shell",
+ "description": "a 50 x 30 x 20 block shelled to 2 mm walls, open at the top (the face picked by name)",
+ "kind": "part",
+ "commands": [
+  {
+   "name": "create_sketch",
+   "args": {
+    "plane": "Top"
+   }
+  },
+  {
+   "name": "sketch_rectangle",
+   "args": {
+    "sketch": "Sketch1",
+    "corner1": [
+     0,
+     0
+    ],
+    "corner2": [
+     50,
+     30
+    ]
+   }
+  },
+  {
+   "name": "extrude",
+   "args": {
+    "sketch": "Sketch1",
+    "depth": 20
+   }
+  },
+  {
+   "name": "shell",
+   "args": {
+    "thickness": 2,
+    "faces_to_remove": [
+     "Boss-Extrude1:cap+"
+    ]
+   }
+  }
+ ],
+ "expect": {
+  "volume": 8472.0,
+  "surface_area": 8792.0,
+  "faces": 11,
+  "edges": 24,
+  "vertices": 16,
+  "bodies": 1,
+  "bounding_box": {
+   "min": [
+    0.0,
+    0.0,
+    -30.0
+   ],
+   "max": [
+    50.0,
+    20.0,
+    0.0
+   ]
+  }
+ },
+ "tolerance": {
+  "relative": 1e-06,
+  "absolute": 1e-06
+ }
+}

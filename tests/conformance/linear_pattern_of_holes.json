@@ -1,0 +1,97 @@
+{
+ "name": "linear_pattern_of_holes",
+ "description": "a 100 x 40 x 5 strip with a diameter-6 hole patterned five times at 20 mm",
+ "kind": "part",
+ "commands": [
+  {
+   "name": "create_sketch",
+   "args": {
+    "plane": "Top"
+   }
+  },
+  {
+   "name": "sketch_rectangle",
+   "args": {
+    "sketch": "Sketch1",
+    "corner1": [
+     0,
+     0
+    ],
+    "corner2": [
+     100,
+     40
+    ]
+   }
+  },
+  {
+   "name": "extrude",
+   "args": {
+    "sketch": "Sketch1",
+    "depth": 5
+   }
+  },
+  {
+   "name": "create_sketch",
+   "args": {
+    "plane": "Top"
+   }
+  },
+  {
+   "name": "sketch_circle",
+   "args": {
+    "sketch": "Sketch2",
+    "center": [
+     10,
+     20
+    ],
+    "radius": 3
+   }
+  },
+  {
+   "name": "cut_extrude",
+   "args": {
+    "sketch": "Sketch2",
+    "end_condition": "ThroughAllBoth"
+   }
+  },
+  {
+   "name": "linear_pattern",
+   "args": {
+    "features": [
+     "Cut-Extrude1"
+    ],
+    "direction": [
+     1,
+     0,
+     0
+    ],
+    "spacing": 20,
+    "count": 5
+   }
+  }
+ ],
+ "expect": {
+  "volume": 19293.141652942304,
+  "surface_area": 9588.495559215395,
+  "faces": 11,
+  "edges": 27,
+  "vertices": 18,
+  "bodies": 1,
+  "bounding_box": {
+   "min": [
+    0.0,
+    0.0,
+    -40.0
+   ],
+   "max": [
+    100.0,
+    5.0,
+    0.0
+   ]
+  }
+ },
+ "tolerance": {
+  "relative": 1e-06,
+  "absolute": 1e-06
+ }
+}

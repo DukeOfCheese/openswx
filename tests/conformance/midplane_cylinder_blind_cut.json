@@ -1,0 +1,80 @@
+{
+ "name": "midplane_cylinder_blind_cut",
+ "description": "a mid-plane cylinder (r 15, length 40) with a blind diameter-12 cut 10 deep",
+ "kind": "part",
+ "commands": [
+  {
+   "name": "create_sketch",
+   "args": {
+    "plane": "Front"
+   }
+  },
+  {
+   "name": "sketch_circle",
+   "args": {
+    "sketch": "Sketch1",
+    "center": [
+     0,
+     0
+    ],
+    "radius": 15
+   }
+  },
+  {
+   "name": "extrude",
+   "args": {
+    "sketch": "Sketch1",
+    "depth": 40,
+    "end_condition": "MidPlane"
+   }
+  },
+  {
+   "name": "create_sketch",
+   "args": {
+    "plane": "Front"
+   }
+  },
+  {
+   "name": "sketch_circle",
+   "args": {
+    "sketch": "Sketch2",
+    "center": [
+     0,
+     0
+    ],
+    "radius": 6
+   }
+  },
+  {
+   "name": "cut_extrude",
+   "args": {
+    "sketch": "Sketch2",
+    "depth": 10
+   }
+  }
+ ],
+ "expect": {
+  "volume": 27143.36052701581,
+  "surface_area": 5786.813667912399,
+  "faces": 6,
+  "edges": 6,
+  "vertices": 4,
+  "bodies": 1,
+  "bounding_box": {
+   "min": [
+    -15.0,
+    -15.0,
+    -20.0
+   ],
+   "max": [
+    15.0,
+    15.0,
+    20.0
+   ]
+  }
+ },
+ "tolerance": {
+  "relative": 1e-06,
+  "absolute": 1e-06
+ }
+}

@@ -23,7 +23,7 @@ def test_every_command_has_a_description():
 
 
 def test_every_command_is_named_in_a_test():
-    text = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "tests").glob("test_*.py") if p.name != "test_docs.py")
+    text = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "tests").glob("*.py") if p.name not in ("test_docs.py", "conftest.py"))
     missing = {n for n in S.COMMANDS if not re.search(rf"\b{re.escape(n)}\b", text)}
     assert missing - UNTESTED == set(), f"commands without a test: {sorted(missing - UNTESTED)}"
     assert UNTESTED - missing == set(), f"now tested, remove from UNTESTED: {sorted(UNTESTED - missing)}"
