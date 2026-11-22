@@ -5012,6 +5012,7 @@ from .commands_tol import *  # noqa: E402,F401,F403
 from .commands_review import *  # noqa: E402,F401,F403
 from .commands_settings import *  # noqa: E402,F401,F403
 from .commands_asm import *  # noqa: E402,F401,F403
+from .commands_blocks import *  # noqa: E402,F401,F403
 
 from . import plugins as _plugins  # noqa: E402
 
