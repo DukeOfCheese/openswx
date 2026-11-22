@@ -37,12 +37,12 @@ state), and how the program got here, pass by pass, in [`PLAN.md`](PLAN.md) (a l
 
 ## Known limits
 
-- SOLIDWORKS feature history: 525 of 841 sample parts rebuild exactly (survey of 2026-10-29, not re-run
-  since); the rest open as an imported body. `.sldprt` is read-only.
+- SOLIDWORKS feature history: 525 of 841 sample parts rebuilt exactly in the survey of 2026-10-29; the rest
+  open as an imported body. The 277 smallest were re-surveyed on 2026-11-23 (243 exact; `docs/survey/`).
+  `.sldprt` is read-only.
 - Simulation meshes are voxel-based: stresses at curved boundaries are approximate.
-- The UI has no automated tests; the desktop window, macOS and Linux builds have not been exercised with
-  the changes of the last pass.
-- No remote repository yet: the CI workflows have never run.
+- The desktop window has not been exercised with the changes of the last pass (the browser UI has, in CI).
+- CI (`.github/workflows/test.yml`) runs the suite on Linux, Windows and macOS and the UI smoke tests in a headless browser.
 
 ## Working on it
 

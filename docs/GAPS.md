@@ -21,13 +21,13 @@ Snapshot
 
 The specs below are as written on 2026-11-22; this table says what has been done about each since
 (commits `df95ff6` onwards, 308 tests). "Done" means implemented with tests that pass on Windows;
-nothing here has been run on GitHub's runners, on macOS or Linux, or in the desktop window.
+since 2026-11-23 the suite also runs green in CI on Linux and macOS; the desktop window has not been launched.
 
 | Item | State | What was done / what is left |
 |---|---|---|
 | A1 licence | done | `LICENSE`, `NOTICE`, `CONTRIBUTING.md`; in the wheel and the Windows installer; About box. **Left:** the macOS package (`packaging/build.py` belongs to the uncommitted macOS work) |
-| A2 remote, branch, commits | **open** | Needs the owner: create the GitHub repository, rename `master`, push. The macOS packaging work is still uncommitted |
-| A3 CI on push | written, **not run** | `.github/workflows/test.yml` (Linux 3.11 / 3.13, Windows, macOS, ruff errors). First run will show whether the Linux job needs more system libraries |
+| A2 remote, branch, commits | mostly | Private GitHub repository `DukeOfCheese/openswx`, branch `main`, pushed 2026-11-23 (to be made public later; the commit author address is a noreply one and no tracked file holds a user name or path). **Left:** the macOS packaging work is still uncommitted in the working tree, with its release workflow `build.yml` |
+| A3 CI on push | done | `.github/workflows/test.yml` runs green on Linux (Python 3.11 and 3.13), Windows and macOS. The first run found one platform-dependent failure (a requirement exactly at its limit), fixed |
 | A4 docs | done | `docs/commands.md` generated and checked by a test; README rewritten around it; `docs/STATUS.md` is the one-screen current state and `PLAN.md` is marked as the log |
 | B1 server guard | done | `security.py`: token, Host / Origin / Sec-Fetch-Site checks, JSON-only POST, `--allow-remote`. The token is per user and persistent (the spec said per launch) so agent configurations survive restarts. Macros: agents cannot run them (not an MCP tool) and `macro_stop` obeys the workspace |
 | B2 agent workspace | done | `--workspace` / `OPENSWX_WORKSPACE`. **Left:** an `overwrite` flag on file commands |
@@ -39,10 +39,10 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | C5 logging | done | `applog.py`, `save_diagnostic_report` |
 | D1 untested commands | done | Every command is named in a test; a test enforces it for new ones. Found and fixed on the way: component numbers reused after a delete, PDM where-used missing linked parts, property commands not marking the document changed |
 | D2 test file split | done | Nine files by area + `core_helpers.py` |
-| D3 UI tests | written, **not run** | `tests/ui/test_ui_smoke.py` (Playwright) and a `ui` job in the test workflow; skipped locally (Playwright is not installed here), so it has never run. By hand in a browser: the token link, every dialog added in this pass (including Document Recovery after a simulated crash, Export Script, Hand-off Pack and the diagnostic report) and a study as a job. Not opened: the desktop window. No screenshot comparison |
+| D3 UI tests | done | `tests/ui/test_ui_smoke.py` (Playwright) passes in the `ui` CI job: token link, a part, every dialog added in this pass, a study as a job, assembly dialogs, no script errors. Also driven by hand in a browser, including Document Recovery after a simulated crash. **Left:** the desktop window, screenshot comparison |
 | D4 conformance | done | `tests/conformance/*.json` (7 cases), `tools/conformance.py record / run` |
 | D5 static checks, deps | partly | ruff (errors only) in CI and `pyproject.toml`; `ezdxf` declared. **Left:** a lock file, type checking, the `sklearn` stub |
-| D6 survey in the repo | partly | `tools/survey.py` (resumable run, summary, compare), bookkeeping tested with a stand-in. **Not run** against the SOLIDWORKS sample corpus; no result table checked in |
+| D6 survey in the repo | partly | `tools/survey.py` run on the installed SOLIDWORKS samples: the 300 smallest files (277 distinct parts) give 243 exact, 224 fully parametric; table in `docs/survey/2026-11-23-smallest-300.json`. The rest of the corpus (the slow, large parts) is still running at the time of writing |
 | E1 split `session.py` | done | 273 commands moved into `commands_document`, `_sketch`, `_features`, `_assembly`, `_drawing`, `_simulation` (AST-driven, no behaviour change); `session.py` keeps the dispatcher and helpers (1,270 lines). `commands_more.py` and `commands_mfg.py` were left as they are |
 | E2 MCP toolsets | done | Core set under 50 tools, `list_toolsets` / `enable_toolset`, annotations, `batch`, persistent names in `get_topology`, resources. **Left:** machine-readable error codes, output schemas, resource-changed notifications |
 | E3 settings, i18n, a11y | partly | `settings.py` + Tools > User Settings (units, autosave, toolsets, close prompt, tolerance class, picture size); System Options unchanged. **Left:** view colours, mouse mapping, shortcuts, translation, keyboard navigation |
@@ -54,11 +54,11 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | G drawings | partly | Ordinate / baseline / chain dimensions; tolerance display. **Left:** the rest of the list |
 | H1 C++ port decision | decided | Parked (2026-11-23): the owner's reason for the port was macOS support, which the Python application already has through `packaging/build.py`. Recorded in `PLAN.md`. Hot loops go to compiled extensions case by case if the benchmarks call for it |
 | H2 simulation | partly | Result probes, an HTML study report and a mesh-convergence study (`simulation_probe`, `simulation_report`, `simulation_convergence`). **Left:** a body-fitted tetrahedral mesher (needs gmsh or netgen as a dependency), mesh controls, remote and bearing loads, shells and beams |
-| H3 sketch solver | partly | No search when every relation already holds; grouped-column Jacobian from 12 unknowns; one SVD: 2.9 s -> 1.3 s on the benchmark. Not re-surveyed against SOLIDWORKS sketches. **Left:** decomposition into rigid clusters, minimal conflicting sets |
+| H3 sketch solver | partly | No search when every relation already holds; grouped-column Jacobian from 12 unknowns; one SVD: 2.9 s -> 1.3 s on the benchmark. Checked against the previous solver (`OPENSWX_SKETCH_SOLVER=legacy`) on 277 SOLIDWORKS sample parts: identical outcomes, none gained or lost. **Left:** decomposition into rigid clusters, minimal conflicting sets |
 | H4 CAM | partly | 3D parallel finishing with ball, bull-nose and flat tools on a drop-cutter surface (`cam_finish_3d`). **Left:** rest machining, adaptive roughing, 2D operations from picked faces, tabs, lead-in / out, setup sheets, turning |
 | H5 flow, plastics | partly | `plastics_gate_advisor`: ranks candidate gate positions by injection pressure, weld lines and air traps. **Left:** non-isothermal fill with a frozen layer, packing; flow: wall refinement, rotating regions, conjugate heat transfer |
 | H6 rendering | **open** | Not started (a path tracer in the browser needs a new vendored library) |
-| I1 Linux build | written, **not run** | `packaging/build_linux.sh` (PyInstaller folder as a tarball, licence files included, a command-line check before packing) and a manual `build-linux` workflow. Never run on Linux; not an AppImage; not yet in the release workflow |
+| I1 Linux build | mostly | `packaging/build_linux.sh` and the manual `build-linux` workflow run on Ubuntu 22.04: the tarball builds and its packed command-line program opens a part and exports STEP. **Left:** the window itself has not been opened on Linux; not an AppImage; not yet in the release workflow |
 | I2 code signing | **open** | Needs certificates |
 | I3 update check | done | Help > Check for Updates (`updates.py`): asks the GitHub releases of the repository in the `update_repository` setting, only when the user asks; nothing is downloaded. **Left:** set the repository once there is one |
 | I4 benchmarks | partly | `tools/bench.py`. **Left:** tracking per release, lazy imports, bundle audit |

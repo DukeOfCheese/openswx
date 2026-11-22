@@ -1,0 +1,1142 @@
+{
+ "date": "2026-11-23",
+ "corpus": "the sample parts installed with SOLIDWORKS 2025 (names and outcomes only; no files)",
+ "scope": "the 300 smallest .sldprt files (277 distinct names), isolated rebuild, 115 s per part",
+ "summary": {
+  "parts": 277,
+  "exact": 243,
+  "fully_parametric": 224,
+  "by_outcome": {
+   "error": 30,
+   "exact": 243,
+   "inexact": 4
+  }
+ },
+ "solver_comparison": {
+  "what": "the same parts with OPENSWX_SKETCH_SOLVER=legacy (the sketch solver before the 2026-11 speed-up)",
+  "legacy": {
+   "parts": 277,
+   "exact": 243,
+   "fully_parametric": 224,
+   "by_outcome": {
+    "error": 30,
+    "exact": 243,
+    "inexact": 4
+   }
+  },
+  "gained": [],
+  "lost": [],
+  "parametric_gained": [],
+  "parametric_lost": []
+ },
+ "parts": {
+  "98blade rivets.sldprt": {
+   "outcome": "error",
+   "reason": "Standard_ConstructionError: "
+  },
+  "Engage Spring (sprinkler).SLDPRT": {
+   "outcome": "error",
+   "reason": "RebuildError: Base-Sweep: the base feature could not be rebuilt as an editable feature"
+  },
+  "Gasket (sprinkler).SLDPRT": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "Gasket-jet (sprinkler).SLDPRT": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "Lower Bearing (sprinkler).SLDPRT": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "Lower Washer (sprinkler).SLDPRT": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "Name Plate (sprinkler).SLDPRT": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "Screw.SLDPRT": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "Shaft (sprinkler).SLDPRT": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "Upper Bearing (sprinkler).SLDPRT": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "Upper Washer (sprinkler).SLDPRT": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "Washer-Swingarm (sprinkler).SLDPRT": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "a.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "aluminum_base.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "angular slot_100.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "angular slot_220.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "asly1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "b.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "b4.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "back_cantilever.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "bar.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "base_plate.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "beam.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "beam_diagrams.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "bearing.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "beater_shaft.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "block20.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "block_1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "block_2.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "bolt.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "bolt2.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "boltholder.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "bolthole.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt body differs from the stored one (volume 5599.7957 vs 5711.7838 mm3, area 2260.7507 vs 2220.8007 m"
+  },
+  "box.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "braceleft.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "braceright.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "bracket.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "buckling_1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "buckling_2.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "buckling_3.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "buckling_4.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "buckling_5.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "buckling_6.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "c.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "cam.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "cam2.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt body differs from the stored one (volume 1013039.5247 vs 1119107.1155 mm3, area 103839.6583 vs 111"
+  },
+  "camshaft.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "can_lid.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt body differs from the stored one (volume 14522.3595 vs 14419.9103 mm3, area 10283.6365 vs 10235.30"
+  },
+  "cantilever.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "car_roof.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "chainpath.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "chip.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "circlip.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "con-rod.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "connector.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "crank-arm.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "crossbar.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "cube.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "cuttingtool.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "cylinder.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "cylinder20.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "door.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "externalreferencedpart.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "f5.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "f6.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "fixture plate.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "follower_planeface.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "freezebarneedsrebuild2.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt body differs from the stored one (volume 3935754.2210 vs 2799264.6967 mm3, area 190134.1905 vs 147"
+  },
+  "frequency_1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "frequency_11.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: MidSurface1: feature type moMidSurface_c is not supported yet"
+  },
+  "frequency_12.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "frequency_13.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "frequency_14.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "frequency_17.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "frequency_2.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "frequency_3.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 8257259.7172 vs 4053659.8328 mm2, deviation 780.7 mm)"
+  },
+  "frequency_4.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "frequency_5.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "frequency_6.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "frequency_7.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "frequency_9.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "front_cantilever.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "groove.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: Revolve1: the base feature could not be rebuilt as an editable feature"
+  },
+  "half_solidbeam.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "handle rod.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "harddrive.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "holder.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "hub.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "inner_ring.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "knob.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "lid.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "lineardynamic.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: the history builds no surface body"
+  },
+  "link.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "link1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "liquidjet.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "locker.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "magnet.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "marble handle.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "mass.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "masspropertiesdemo.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "mill2ax_11.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt body differs from the stored one (volume 970081.5652 vs 1169354.7881 mm3, area 119719.9997 vs 1423"
+  },
+  "mill2ax_13.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "mill3axii_3.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: the history builds no body"
+  },
+  "millp1.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt body differs from the stored one (volume 1079053.1025 vs 1316907.0842 mm3, area 113383.3615 vs 122"
+  },
+  "mixed-1-shell.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 1272460.6798 vs 125000.0000 mm2, deviation 539.8 mm)"
+  },
+  "motor.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "multiple planar_faces2.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_3dnlg1.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: Body-Move/Copy1: feature type moMoveCopyBody_c is not supported yet"
+  },
+  "nafems_3dnlg5.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt body differs from the stored one (volume 6435.1850 vs 1287036.9969 mm3, area 2303.7350 vs 203973.3"
+  },
+  "nafems_freq_test1.sldprt": {
+   "outcome": "inexact",
+   "parametric": false
+  },
+  "nafems_freq_test11.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_freq_test13.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_freq_test14.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_freq_test21.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_freq_test3.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_freq_test31.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_freq_test71.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_gnl7.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_gnl8.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_ic13.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_ic14_15.sldprt": {
+   "outcome": "inexact",
+   "parametric": false
+  },
+  "nafems_ic1_3_10.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 6000000.0000 vs 12000000.0000 mm2, deviation 2000 mm)"
+  },
+  "nafems_ic21.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_ic22.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_ic2_4_11.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 6000000.0000 vs 12000000.0000 mm2, deviation 2000 mm)"
+  },
+  "nafems_ic30.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: Surface-Extrude1: no variant builds"
+  },
+  "nafems_ic31.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_ic5_6.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_ic9.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: Extrude1: no variant builds"
+  },
+  "nafems_r0016_test13r.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_r0031-2.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_thermal_test10.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_thermal_test3.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_thermal_test4.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_thermal_test5.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_thermal_test8.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nafems_thermal_test9.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nl2a_part1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nl2a_part2.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nl2a_part3.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nl2c_part1c.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nl2c_part2c.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nl2c_part3.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nl_curvedsheet.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nl_plate.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nl_sheet.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_dynamic_1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_static_1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_static_10.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_static_11.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_static_12.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: Surface-Imported1: feature type moRefSurface_c is not supported yet"
+  },
+  "nonlinear_static_13.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_static_14.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_static_15.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_static_16.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_static_2.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_static_3.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_static_6.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_static_7.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_static_8.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_static_9.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "nonlinear_thermal.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "ns26_b.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "ns37a_largecube.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "ns37a_smallcube.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "ns87_rigid.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "ns87_rubber.sldprt": {
+   "outcome": "error",
+   "reason": "DocumentError: Surface-Plane1: sketch has no closed contour"
+  },
+  "nut.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "o_ring.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: Fillet1: could not find its edges"
+  },
+  "oleopiston.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "originalpart.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "outer_ring.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "part1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "part2.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt body differs from the stored one (volume 11113.1499 vs 13171.5509 mm3, area 2897.3016 vs 3208.3506"
+  },
+  "part3.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "partequations.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "pin.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "pinforyoke.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "plate-with-hole.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "plate.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "plate2.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt body differs from the stored one (volume 39865.6930 vs 34795.9945 mm3, area 30802.6750 vs 26421.65"
+  },
+  "plate_ads_plusminus.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "plate_tolstatus.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "punch.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "rblock.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "remoteload.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "replaceview.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "rigid_punch.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "riser.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "rocker.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "rocker_shaft.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "rod.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "roller.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "rubber feet.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "s1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "s3.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "scale.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "shaft washer.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "shaft.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "shaft_mount.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "sheet.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "shell.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "shield.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "silicon_chip.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "slider.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "solid.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "spider.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "spring_system_piston.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt body differs from the stored one (volume 780.2587 vs 799.7287 mm3, area 524.4422 vs 535.7339 mm2, "
+  },
+  "square-rail.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "squarepad_blue.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "squarepad_green.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "squarepad_orange.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "squarepad_pink.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "squarepad_red.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "squarepad_skyblue.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "squarepad_yellow.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_10.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_11.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_12.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_13.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: the history builds no surface body"
+  },
+  "static_14.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_15.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_16.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_17.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_18.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: MidSurface1: feature type moMidSurface_c is not supported yet"
+  },
+  "static_19.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_2.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_22.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_24.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_25.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: the history builds no surface body"
+  },
+  "static_26.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_28.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_3.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_4.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_6.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_7.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_8.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "static_9.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "steel disc.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "straight slot.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "strain_hardening_mat.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "substrate.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "surfcut.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "sweepcutextrude.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "sweepcutextrude2.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "switch.sldprt": {
+   "outcome": "error",
+   "reason": "RebuildError: rebuilt body differs from the stored one (volume 2886.7240 vs 2511.6350 mm3, area 2164.6003 vs 1921.0360 m"
+  },
+  "switch_plate.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "t7.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "table.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "tablepattern.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "testimo1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "testpart100.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "thermal_1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "thermal_10.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "thermal_2.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "thermal_4.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "thermal_5.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "thermal_6.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "thermal_8.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "thermal_9.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "top_plate.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "training shaft.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "training_shaft.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "turn2ax_8.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "tutor1a.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "tutor1b.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "usb_connector1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "usb_connector2.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "usb_led1.sldprt": {
+   "outcome": "inexact",
+   "parametric": false
+  },
+  "usb_led2.sldprt": {
+   "outcome": "inexact",
+   "parametric": false
+  },
+  "valve_guide.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "varyinstance.sldprt": {
+   "outcome": "exact",
+   "parametric": false
+  },
+  "washer.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "weldment_box.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "window1.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  },
+  "window2.sldprt": {
+   "outcome": "exact",
+   "parametric": true
+  }
+ }
+}
