@@ -182,7 +182,7 @@ FILE_ARGS = {
     "pdm_set_vault": ("path",), "pdm_check_in": ("path",), "export_edrawing": ("path",), "macro_stop": ("path",),
     "run_macro": ("path",), "cam_gcode": ("path",), "inspection_report": ("path",), "electrical_import_wires": ("path",),
     "electrical_formboard": ("path",), "composer_export": ("path",), "save_diagnostic_report": ("path",),
-    "export_script": ("path",), "simulation_report": ("path",), "sketch_from_image": ("path",), "export_handoff_pack": ("folder",), "compare_documents": ("a", "b"),
+    "export_script": ("path",), "simulation_report": ("path",), "sketch_from_image": ("path",), "import_sw_configurations": ("path",), "export_handoff_pack": ("folder",), "compare_documents": ("a", "b"),
 }
 
 

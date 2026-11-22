@@ -8,7 +8,7 @@ from . import recovery
 from .document import DocumentError, PartDocument
 from .session import APP, command
 
-__all__ = ["list_recovered", "recover_document", "discard_recovered", "save_diagnostic_report", "batch", "start_job", "job_status", "cancel_job"]
+__all__ = ["list_recovered", "recover_document", "discard_recovered", "save_diagnostic_report", "batch", "start_job", "job_status", "cancel_job", "import_sw_configurations"]
 
 
 @command(mutates=False, category="document")
@@ -151,3 +151,60 @@ def cancel_job(id: str) -> dict:
     if job is None:
         raise DocumentError(f"no job {id!r}")
     return {**jobs.public(job, with_result=False), "cancel_requested": jobs.cancel(id)}
+
+
+# ====================================================================== SOLIDWORKS configurations
+@command(category="configurations")
+def import_sw_configurations(path: str, limit: int = 12) -> dict:
+    """Bring the other configurations of a SOLIDWORKS part (.sldprt) into the active part, which was opened
+    from that file. Each configuration that has geometry stored in the file becomes an openswx configuration
+    of the same name showing that geometry as an imported body (the editable history, where it was rebuilt,
+    belongs to the configuration the file was saved in, and is suppressed in the others). Configurations
+    SOLIDWORKS had not rebuilt before saving carry no geometry and are listed under `without_geometry` in the
+    file's own tools; they cannot be imported. limit: at most this many configurations (each is read and
+    stored in the part)."""
+    from pathlib import Path as _P
+
+    from . import session as S
+    from .features import encode_shape
+    from .sldprt import configurations
+    doc = APP.doc
+    p = _P(path)
+    if p.suffix.lower() != ".sldprt" or not p.is_file():
+        raise DocumentError(f"{path!r} is not a SOLIDWORKS part file")
+    cfgs = configurations(str(p))
+    others = [c for c in cfgs if not c["active"]]
+    if not cfgs:
+        raise DocumentError("the file lists no configuration with stored geometry")
+    if not others:
+        return {"configurations": list(doc.configurations), "imported": [], "note": "the file stores geometry for its active configuration only"}
+    base = [f["name"] for f in doc.features]
+    doc._checkpoint()
+    n_undo = len(doc._undo)
+    imported, failed = [], []
+    try:
+        for c in others[:limit]:
+            name = c["name"]
+            while name in doc.configurations:
+                name += " (SW)"
+            try:
+                shape, _notes = S._read_foreign(str(p), c["id"])
+                if not shape.solids():
+                    raise ValueError("no solid body in this configuration")
+            except Exception as exc:  # noqa: BLE001 - one configuration that cannot be read does not lose the others
+                failed.append({"configuration": c["name"], "reason": str(exc)[:200]})
+                continue
+            feat = doc.add_feature("import", {"brep": encode_shape(shape), "source": f"{p.name} [{c['name']}]"})
+            for other in doc.configurations.values():  # this body shows in its own configuration only
+                other.setdefault("suppressed", {})[feat["name"]] = True
+            doc.configurations[name] = {"suppressed": {**{b: True for b in base}, **{i["feature"]: True for i in imported},
+                                                       feat["name"]: False}, "values": {}}
+            for i in imported:  # ... and the bodies of the configurations imported before it are hidden here too
+                doc.configurations[i["name"]]["suppressed"][feat["name"]] = True
+            imported.append({"name": name, "feature": feat["name"], "volume": round(float(shape.volume), 6)})
+    finally:
+        del doc._undo[n_undo:]  # one Undo step for the lot
+    doc.rebuild()
+    doc.dirty = True
+    return {"configurations": list(doc.configurations), "active": doc.active_config, "imported": imported, "failed": failed,
+            "skipped_over_limit": [c["name"] for c in others[limit:]]}

@@ -138,6 +138,25 @@ def read_info(path: str) -> dict:
     return info
 
 
+def configurations(path: str) -> list[dict]:
+    """The configurations of a SOLIDWORKS part that have geometry stored: [{"id", "name", "active"}], in file
+    order. (A configuration that was never activated since the last rebuild has no partition of its own and is
+    left out: SOLIDWORKS would rebuild it on demand, which needs the feature history.)"""
+    streams = read_streams(path)
+    have = {int(m.group(1)) for n in streams if (m := re.fullmatch(r"Contents/Config-(\d+)-Partition", n))}
+    raw = streams.get("swXmlContents/Features")
+    out = []
+    if raw:
+        text = raw.lstrip(b"\x86").decode("utf-8", "replace")
+        for m in re.finditer(r"<swConfiguration [^>]*>", text):
+            tag = m.group(0)
+            idm, nm = re.search(r'swID="(\d+)"', tag), re.search(r'swName="([^"]*)"', tag)
+            if idm and int(idm.group(1)) in have:
+                out.append({"id": int(idm.group(1)), "name": nm.group(1) if nm else f"Config {idm.group(1)}",
+                            "active": 'swMostRecentConfiguration="YES"' in tag})
+    return out
+
+
 def _active_config(streams: dict) -> int | None:
     """Id of the active configuration (swMostRecentConfiguration in swXmlContents/Features): the one
     SOLIDWORKS opens. Its geometry is Contents/Config-<id>-Partition."""
