@@ -2758,9 +2758,12 @@ def drawing_auto_balloon(view: str) -> dict:
 
 @command(category="drawing")
 def drawing_edit_dimension(id: str, offset: float | None = None, text: str | None = None, angle: float | None = None,
-                           kind: Literal["radius", "diameter"] | None = None) -> dict:
+                           kind: Literal["radius", "diameter"] | None = None, tolerance: dict | None = None) -> dict:
     """Change a drawing dimension: its offset from the geometry (sheet mm), override text ('' = show the
-    value) or, for radius / diameter, the leader angle (degrees) and which of the two it shows."""
+    value) or, for radius / diameter, the leader angle (degrees) and which of the two it shows. tolerance:
+    {"type": "symmetric", "plus": 0.1} | {"type": "bilateral", "plus": 0.1, "minus": 0.05} | {"type": "limit",
+    "plus": .., "minus": ..} | {"type": "fit", "fit": "H7"} | {"type": "none"}; it is shown with the value and
+    used by the inspection report instead of the general tolerance."""
     def f(st, DS):
         for sh in st["sheets"]:
             for d in sh.get("dims", []):
@@ -2774,6 +2777,18 @@ def drawing_edit_dimension(id: str, offset: float | None = None, text: str | Non
                             d.pop("text", None)
                     if angle is not None:
                         d["angle"] = angle
+                    if tolerance is not None:
+                        from . import tolerance as T
+                        try:
+                            tol = T.normalize(tolerance)
+                            if tol is not None:
+                                T.deviations(DS.dim_value(d), tol)  # (a fit must exist at this size)
+                        except T.ToleranceError as exc:
+                            raise DocumentError(str(exc)) from exc
+                        if tol is None:
+                            d.pop("tol", None)
+                        else:
+                            d["tol"] = tol
                     if kind is not None:
                         if d["kind"] not in ("radius", "diameter"):
                             raise DocumentError(f"{id} is not a radius or diameter")
@@ -4829,3 +4844,4 @@ def get_view_image(view: Literal["isometric", "front", "back", "top", "bottom", 
 from .commands_more import *  # noqa: E402,F401,F403
 from .commands_mfg import *  # noqa: E402,F401,F403
 from .commands_app import *  # noqa: E402,F401,F403
+from .commands_tol import *  # noqa: E402,F401,F403

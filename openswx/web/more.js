@@ -765,6 +765,36 @@ const MIXIN = {
     if (r) this.toast(`Saved ${r.result.commands} commands to ${escapeHtml(r.result.path)}`);
   },
 
+  // Tools > Dimension Tolerances: every model dimension with its tolerance (type, values or ISO 286 fit)
+  async toleranceDialog() {
+    if ((this.model.kind || "part") !== "part") return this.toast("Dimension tolerances belong to a part.", "err");
+    const r = await this.evalCall("get_dimension_tolerances", { all_dimensions: true });
+    if (!r) return;
+    if (!r.dimensions.length) return this.toast("This part has no dimensions yet.");
+    const types = ["none", "symmetric", "bilateral", "limit", "fit"];
+    const rows = r.dimensions.map((d, i) => {
+      const t = d.tolerance || { type: "none" };
+      return `<tr data-i="${i}"><td>${escapeHtml(d.dimension)}</td><td>${d.value == null ? "" : +d.value.toFixed(4)}</td>
+        <td><select class="tt">${types.map((x) => `<option${x === t.type ? " selected" : ""}>${x}</option>`).join("")}</select></td>
+        <td><input class="tp" type="number" step="0.01" min="0" value="${t.plus ?? ""}" style="width:70px"></td>
+        <td><input class="tm" type="number" step="0.01" min="0" value="${t.minus ?? ""}" style="width:70px"></td>
+        <td><input class="tf" value="${escapeHtml(t.fit || "")}" placeholder="H7" style="width:60px"></td>
+        <td>${d.min == null ? "" : `${d.min} … ${d.max}`}</td></tr>`;
+    }).join("");
+    this.modal("Dimension Tolerances", `<p>Symmetric: ± plus. Bilateral and limit: +plus / −minus. Fit: an ISO 286 class (H7, g6, ...).</p>
+      <div style="max-height:50vh;overflow:auto"><table class="dw-bom"><tr><th>Dimension</th><th>Value</th><th>Type</th><th>Plus</th><th>Minus</th><th>Fit</th><th>Limits</th></tr>${rows}</table></div>`,
+    async () => {
+      for (const tr of document.querySelectorAll("#modal-box tr[data-i]")) {
+        const d = r.dimensions[+tr.dataset.i], was = d.tolerance || { type: "none" };
+        const now = { type: tr.querySelector(".tt").value, plus: parseFloat(tr.querySelector(".tp").value) || 0,
+          minus: parseFloat(tr.querySelector(".tm").value) || 0, fit: tr.querySelector(".tf").value.trim() || null };
+        const same = was.type === now.type && (was.plus || 0) === now.plus && (was.minus ?? (was.type === "symmetric" ? 0 : 0)) === now.minus && (was.fit || null) === now.fit;
+        if (same || (was.type === "none" && now.type === "none")) continue;
+        await this.run("set_dimension_tolerance", { dimension: d.dimension, ...now });
+      }
+    }, "smart_dim");
+  },
+
   async macroRun() {
     const path = await this.askPath("open", "", ["Python macro (*.py)"], "Run Macro");
     if (!path) return;

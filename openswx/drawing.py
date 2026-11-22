@@ -272,6 +272,16 @@ def _dim_aligned(a, b, text: str, offset: float = 7.0) -> list[str]:
             f'transform="rotate({ang:.2f} {mx:.3f} {my:.3f})">{escape(text)}</text>']
 
 
+def _tol_text(doc, sketch: str, d: dict, base: str) -> str:
+    """A model dimension's text with the tolerance set on it (set_dimension_tolerance), if any."""
+    from . import tolerance
+    tol = getattr(doc, "tolerances", {}).get(f"{d['id']}@{sketch}")
+    try:
+        return tolerance.text(base, float(d["value"]), tol)
+    except tolerance.ToleranceError:
+        return base
+
+
 def _model_items(doc, body, tfs: dict, names: list[str]) -> list[str]:
     """Model Items: driving sketch dimensions shown in the standard view that looks straight at the sketch."""
     import numpy as np
@@ -305,7 +315,7 @@ def _model_items(doc, body, tfs: dict, names: list[str]) -> list[str]:
                     (ax, ay), (bx, by) = S(c), S(p_on)
                     tx, ty = bx + (bx - ax) * 0.6 + 2, by + (by - ay) * 0.6
                     out += _leader(tx, ty, bx, by)
-                    label = ("R" if typ == "radius" else "⌀") + _fmt(d["value"])
+                    label = _tol_text(doc, f["name"], d, ("R" if typ == "radius" else "⌀") + _fmt(d["value"]))
                     out.append(f'<text x="{tx + 0.8:.3f}" y="{ty - 0.6:.3f}" font-size="3.2">{label}</text>')
                     continue
                 if typ == "angle":
@@ -324,7 +334,7 @@ def _model_items(doc, body, tfs: dict, names: list[str]) -> list[str]:
                     a, b = a0 + u * float(np.dot(p - a0, u)), p
                 else:
                     a, b = g.center(refs[0]), g.center(refs[1])
-                out += _dim_aligned(S(a), S(b), _fmt(d["value"]))
+                out += _dim_aligned(S(a), S(b), _tol_text(doc, f["name"], d, _fmt(d["value"])))
             except Exception:  # dimension references something we cannot place: skip it
                 continue
     return out

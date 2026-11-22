@@ -115,10 +115,18 @@ def collect(doc, st: dict, include_pmi: bool = True) -> list[dict]:
                 tol, ctype, unit, des = general_tolerance("linear", value, cls), "diameter", "", "Diameter"
             else:
                 tol, ctype, unit, des = general_tolerance("linear", value, cls), "linear", "", "Dimension"
+            lower, general = (-tol if tol is not None else None), tol is not None
+            if d.get("tol"):  # the dimension's own tolerance comes before the general one
+                from . import tolerance
+                try:
+                    lower, tol = tolerance.deviations(value, d["tol"])
+                    general = False
+                except tolerance.ToleranceError:
+                    pass
             items.append({"source": d["id"], "sheet": sh["name"], "view": d["view"], "zone": zone(v.get("x", 0), v.get("y", 0), W, H),
                           "type": ctype, "designator": des, "nominal": round(value, 4), "upper": tol,
-                          "lower": -tol if tol is not None else None, "unit": unit, "count": count,
-                          "general": tol is not None, "text": text or None})
+                          "lower": lower, "unit": unit, "count": count,
+                          "general": general, "text": text or None})
         for g in sh.get("gdt", []):
             name = _GDT_NAMES.get(g["characteristic"], g["characteristic"])
             ref = " | ".join(g.get("datums") or [])

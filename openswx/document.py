@@ -19,7 +19,7 @@ FORMAT = "openswx-part"
 VERSION = 1  # (migrate.CURRENT[FORMAT]; see migrate.py before changing it)
 _KNOWN_KEYS = {"format", "version", "name", "units", "material", "appearance", "properties", "drawing", "study", "features",
                "rollback", "counters", "next_id", "variables", "configurations", "active_config", "folders",
-               "design_table", "named_views", "pmi", "render"}
+               "design_table", "named_views", "pmi", "render", "tolerances"}
 DEFAULT_TREE = ["History", "Sensors", "Annotations", "Material", "Front Plane", "Top Plane", "Right Plane", "Origin"]
 CONSUMES_SKETCH = {"extrude", "cut_extrude", "revolve", "cut_revolve", "sweep", "cut_sweep", "loft", "cut_loft",
                    "base_flange", "structural_member", "sketched_bend", "revolved_surface", "swept_surface",
@@ -106,6 +106,7 @@ class PartDocument:
             "variables": self.variables, "configurations": self.configurations, "active_config": self.active_config,
             "folders": self.folders, "design_table": self.design_table, "named_views": getattr(self, "named_views", {}),
             "pmi": getattr(self, "pmi", []), "render": getattr(self, "render", {}),
+            "tolerances": getattr(self, "tolerances", {}),  # {"D1@Sketch1": {"type": ...}} (tolerance.py)
             **getattr(self, "_extra", {}),  # (keys of the file this version does not use: written back)
         }
 
@@ -135,6 +136,7 @@ class PartDocument:
         self.named_views = d.get("named_views", {})
         self.pmi = d.get("pmi", [])
         self.render = d.get("render", {})
+        self.tolerances = d.get("tolerances", {})
         self.rebuild()
 
     def save(self, path: str | None = None) -> str:

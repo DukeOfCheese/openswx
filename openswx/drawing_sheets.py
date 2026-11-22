@@ -654,6 +654,19 @@ def item_numbers(doc, sheet: dict) -> dict:
     return {c.name: item.get(c.link or c.name.rsplit("-", 1)[0]) for c in doc.components}
 
 
+def dim_text(d: dict, base: str, value: float | None = None) -> str:
+    """What a dimension shows: its override text, else the value (`base`) with the dimension's tolerance."""
+    if d.get("text"):
+        return d["text"]
+    if not d.get("tol"):
+        return base
+    from . import tolerance
+    try:
+        return tolerance.text(base, dim_value(d) if value is None else value, d["tol"])
+    except tolerance.ToleranceError:
+        return base
+
+
 def dim_value(d: dict) -> float:
     a, b = d.get("a"), d.get("b")
     k = d["kind"]
@@ -743,7 +756,7 @@ def _render_dims(st, sheet, v, g, t) -> list[str]:
             if d["kind"] == "callout":  # Hole Callout: the hole's size and depth, a line per item
                 lines = (d.get("text") or d.get("callout") or "⌀" + D._fmt(dim_value(d))).split("\n")
             else:
-                lines = [d.get("text") or (("⌀" if d["kind"] == "diameter" else "R") + D._fmt(dim_value(d)))]
+                lines = [dim_text(d, ("⌀" if d["kind"] == "diameter" else "R") + D._fmt(dim_value(d)))]
             anchor = "start" if math.cos(ang) >= 0 else "end"
             for i, line in enumerate(lines):
                 out.append(f'<text data-dim="{escape(d["id"])}" x="{tx + (1 if math.cos(ang) >= 0 else -1):.3f}" y="{ty - 0.8 + 4.0 * i:.3f}" '
@@ -772,7 +785,7 @@ def _render_dims(st, sheet, v, g, t) -> list[str]:
             ext = (t(*b), pb)
         else:
             pa, pb, ext = t(*a), t(*b), None
-        text = d.get("text") or D._fmt(dim_value(d))
+        text = dim_text(d, D._fmt(dim_value(d)))
         seg = D._dim_aligned(pa, pb, text, offset=float(d.get("offset", 8.0)))
         if seg:
             seg[-1] = seg[-1].replace("<text ", f'<text data-dim="{escape(d["id"])}" ', 1)
@@ -809,7 +822,7 @@ def _render_angle(st, v, d, t) -> list[str]:
             out.append(f'<line x1="{a0[0]:.3f}" y1="{a0[1]:.3f}" x2="{a1[0]:.3f}" y2="{a1[1]:.3f}" stroke="#000" stroke-width="0.13"/>')
     tm = th1 + delta / 2
     tx, ty = P[0] + (R + 2.5) * math.cos(tm), P[1] + (R + 2.5) * math.sin(tm)
-    text = d.get("text") or f"{D._fmt(deg)}°"
+    text = dim_text(d, f"{D._fmt(deg)}°", deg)
     out.append(f'<text data-dim="{escape(d["id"])}" x="{tx:.3f}" y="{ty + 1.1:.3f}" font-size="3.2" text-anchor="middle">{escape(text)}</text>')
     return out
 
@@ -822,7 +835,7 @@ def _render_line_gap(d, t) -> list[str]:
     u = np.asarray(d["l2"][1], float) - p2
     u = u / np.linalg.norm(u)
     m2 = p2 + u * float((m1 - p2) @ u)
-    seg = D._dim_aligned(t(*m1), t(*m2), d.get("text") or D._fmt(dim_value(d)), offset=float(d.get("offset", 0.0)))
+    seg = D._dim_aligned(t(*m1), t(*m2), dim_text(d, D._fmt(dim_value(d))), offset=float(d.get("offset", 0.0)))
     if seg:
         seg[-1] = seg[-1].replace("<text ", f'<text data-dim="{escape(d["id"])}" ', 1)
     return seg
