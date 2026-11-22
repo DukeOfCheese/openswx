@@ -164,6 +164,18 @@ def run(port: int = 8765, file: str | None = None) -> int:
     window = webview.create_window("openswx", html=SPLASH, js_api=api, width=1600, height=960,
                                    min_size=(1000, 640), maximized=True, background_color="#F2F3F5")
     api._window = window
+
+    def closing():  # unsaved changes: ask before the window goes (False keeps it open)
+        session = sys.modules.get("openswx.session")  # (not loaded yet while the splash shows: nothing to lose)
+        if session is None:
+            return True
+        dirty = [n for n, d in session.APP.documents.items() if getattr(d, "dirty", False)]
+        if not dirty:
+            return True
+        names = ", ".join(dirty[:5]) + (" ..." if len(dirty) > 5 else "")
+        return bool(window.create_confirmation_dialog("openswx", f"Close without saving the changes to {names}?"))
+
+    window.events.closing += closing
     servers = []
 
     def show(pct, msg, detail="", error=False):
@@ -223,4 +235,6 @@ def run(port: int = 8765, file: str | None = None) -> int:
     webview.start(boot, private_mode=False)
     for server in servers:
         server.should_exit = True
+    from . import recovery
+    recovery.clean_exit()  # (the window was closed by the user: nothing to recover next time)
     return 0

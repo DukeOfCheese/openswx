@@ -3,36 +3,31 @@
 Open-source parametric part modeling with a SOLIDWORKS-style workflow — and a built-in
 **MCP server** so AI agents can design parts in it while you watch.
 
-- **Feature-based modeling**: constrained 2D sketches → Extruded Boss/Cut (Blind, Through All, Mid Plane,
-  Up To Next/Vertex/Surface, Offset From Surface, draft, two directions), Revolved Boss/Cut, Swept Boss/Cut,
-  Lofted Boss/Cut, Fillet, Chamfer, Shell, Draft, Hole (simple / counterbore / countersink), Linear &
-  Circular Pattern, Mirror, Reference Planes. Full parametric rebuild, rollback bar, suppress, rename, undo/redo.
-- **Design intent**: Equations and Global Variables in SOLIDWORKS syntax (`"D1@Sketch1" = "width"/2`),
-  Configurations with per-configuration suppression and dimension overrides.
-- **Sketcher**: line, centerline, corner/center rectangle, circle, centre-point & 3-point arc, polygon,
-  slot, point; Trim / Extend / Offset / Mirror Entities, Sketch Fillet; 12 relation types; Smart Dimension with a Modify box;
-  under/fully/over-defined status (blue/black/red), point dragging, construction geometry.
-- **Sheet metal**: Base Flange (thickness, bend radius, K-factor), Edge Flange (any angle, exact bend),
-  Flatten with bend allowance. **Surfaces**: Extruded Surface, Thicken. **Weldments**: Structural Members
-  (square/rectangular tube, pipe, angle, bar) along layout sketches.
-- **Assemblies**: insert parts (linked: editing the part updates the assembly), mates (coincident, parallel,
-  perpendicular, tangent, concentric, distance, angle, lock, width, gear) with DOF status, Rotate Component,
-  interference detection, `.oswasm`.
-- **Drawings**: Make Drawing from Part/Assembly — third/first-angle standard views + isometric, Section A-A with
-  hatching, Detail view, hole callouts, BOM for assemblies, overall dimensions and a title block (SVG).
-- **Familiar UI** (browser): CommandManager, FeatureManager design tree, PropertyManager with live yellow
-  preview, heads-up view toolbar, confirmation corner, standard views (Ctrl+1…8, Space), SOLIDWORKS
-  mouse navigation, mini context toolbar, mass properties, measure.
-- **Agents**: 90 MCP tools (sketching, features, equations, configurations, assemblies, drawings, topology
-  queries, mass properties, rendered view images), over stdio or streamable HTTP. Agent actions show up live
-  in the UI's Agent activity pane.
-- **Interop**: STEP/STL/BREP/Parasolid export, STEP import, native `.oswprt`/`.oswasm` (JSON). Clean-room Parasolid
-  reader (`.x_t`, `.x_b`) and writer (`.x_t`, verified by importing into SOLIDWORKS). Opens SOLIDWORKS 2015+
-  parts (`.sldprt`) natively, with no SOLIDWORKS installation: the feature history (sketches, extrudes, cuts,
-  revolves, fillets, chamfers, shells, patterns, ...) is decoded and rebuilt as editable openswx features when
-  the result matches the B-rep stored in the file; otherwise that B-rep is imported as one feature. Opens
-  `.sldasm` assemblies natively too: component files, configurations, positions and the common mates.
-- **Differential testing** against a licensed SOLIDWORKS through its public COM API.
+- **Parts**: constrained 2D and 3D sketches; extrude / revolve / sweep / loft (boss and cut, with the SOLIDWORKS
+  end conditions), fillets and chamfers of every kind, shell, draft, rib, dome, wrap, Hole Wizard, threads,
+  patterns (linear, circular, curve, sketch, table, fill), mirror, multibody tools, reference geometry.
+  Full parametric rebuild, rollback bar, suppress, reorder, folders, undo / redo.
+- **Design intent**: equations and global variables in SOLIDWORKS syntax (`"D1@Sketch1" = "width"/2`),
+  configurations, design tables, materials, custom properties.
+- **Sheet metal, surfaces, weldments, mold tools**: flanges, hems, jogs, forming tools and flat patterns;
+  the surface toolbox (extrude to boundary, knit, trim, thicken); structural members with cut lists;
+  parting lines and tooling split.
+- **Assemblies**: linked parts, standard / advanced / mechanical mates with DOF status, patterns, exploded
+  views, motion studies, interference and clearance checks, Toolbox fasteners, pipe and cable routing.
+- **Drawings**: sheets with model, projected, section, detail, auxiliary, broken and cropped views; smart
+  dimensions, GD&T, hole tables, BOM and balloons; PDF / DXF / SVG export (DWG through the ODA converter).
+- **Analysis**: static, frequency, buckling, thermal, nonlinear, fatigue and drop studies (finite-cell voxel
+  mesh); lattice-Boltzmann flow; plastics fill; 3-axis CAM with G-code; costing; inspection reports.
+- **Familiar UI** (desktop app or browser): CommandManager, FeatureManager design tree, PropertyManager with
+  live preview, SOLIDWORKS mouse navigation and shortcuts.
+- **Agents**: <!-- counts -->385 commands, 370 of them MCP tools ([full list](docs/commands.md))<!-- /counts -->, over stdio or
+  streamable HTTP. Agent actions show up live in the UI's Agent activity pane.
+- **Interop**: opens SOLIDWORKS parts, assemblies and drawings (`.sldprt`, `.sldasm`, `.slddrw`; 2015 and
+  later) natively, with no SOLIDWORKS installation - see *Status* for how much of the feature history comes
+  across. Clean-room Parasolid reader (`.x_t`, `.x_b`) and writer (`.x_t`). STEP and IGES in and out; STL, 3MF,
+  glTF, BREP out; DXF in and out. Native `.oswprt` / `.oswasm` / `.oswdrw` (JSON, versioned).
+- **Safety**: autosave with document recovery after a crash, an application log, a token and origin check on
+  the local server, and an optional folder agents are confined to (`--workspace`).
 
 Geometry kernel: [OpenCASCADE](https://dev.opencascade.org/) via [build123d](https://github.com/gumyr/build123d).
 Not affiliated with or endorsed by Dassault Systèmes. SOLIDWORKS is a trademark of Dassault Systèmes.
@@ -88,13 +83,14 @@ Then ask, e.g. *"Make a 120×60×10 mm mounting plate with four Ø8 holes 12 mm 
 Ø36 boss with a counterbored hole, fillet the corners R6, material 6061."* See
 [`tools/agent_demo.py`](tools/agent_demo.py) for a scripted agent that does exactly that.
 
-Tool overview: `new_part`, `create_sketch`, `sketch_line|rectangle|circle|arc|three_point_arc|polygon|slot|point|centerline`,
-`sketch_relation`, `sketch_dimension`, `set_dimension`, `extrude`, `cut_extrude`, `revolve`, `cut_revolve`,
-`fillet`, `chamfer`, `shell`, `hole`, `linear_pattern`, `circular_pattern`, `mirror`, `reference_plane`,
-`edit_feature`, `suppress_feature`, `rollback`, `delete_feature`, `undo`/`redo`, `get_model`, `get_feature`,
-`get_topology` (face/edge ids for selection), `get_mass_properties`, `measure`, `get_view_image` (PNG),
-`save_part`, `open_part`, `import_file`, `export_file`, `set_material`. End conditions accept names or
-SOLIDWORKS `swEndConditions_e` values (Blind=0, ThroughAll=1, MidPlane=6, ThroughAllBoth=9).
+Every command is an MCP tool; the full list with arguments is in [`docs/commands.md`](docs/commands.md).
+Start with `new_part`, `create_sketch`, `sketch_rectangle` / `sketch_circle` / `sketch_line`, `sketch_dimension`,
+`extrude` / `cut_extrude`, `fillet`, `get_topology` (face and edge ids for selection), `get_mass_properties` and
+`get_view_image`. End conditions accept names or SOLIDWORKS `swEndConditions_e` values (Blind=0, ThroughAll=1,
+MidPlane=6, ThroughAllBoth=9).
+
+To keep an agent's file access to one folder, start openswx with `--workspace DIR` (or set
+`OPENSWX_WORKSPACE`): commands from agents may then only read and write files there.
 
 ## Other commands
 
@@ -129,7 +125,14 @@ clean-room rule: [`CONTRIBUTING.md`](CONTRIBUTING.md). Known gaps and their spec
 
 ## Status / limitations
 
-SOLIDWORKS feature history: common part features are rebuilt (see docs/PLAN.md, F1-F5); sweeps, lofts,
-sheet metal, weldments and most surface features are not decoded yet, and such parts open as an imported body.
-Simulation uses a finite-cell voxel mesh, so stresses at curved
-boundaries are approximate. Full list: `docs/PLAN.md` "Next steps".
+- **SOLIDWORKS feature history**: of the 841 sample parts that ship with SOLIDWORKS 2025, 525 rebuild to exactly
+  the stored body and 363 of those are fully parametric (survey of 2026-10-29). Sweeps, lofts, sheet metal and
+  most surface features are not decoded yet; such parts open as an imported body. `.sldprt` is read-only:
+  export goes through Parasolid, STEP or IGES.
+- **Simulation** uses a finite-cell voxel mesh, so stresses at curved boundaries are approximate. Flow results
+  at high Reynolds numbers carry a warning. CAM is 3-axis with flat end mills.
+- **Autosave** keeps the last copy of each unsaved document (`~/.openswx/recovery`); set `OPENSWX_AUTOSAVE`
+  to a number of seconds or `off`. The log is in `~/.openswx/logs` (Help > Save Diagnostic Report).
+
+What is missing, with a spec for each item: [`docs/GAPS.md`](docs/GAPS.md). History of the build:
+[`docs/PLAN.md`](docs/PLAN.md).

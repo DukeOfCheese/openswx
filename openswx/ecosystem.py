@@ -196,7 +196,9 @@ class Vault:
                 continue
             m = self.meta(f["name"])
             data = (self._dir(f["name"]) / m["versions"][-1]["file"]).read_text(encoding="utf-8")
-            if re.search(r'"link":\s*"[^"]*[\\/]?' + re.escape(name) + '"', data) or f'"{name}"' in data:
+            stem = Path(name).stem  # (a component linked to an open document carries its name, not its file's)
+            if (re.search(r'"link":\s*"[^"]*[\\/]?' + re.escape(name) + '"', data) or f'"{name}"' in data
+                    or re.search(r'"link":\s*"' + re.escape(stem) + '"', data)):
                 out.append(f["name"])
         return out
 

@@ -1,0 +1,52 @@
+"""Versions of the native file formats (.oswprt, .oswasm, .oswdrw) and the steps between them.
+
+A file carries `"format"` and `"version"`. Opening one runs every step from its version to the current one;
+a file written by a newer openswx is refused (reading it with older rules could silently drop what the newer
+version added, and saving would then lose it). Keys this version does not know are kept and written back.
+
+To change a format: bump its number in CURRENT and add a function to STEPS[(format, old_version)] that turns
+an old dictionary into the next version's. Add a file of the old version to tests/data/native/ so it keeps
+opening (tests/test_migrate.py opens every file there).
+"""
+from __future__ import annotations
+
+from typing import Callable
+
+CURRENT = {"openswx-part": 1, "openswx-assembly": 1, "openswx-drawing": 1}
+
+# (format, from_version) -> function(dict) -> dict of version from_version + 1
+STEPS: dict[tuple[str, int], Callable[[dict], dict]] = {}
+
+
+class FormatError(ValueError):
+    pass
+
+
+def migrate(d: dict, fmt: str) -> dict:
+    """`d` (as read from a file) brought to the current version of `fmt`. Raises FormatError for another
+    format, a newer version, or a version there is no step from."""
+    if not isinstance(d, dict) or d.get("format") != fmt:
+        raise FormatError(f"not an {fmt.replace('-', ' ')} file")
+    try:
+        v = int(d.get("version", 1))
+    except (TypeError, ValueError):
+        raise FormatError(f"unreadable file version {d.get('version')!r}") from None
+    cur = CURRENT[fmt]
+    if v > cur:
+        raise FormatError(f"this file was saved by a newer openswx (file version {v}, this program reads up to "
+                          f"{cur}); update openswx to open it")
+    if v < 1:
+        raise FormatError(f"unreadable file version {v}")
+    while v < cur:
+        step = STEPS.get((fmt, v))
+        if step is None:
+            raise FormatError(f"no way to read file version {v} of {fmt}")
+        d = step(d)
+        v += 1
+        d["version"] = v
+    return d
+
+
+def extras(d: dict, known: set[str]) -> dict:
+    """The keys of a file this version does not use (kept so that saving writes them back)."""
+    return {k: v for k, v in d.items() if k not in known}

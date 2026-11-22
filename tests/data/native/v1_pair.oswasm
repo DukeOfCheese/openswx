@@ -1,0 +1,498 @@
+{
+ "format": "openswx-assembly",
+ "version": 1,
+ "name": "v1_pair",
+ "mate_counter": 0,
+ "components": [
+  {
+   "name": "v1_bracket-1",
+   "part": {
+    "format": "openswx-part",
+    "version": 1,
+    "name": "v1_bracket",
+    "units": "mm",
+    "material": {
+     "name": "Plain Carbon Steel",
+     "category": "Steel",
+     "density": 7800.0,
+     "elastic_modulus": 210000.0,
+     "poisson": 0.28,
+     "yield_strength": 220.6,
+     "tensile_strength": 399.8,
+     "thermal_conductivity": 43.0,
+     "color": "#8a8f96",
+     "specific_heat": 440
+    },
+    "appearance": {
+     "part": null,
+     "features": {},
+     "faces": []
+    },
+    "properties": {},
+    "drawing": {},
+    "study": {
+     "fixtures": [],
+     "loads": [],
+     "element_size": null
+    },
+    "features": [
+     {
+      "id": "f1",
+      "name": "Sketch1",
+      "type": "sketch",
+      "params": {
+       "plane": "Top",
+       "sketch": {
+        "points": {
+         "P1": [
+          0.0,
+          0.0
+         ],
+         "P2": [
+          40.0,
+          0.0
+         ],
+         "P3": [
+          40.0,
+          20.0
+         ],
+         "P4": [
+          0.0,
+          20.0
+         ]
+        },
+        "entities": {
+         "Line5": {
+          "type": "line",
+          "p1": "P1",
+          "p2": "P2",
+          "construction": false
+         },
+         "Line6": {
+          "type": "line",
+          "p1": "P2",
+          "p2": "P3",
+          "construction": false
+         },
+         "Line7": {
+          "type": "line",
+          "p1": "P3",
+          "p2": "P4",
+          "construction": false
+         },
+         "Line8": {
+          "type": "line",
+          "p1": "P4",
+          "p2": "P1",
+          "construction": false
+         }
+        },
+        "relations": [
+         {
+          "id": "R9",
+          "type": "horizontal",
+          "refs": [
+           "Line5"
+          ]
+         },
+         {
+          "id": "R10",
+          "type": "horizontal",
+          "refs": [
+           "Line7"
+          ]
+         },
+         {
+          "id": "R11",
+          "type": "vertical",
+          "refs": [
+           "Line6"
+          ]
+         },
+         {
+          "id": "R12",
+          "type": "vertical",
+          "refs": [
+           "Line8"
+          ]
+         }
+        ],
+        "dimensions": [],
+        "counter": 12,
+        "status": {
+         "state": "under_defined",
+         "dof": 4,
+         "failing": [],
+         "redundant": 0,
+         "entities": {
+          "Line5": "under_defined",
+          "Line6": "under_defined",
+          "Line7": "under_defined",
+          "Line8": "under_defined"
+         }
+        }
+       }
+      },
+      "suppressed": false
+     },
+     {
+      "id": "f2",
+      "name": "Boss-Extrude1",
+      "type": "extrude",
+      "params": {
+       "sketch": "Sketch1",
+       "depth": 6,
+       "end_condition": "Blind",
+       "reverse": false,
+       "draft": 0.0,
+       "draft_outward": false,
+       "merge": true,
+       "start_offset": 0.0
+      },
+      "suppressed": false
+     },
+     {
+      "id": "f3",
+      "name": "Sketch2",
+      "type": "sketch",
+      "params": {
+       "plane": "Top",
+       "sketch": {
+        "points": {
+         "P2": [
+          10.0,
+          10.0
+         ]
+        },
+        "entities": {
+         "Circle1": {
+          "type": "circle",
+          "c": "P2",
+          "r": 3.0,
+          "construction": false
+         }
+        },
+        "relations": [],
+        "dimensions": [],
+        "counter": 2,
+        "status": {
+         "state": "under_defined",
+         "dof": 3,
+         "failing": [],
+         "redundant": 0,
+         "entities": {
+          "Circle1": "under_defined"
+         }
+        }
+       }
+      },
+      "suppressed": false
+     },
+     {
+      "id": "f4",
+      "name": "Cut-Extrude1",
+      "type": "cut_extrude",
+      "params": {
+       "sketch": "Sketch2",
+       "depth": 10.0,
+       "end_condition": "ThroughAllBoth",
+       "reverse": false,
+       "draft": 0.0,
+       "draft_outward": false,
+       "merge": true,
+       "start_offset": 0.0,
+       "flip_side_to_cut": false
+      },
+      "suppressed": false
+     }
+    ],
+    "rollback": null,
+    "counters": {
+     "Sketch": 2,
+     "Boss-Extrude": 1,
+     "Cut-Extrude": 1
+    },
+    "next_id": 5,
+    "variables": {
+     "w": "40"
+    },
+    "configurations": {
+     "Default": {
+      "suppressed": {},
+      "values": {}
+     }
+    },
+    "active_config": "Default",
+    "folders": [],
+    "design_table": null,
+    "named_views": {},
+    "pmi": [],
+    "render": {}
+   },
+   "link": "v1_bracket",
+   "x": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "fixed": true
+  },
+  {
+   "name": "v1_bracket-2",
+   "part": {
+    "format": "openswx-part",
+    "version": 1,
+    "name": "v1_bracket",
+    "units": "mm",
+    "material": {
+     "name": "Plain Carbon Steel",
+     "category": "Steel",
+     "density": 7800.0,
+     "elastic_modulus": 210000.0,
+     "poisson": 0.28,
+     "yield_strength": 220.6,
+     "tensile_strength": 399.8,
+     "thermal_conductivity": 43.0,
+     "color": "#8a8f96",
+     "specific_heat": 440
+    },
+    "appearance": {
+     "part": null,
+     "features": {},
+     "faces": []
+    },
+    "properties": {},
+    "drawing": {},
+    "study": {
+     "fixtures": [],
+     "loads": [],
+     "element_size": null
+    },
+    "features": [
+     {
+      "id": "f1",
+      "name": "Sketch1",
+      "type": "sketch",
+      "params": {
+       "plane": "Top",
+       "sketch": {
+        "points": {
+         "P1": [
+          0.0,
+          0.0
+         ],
+         "P2": [
+          40.0,
+          0.0
+         ],
+         "P3": [
+          40.0,
+          20.0
+         ],
+         "P4": [
+          0.0,
+          20.0
+         ]
+        },
+        "entities": {
+         "Line5": {
+          "type": "line",
+          "p1": "P1",
+          "p2": "P2",
+          "construction": false
+         },
+         "Line6": {
+          "type": "line",
+          "p1": "P2",
+          "p2": "P3",
+          "construction": false
+         },
+         "Line7": {
+          "type": "line",
+          "p1": "P3",
+          "p2": "P4",
+          "construction": false
+         },
+         "Line8": {
+          "type": "line",
+          "p1": "P4",
+          "p2": "P1",
+          "construction": false
+         }
+        },
+        "relations": [
+         {
+          "id": "R9",
+          "type": "horizontal",
+          "refs": [
+           "Line5"
+          ]
+         },
+         {
+          "id": "R10",
+          "type": "horizontal",
+          "refs": [
+           "Line7"
+          ]
+         },
+         {
+          "id": "R11",
+          "type": "vertical",
+          "refs": [
+           "Line6"
+          ]
+         },
+         {
+          "id": "R12",
+          "type": "vertical",
+          "refs": [
+           "Line8"
+          ]
+         }
+        ],
+        "dimensions": [],
+        "counter": 12,
+        "status": {
+         "state": "under_defined",
+         "dof": 4,
+         "failing": [],
+         "redundant": 0,
+         "entities": {
+          "Line5": "under_defined",
+          "Line6": "under_defined",
+          "Line7": "under_defined",
+          "Line8": "under_defined"
+         }
+        }
+       }
+      },
+      "suppressed": false
+     },
+     {
+      "id": "f2",
+      "name": "Boss-Extrude1",
+      "type": "extrude",
+      "params": {
+       "sketch": "Sketch1",
+       "depth": 6,
+       "end_condition": "Blind",
+       "reverse": false,
+       "draft": 0.0,
+       "draft_outward": false,
+       "merge": true,
+       "start_offset": 0.0
+      },
+      "suppressed": false
+     },
+     {
+      "id": "f3",
+      "name": "Sketch2",
+      "type": "sketch",
+      "params": {
+       "plane": "Top",
+       "sketch": {
+        "points": {
+         "P2": [
+          10.0,
+          10.0
+         ]
+        },
+        "entities": {
+         "Circle1": {
+          "type": "circle",
+          "c": "P2",
+          "r": 3.0,
+          "construction": false
+         }
+        },
+        "relations": [],
+        "dimensions": [],
+        "counter": 2,
+        "status": {
+         "state": "under_defined",
+         "dof": 3,
+         "failing": [],
+         "redundant": 0,
+         "entities": {
+          "Circle1": "under_defined"
+         }
+        }
+       }
+      },
+      "suppressed": false
+     },
+     {
+      "id": "f4",
+      "name": "Cut-Extrude1",
+      "type": "cut_extrude",
+      "params": {
+       "sketch": "Sketch2",
+       "depth": 10.0,
+       "end_condition": "ThroughAllBoth",
+       "reverse": false,
+       "draft": 0.0,
+       "draft_outward": false,
+       "merge": true,
+       "start_offset": 0.0,
+       "flip_side_to_cut": false
+      },
+      "suppressed": false
+     }
+    ],
+    "rollback": null,
+    "counters": {
+     "Sketch": 2,
+     "Boss-Extrude": 1,
+     "Cut-Extrude": 1
+    },
+    "next_id": 5,
+    "variables": {
+     "w": "40"
+    },
+    "configurations": {
+     "Default": {
+      "suppressed": {},
+      "values": {}
+     }
+    },
+    "active_config": "Default",
+    "folders": [],
+    "design_table": null,
+    "named_views": {},
+    "pmi": [],
+    "render": {}
+   },
+   "link": "v1_bracket",
+   "x": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    30.0,
+    0.0
+   ],
+   "fixed": false
+  }
+ ],
+ "mates": [],
+ "features": [],
+ "explode": {
+  "steps": [],
+  "active": false
+ },
+ "drawing": {},
+ "study": {
+  "fixtures": [],
+  "loads": [],
+  "element_size": null
+ },
+ "named_views": {},
+ "alternate_positions": {},
+ "large_assembly_mode": false,
+ "render": {},
+ "electrical": {},
+ "composer": {}
+}

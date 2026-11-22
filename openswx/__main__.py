@@ -31,12 +31,14 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--open", action="store_true", help="open the browser")
     s.add_argument("--file", help="part to open on start (.oswprt/.step)")
     s.add_argument("--no-token", action="store_true", help="do not ask for the token (this computer only)")
+    s.add_argument("--workspace", help="folder agents (MCP) may read and write files in; elsewhere is refused")
     s.add_argument("--allow-remote", action="store_true", help="allow --host to be an address other computers can reach")
     sub.add_parser("token", help="print the token for the web UI link and for agents (MCP over HTTP)")
     m = sub.add_parser("mcp", help="run the MCP server over stdio")
     m.add_argument("--host", default="127.0.0.1")
     m.add_argument("--port", type=int, default=8765)
     m.add_argument("--no-ui", action="store_true", help="do not start the web UI alongside")
+    m.add_argument("--workspace", help="folder agents (MCP) may read and write files in; elsewhere is refused")
     i = sub.add_parser("sldinfo", help="inspect a SOLIDWORKS file container")
     i.add_argument("file")
     i.add_argument("--extract", help="directory to extract streams and Parasolid data into")
@@ -47,6 +49,8 @@ def main(argv: list[str] | None = None) -> int:
     if not argv or (argv[0] not in ("desktop", "serve", "mcp", "token", "sldinfo", "register-file-types", "unregister-file-types", "-h", "--help")):
         argv = ["desktop", *argv]  # double-clicking openswx.exe (or opening a file with it) starts the app
     a = ap.parse_args(argv)
+    if getattr(a, "workspace", None):
+        os.environ["OPENSWX_WORKSPACE"] = str(Path(a.workspace).resolve())
 
     if a.cmd == "desktop":
         from .desktop import run as run_desktop

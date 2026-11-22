@@ -51,6 +51,25 @@ class App {
     this.bindViewport(); this.bindKeys(); this.bindSearch(); this.bindFileInput();
     this.renderCommandManager(); this.renderConfirm();
     this.connect();
+    this.checkRecovery();
+    // leaving with unsaved changes asks first (the desktop window has its own check on close)
+    window.addEventListener("beforeunload", (e) => { if (!this.desk && (this.docs || []).some((d) => d.dirty)) { e.preventDefault(); e.returnValue = ""; } });
+  }
+
+  // Document Recovery: autosaved copies left by a session that crashed or was killed
+  async checkRecovery() {
+    const r = await this.api("/api/command", { name: "list_recovered", args: {} }).catch(() => null);
+    const list = r?.ok ? r.result.recovered : [];
+    if (!list.length) return;
+    const rows = list.map((d) => `<tr><td><input type="checkbox" class="rcv" value="${escapeHtml(d.id)}" checked></td><td><b>${escapeHtml(d.name)}</b></td><td>${d.kind}</td><td>${new Date(d.saved * 1000).toLocaleString()}</td><td>${escapeHtml(d.path || "(never saved)")}</td></tr>`).join("");
+    this.modal("Document Recovery", `<p>openswx did not close normally last time. These documents had unsaved changes:</p>
+      <table class="dw-bom"><tr><th></th><th>Document</th><th>Type</th><th>Autosaved</th><th>File</th></tr>${rows}</table>
+      <p>OK opens the ticked ones (save them to keep the changes) and deletes the autosaved copies of the others.</p>`, async () => {
+      for (const c of document.querySelectorAll(".rcv")) {
+        await this.api("/api/command", { name: c.checked ? "recover_document" : "discard_recovered", args: { id: c.value } });
+      }
+      await this.refresh();
+    }, "open");
   }
 
   // ================================================================== server
@@ -259,7 +278,7 @@ class App {
         ["Appearance...", "", () => this.appearanceDialog()], ["Properties...", "", () => this.propertiesDialog()], ["Options...", "", () => this.optionsDialog()]],
       Window: () => [...(this.docs?.documents || []).map((d) => [`${d.name === this.model.name ? "✓ " : ""}${d.name}`.replace(/ > /g, " › "), "", () => this.switchDocument(d.name)]),
         "-", ["Next Document", "Ctrl+Tab", () => this.nextDocument()], ["Close", "Ctrl+W", () => this.run("close_document").then(() => this.vp.zoomFit())]],
-      Help: [["Keyboard Shortcuts", "", () => this.showTask("help")], ["Agent (MCP) Setup", "", () => this.mcpDialog()], ["About openswx", "", () => this.about()]],
+      Help: [["Keyboard Shortcuts", "", () => this.showTask("help")], ["Agent (MCP) Setup", "", () => this.mcpDialog()], ["Save Diagnostic Report...", "", () => this.diagnosticReport()], ["About openswx", "", () => this.about()]],
     };
     const bar = $("#menubar");
     for (const [name, items] of Object.entries(M)) {
@@ -2558,11 +2577,19 @@ class App {
     const cfg = { mcpServers: { openswx: { type: "http", url: `${location.origin}/mcp` } } };
     const stdio = { mcpServers: { openswx: { command: "python", args: ["-m", "openswx", "mcp"] } } };
     this.modal("Connect an agent (MCP)", `<p>Streamable HTTP (this running app):</p><pre class="code">${escapeHtml(JSON.stringify(cfg, null, 1))}</pre>
-      <p>Claude Code:</p><pre class="code">claude mcp add --transport http openswx ${location.origin}/mcp</pre>
+      <p>Claude Code:</p><pre class="code">claude mcp add --transport http openswx ${location.origin}/mcp --header "Authorization: Bearer &lt;token&gt;"</pre>
+      <p>The token is your openswx secret: print it with <code>openswx token</code> (desktop app: <code>openswx-cli token</code>). Requests without it are refused.</p>
       <p>Stdio (starts its own app + UI):</p><pre class="code">${escapeHtml(JSON.stringify(stdio, null, 1))}</pre>`, null, "agent");
   }
 
-  about() { this.modal("About openswx", `<p><b>openswx</b> 0.1 — open-source parametric CAD with a SOLIDWORKS-style workflow and a built-in MCP server for agents.</p><p>Geometry: OpenCASCADE (via build123d/OCP). Not affiliated with Dassault Systèmes.</p>`, null, "help"); }
+  async diagnosticReport() {
+    const path = await this.askPath("save", "openswx-report.zip", ["Zip archive (*.zip)"], "Save Diagnostic Report");
+    if (!path) return;
+    const r = await this.api("/api/command", { name: "save_diagnostic_report", args: { path } });
+    if (r.ok) this.toast(`Saved ${escapeHtml(r.result.saved)} (log, versions, recent commands; no documents).`); else this.toast(r.error, "err");
+  }
+
+  about() { this.modal("About openswx", `<p><b>openswx</b> 0.1 — open-source parametric CAD with a SOLIDWORKS-style workflow and a built-in MCP server for agents.</p><p>Geometry: OpenCASCADE (via build123d/OCP). Not affiliated with Dassault Systèmes.</p><p>Licensed under the Apache License 2.0; third-party notices are in the NOTICE file that comes with openswx.</p>`, null, "help"); }
 
   modal(title, body, onOK, ic = "help") {
     const box = $("#modal-box");

@@ -120,12 +120,18 @@ class AssemblyDocument:
                 "named_views": getattr(self, "named_views", {}),
                 "alternate_positions": getattr(self, "alternate_positions", {}),
                 "large_assembly_mode": getattr(self, "large_assembly_mode", False), "render": getattr(self, "render", {}),
-                "electrical": getattr(self, "electrical", {}), "composer": getattr(self, "composer", {})}
+                "electrical": getattr(self, "electrical", {}), "composer": getattr(self, "composer", {}),
+                **getattr(self, "_extra", {})}  # (keys of the file this version does not use: written back)
 
     def load_dict(self, d: dict) -> None:
-        if d.get("format") != FORMAT:
-            raise DocumentError("not an openswx assembly file")
-        d = copy.deepcopy(d)
+        from . import migrate
+        try:
+            d = migrate.migrate(copy.deepcopy(d), FORMAT)
+        except migrate.FormatError as exc:
+            raise DocumentError(str(exc)) from exc
+        self._extra = migrate.extras(d, {"format", "version", "name", "mate_counter", "components", "mates", "features",
+                                         "explode", "drawing", "study", "named_views", "alternate_positions",
+                                         "large_assembly_mode", "render", "electrical", "composer"})
         self.name = d.get("name", self.name)
         self.mate_counter = d.get("mate_counter", len(d.get("mates", [])))
         self.components = [Component(c["name"], c["part"], c.get("link"), c["x"], c.get("fixed", False), c.get("derived"))
@@ -192,7 +198,7 @@ class AssemblyDocument:
             raise DocumentError(f"{part.name} has no solid body to insert")
         self._checkpoint()
         base = part.name
-        n = 1 + sum(1 for c in self.components if c.name.rsplit("-", 1)[0] == base)
+        n = self._instance_number(base)
         rv = Rotation.from_euler("xyz", rotation, degrees=True).as_rotvec()
         comp = Component(f"{base}-{n}", part.to_dict(), link, [*rv, *position],
                          fixed if fixed is not None else not self.components)
@@ -239,13 +245,24 @@ class AssemblyDocument:
         self.solve()
 
     # ------------------------------------------------------------------ assembly features
+    def _instance_number(self, base: str) -> int:
+        """The next instance number of a part: one past the highest in use (counting instances gave a deleted
+        component's number to the next one inserted - or the number of one still there)."""
+        used = [0]
+        for c in self.components:
+            head, _, tail = c.name.rpartition("-")
+            if head == base and tail.isdigit():
+                used.append(int(tail))
+        return max(used) + 1
+
     def _feature_name(self, base: str) -> str:
-        n = 1 + sum(1 for f in self.features if f["name"].startswith(base))
-        return f"{base}{n}"
+        used = [0] + [int(f["name"][len(base):]) for f in self.features
+                      if f["name"].startswith(base) and f["name"][len(base):].isdigit()]
+        return f"{base}{max(used) + 1}"
 
     def _new_instance(self, seed: Component, feature: str, **extra) -> Component:
         base = seed.name.rsplit("-", 1)[0]
-        n = 1 + sum(1 for c in self.components if c.name.rsplit("-", 1)[0] == base)
+        n = self._instance_number(base)
         comp = Component(f"{base}-{n}", seed.part, seed.link, seed.x.tolist(), False,
                          {"feature": feature, "seed": seed.name, **extra})
         self.components.append(comp)

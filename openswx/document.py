@@ -16,6 +16,10 @@ from .geom import edge_info, face_info, tessellate
 from .sketch import Sketch, SketchError
 
 FORMAT = "openswx-part"
+VERSION = 1  # (migrate.CURRENT[FORMAT]; see migrate.py before changing it)
+_KNOWN_KEYS = {"format", "version", "name", "units", "material", "appearance", "properties", "drawing", "study", "features",
+               "rollback", "counters", "next_id", "variables", "configurations", "active_config", "folders",
+               "design_table", "named_views", "pmi", "render"}
 DEFAULT_TREE = ["History", "Sensors", "Annotations", "Material", "Front Plane", "Top Plane", "Right Plane", "Origin"]
 CONSUMES_SKETCH = {"extrude", "cut_extrude", "revolve", "cut_revolve", "sweep", "cut_sweep", "loft", "cut_loft",
                    "base_flange", "structural_member", "sketched_bend", "revolved_surface", "swept_surface",
@@ -95,19 +99,23 @@ class PartDocument:
     # ------------------------------------------------------------------ persistence
     def to_dict(self) -> dict:
         return {
-            "format": FORMAT, "version": 1, "name": self.name, "units": self.units,
+            "format": FORMAT, "version": VERSION, "name": self.name, "units": self.units,
             "material": self.material, "appearance": self.appearance, "properties": self.properties, "drawing": self.drawing,
             "study": self.study, "features": self.features, "rollback": self.rollback,
             "counters": self.counters, "next_id": self.next_id,
             "variables": self.variables, "configurations": self.configurations, "active_config": self.active_config,
             "folders": self.folders, "design_table": self.design_table, "named_views": getattr(self, "named_views", {}),
             "pmi": getattr(self, "pmi", []), "render": getattr(self, "render", {}),
+            **getattr(self, "_extra", {}),  # (keys of the file this version does not use: written back)
         }
 
     def load_dict(self, d: dict) -> None:
-        if d.get("format") != FORMAT:
-            raise DocumentError("not an openswx part file")
-        d = copy.deepcopy(d)  # never share feature lists between documents (previews clone documents)
+        from . import migrate
+        try:
+            d = migrate.migrate(copy.deepcopy(d), FORMAT)  # (a copy: never share feature lists between documents)
+        except migrate.FormatError as exc:
+            raise DocumentError(str(exc)) from exc
+        self._extra = migrate.extras(d, _KNOWN_KEYS)
         self.name = d.get("name", self.name)
         self.units = d.get("units", "mm")
         self.material = d.get("material", self.material)

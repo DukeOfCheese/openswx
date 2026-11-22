@@ -6,15 +6,18 @@ application version so connected UIs refresh live (SSE).
 from __future__ import annotations
 
 import functools
+import hashlib
 import inspect
 import json
 import math
+import os
 import re
 import threading
 import time
 from pathlib import Path
 from typing import Any, Literal
 
+from . import applog
 from .document import DocumentError, PartDocument
 from .features import END_CONDITIONS, FeatureError, encode_shape, mass_properties
 from .geom import edge_ref, face_ref
@@ -85,6 +88,7 @@ class Application:
 
 
 APP = Application()
+_LOG = applog.setup()
 COMMANDS: dict[str, dict] = {}
 ERRORS = (DocumentError, FeatureError, SketchError, ValueError, KeyError, FileNotFoundError)
 _TL = threading.local()  # .origin = "ui" for web requests; MCP/tests default to "agent"
@@ -100,19 +104,43 @@ def command(mutates: bool = True, category: str = "general", mcp: bool = True):
         def wrapper(*args, **kwargs):
             bound = inspect.signature(fn).bind(*args, **kwargs)
             origin = getattr(_TL, "origin", "agent")
+            depth = getattr(_TL, "depth", 0)  # (commands called by commands are not the agent's own requests)
+            if origin == "agent" and depth == 0:
+                _check_workspace(fn.__name__, bound.arguments)
             if not APP.lock.acquire(timeout=30):  # never hang a client forever behind a stuck command
                 busy = getattr(APP, "busy", None)
                 raise CommandError(f"openswx is busy with {busy[0] if busy else 'another command'}; try again")
             outer = getattr(APP, "busy", None)  # nested commands keep the outermost name
             if outer is None:
                 APP.busy = (fn.__name__, time.time())
+            watch = None  # a document without unsaved changes: did this command change it? (see _mark_dirty)
+            if mutates and outer is None and not getattr(_TL, "preview", False):
+                watch = APP.documents.get(APP.active)
+                if watch is not None and not watch.dirty and getattr(watch, "_clean", None) is None:
+                    watch._clean = _fingerprint(watch)
+            t0 = time.perf_counter()
+            _TL.depth = depth + 1
             try:
-                result = fn(*args, **kwargs)
+                result = fn(*bound.args, **bound.kwargs)  # (as bound: the workspace check may have resolved paths)
+                if watch is not None:
+                    _mark_dirty(watch)
+                if outer is None and not getattr(_TL, "preview", False) and (mutates or time.perf_counter() - t0 > 1.0):
+                    _LOG.info("%s (%s) %.3f s", fn.__name__, origin, time.perf_counter() - t0)
+                    _LOG.debug("%s args %s", fn.__name__, _short(dict(bound.arguments)))
             except ERRORS as exc:
                 if mutates and not getattr(_TL, "preview", False):
                     APP.bump(fn.__name__, dict(bound.arguments), False, str(exc), origin)
+                if outer is None and not getattr(_TL, "preview", False):
+                    _LOG.warning("%s (%s) failed after %.3f s: %s", fn.__name__, origin, time.perf_counter() - t0, exc,
+                                 exc_info=True)
                 raise CommandError(str(exc)) from exc
+            except CommandError:
+                raise
+            except Exception:  # a defect, not a user error: the traceback is what a bug report needs
+                _LOG.exception("%s (%s) crashed after %.3f s", fn.__name__, origin, time.perf_counter() - t0)
+                raise
             finally:
+                _TL.depth = depth
                 if outer is None:
                     APP.busy = None
                 APP.lock.release()
@@ -122,11 +150,70 @@ def command(mutates: bool = True, category: str = "general", mcp: bool = True):
                     if APP.macro is not None and outer is None and not fn.__name__.startswith("macro_"):
                         APP.macro.append({"command": fn.__name__,
                                           "args": json.loads(json.dumps(dict(bound.arguments), default=str))})
+                if outer is None:
+                    from . import recovery
+                    recovery.start(APP)  # (autosave thread: started by the first change, see recovery.py)
             return result
         COMMANDS[fn.__name__] = {"fn": wrapper, "mutates": mutates, "category": category, "mcp": mcp,
                                  "doc": inspect.getdoc(fn) or ""}
         return wrapper
     return deco
+
+
+# Arguments that name files or folders, per command (everything else called `path` is a sketch or curve name).
+FILE_ARGS = {
+    "open_part": ("path",), "save_part": ("path",), "save_drawing_document": ("path",), "import_file": ("path",),
+    "export_file": ("path",), "create_drawing": ("path",), "export_drawing": ("path",), "insert_component": ("source",),
+    "replace_component": ("source",), "motion_export": ("path",), "export_bom": ("path",), "import_dxf": ("path",),
+    "export_sketch_dxf": ("path",), "export_flat_pattern_dxf": ("path",), "insert_part": ("path",),
+    "mirror_part": ("path",), "add_part_to_design_library": ("path",), "pack_and_go": ("folder", "zip_file"),
+    "pdm_set_vault": ("path",), "pdm_check_in": ("path",), "export_edrawing": ("path",), "macro_stop": ("path",),
+    "run_macro": ("path",), "cam_gcode": ("path",), "inspection_report": ("path",), "electrical_import_wires": ("path",),
+    "electrical_formboard": ("path",), "composer_export": ("path",), "save_diagnostic_report": ("path",),
+}
+
+
+def workspace() -> Path | None:
+    """The folder agents are confined to (OPENSWX_WORKSPACE / --workspace), or None: no limit."""
+    w = os.environ.get("OPENSWX_WORKSPACE", "").strip()
+    return Path(w).resolve() if w else None
+
+
+def _check_workspace(name: str, arguments) -> None:
+    """With a workspace set, a command from an agent may only name files inside it. The user's own actions in
+    the UI are not limited."""
+    ws = workspace()
+    if ws is None:
+        return
+    for arg in FILE_ARGS.get(name, ()):
+        v = arguments.get(arg)
+        if not isinstance(v, str) or not v:
+            continue
+        if arg == "source" and v in APP.documents:  # (an open document's name, not a file)
+            continue
+        p = Path(v)
+        target = (p if p.is_absolute() else ws / p).resolve()  # (resolve follows links: no way out through one)
+        if target != ws and ws not in target.parents:
+            raise CommandError(f"{name}: {v!r} is outside the agent workspace {str(ws)!r}; agents may only read and "
+                               f"write files there (relative paths are taken from it)")
+        arguments[arg] = str(target)
+
+
+def _fingerprint(doc) -> str | None:
+    try:
+        return hashlib.sha1(json.dumps(doc.to_dict(), default=str).encode("utf-8")).hexdigest()
+    except Exception:  # noqa: BLE001 - a document that cannot be written out is reported when it is saved
+        return None
+
+
+def _mark_dirty(doc) -> None:
+    """Commands that set a property (material, units, appearance, ...) do not all flag the document as changed:
+    a document that was clean before a mutating command is compared with what it was then. Costs one
+    serialisation per command, and only while the document has no unsaved changes."""
+    if doc.dirty:
+        doc._clean = None
+    elif getattr(doc, "_clean", None) is not None and _fingerprint(doc) != doc._clean:
+        doc.dirty, doc._clean = True, None
 
 
 def call(name: str, args: dict | None = None, origin: str | None = None) -> Any:
@@ -250,8 +337,11 @@ def open_part(path: str, history: bool = True) -> dict:
         return doc.summary()
     if ext == ".oswdrw":  # a drawing document: open (or reuse) its model, then show the drawing
         data = json.loads(p.read_text(encoding="utf-8"))
-        if data.get("format") != "openswx-drawing":
-            raise DocumentError(f"{p.name} is not an openswx drawing")
+        from . import migrate
+        try:
+            data = migrate.migrate(data, "openswx-drawing")
+        except migrate.FormatError as exc:
+            raise DocumentError(f"{p.name}: {exc}") from exc
         ref = Path(data["model"])
         model = (ref if ref.is_absolute() else p.parent / ref).resolve()
         doc = next((d for d in APP.documents.values() if getattr(d, "path", None) and Path(d.path).resolve() == model), None)
@@ -1385,6 +1475,8 @@ def list_end_conditions() -> dict:
 
 @command(mutates=False, category="query", mcp=False)
 def get_mesh() -> dict:
+    """The active document's display mesh for the viewport: triangles per face (with face ids), edge polylines,
+    sketch, plane and reference-geometry overlays."""
     m = APP.active_doc.mesh()
     ctx = APP.context
     if ctx and ctx["part"] == APP.active and ctx["assembly"] in APP.documents:
@@ -2873,7 +2965,7 @@ def edit_mate(name: str, value: float | None = None, aligned: bool | None = None
 
 @command(category="assembly")
 def delete_mate(name: str) -> dict:
-    """Delete a mate."""
+    """Delete a mate by name (e.g. 'Coincident1'); the assembly is solved again without it."""
     APP.asm.delete_mate(name)
     return APP.asm.summary()
 
@@ -4711,3 +4803,4 @@ def get_view_image(view: Literal["isometric", "front", "back", "top", "bottom", 
 # more commands (flex, mold tools, library features, ...) register with the same registry
 from .commands_more import *  # noqa: E402,F401,F403
 from .commands_mfg import *  # noqa: E402,F401,F403
+from .commands_app import *  # noqa: E402,F401,F403
