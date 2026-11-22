@@ -895,7 +895,9 @@ class Sketch:
             fun = _TimedResiduals(lambda v: self._residuals(v, idx)[0], x0, SOLVE_SECONDS + 0.02 * n)
             opts = dict(method="trf", xtol=1e-14, ftol=1e-14, gtol=1e-14, max_nfev=400 * (n + 1))
             try:
-                if n > 40:  # large sketches: a Jacobian from grouped columns of the sparsity pattern
+                if float(np.abs(res0).max()) <= 1e-11:
+                    pass  # every relation and dimension already holds (new geometry was added, nothing moved): no search
+                elif n > SPARSE_FROM:  # a Jacobian from grouped columns of the sparsity pattern (same values, fewer evaluations)
                     pat = self._sparsity(idx, owners, n)
                     least_squares(fun, x0, jac=lambda v: _numeric_jac(fun, v, pat), **opts)
                     if float(np.abs(fun(fun.best_x)).max(initial=0.0)) > 1e-8:
@@ -906,7 +908,7 @@ class Sketch:
                 pass  # a sketch that will not converge (conflicting constraints): keep the closest point found
             x = fun.best_x
             res, _ = self._residuals(x, idx)
-            jac = _numeric_jac(fun.f, x, self._sparsity(idx, owners, n) if n > 40 else None)
+            jac = _numeric_jac(fun.f, x, self._sparsity(idx, owners, n) if n > SPARSE_FROM else None)
         else:
             x, res, jac = x0, np.zeros(0), np.zeros((0, n))
         # write back
@@ -920,9 +922,8 @@ class Sketch:
                 d["value"] = self.measure(d)
         # degrees of freedom
         if jac.size:
-            s = np.linalg.svd(jac, compute_uv=False)
+            _, s, vt = np.linalg.svd(jac)  # (once: the singular values give the rank, vt the free directions)
             rank = int((s > 1e-7 * max(1.0, s[0])).sum())
-            _, _, vt = np.linalg.svd(jac)
             null = vt[rank:]
         else:
             rank, null = 0, np.eye(n)
@@ -1266,6 +1267,10 @@ SOLVE_SECONDS = 4.0  # time box for one sketch solve (plus 20 ms per unknown)
 
 class _OutOfTime(Exception):
     pass
+
+
+SPARSE_FROM = 12  # unknowns above which the Jacobian is built by column groups (was 40: every sketch of a few
+# dimensioned lines paid one residual evaluation per unknown, per iteration)
 
 
 class _TimedResiduals:
