@@ -790,8 +790,18 @@ class PartDocument:
         body = self.body
         if body is None:
             return {"faces": [], "edges": []}
-        return {"faces": [face_info(i, f) for i, f in enumerate(body.faces())],
-                "edges": [edge_info(i, e) for i, e in enumerate(body.edges())]}
+        from .naming import edge_faces, label_of_face
+        faces = [face_info(i, f) for i, f in enumerate(body.faces())]
+        edges = [edge_info(i, e) for i, e in enumerate(body.edges())]
+        for info, f in zip(faces, body.faces()):  # persistent names: valid after later edits, unlike the ids
+            label = label_of_face(f, body)
+            if label:
+                info["name"] = label
+        for info, e in zip(edges, body.edges()):
+            sides = edge_faces(body, e)
+            if sides and len(sides) == 2:
+                info["name"] = "|".join(sides)  # an edge is named by the two faces it lies between
+        return {"faces": faces, "edges": edges}
 
     def mesh(self) -> dict:
         m = tessellate(self.body)

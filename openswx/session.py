@@ -268,6 +268,12 @@ def _face(doc: PartDocument, sel) -> dict:
     if doc.body is None:
         raise DocumentError("the part has no body yet")
     faces = doc.body.faces()
+    if not re.fullmatch(r"(Face)?\d+", str(sel)):  # a persistent name from get_topology ('Boss-Extrude1:cap+')
+        from .naming import find_face
+        hit = find_face(doc.body, str(sel))
+        if hit is None:
+            raise DocumentError(f"unknown face {sel!r}; call get_topology for current face ids and names")
+        return face_ref(hit, doc.body)
     try:
         return face_ref(faces[int(str(sel).replace("Face", ""))], doc.body)
     except (ValueError, IndexError):
@@ -280,22 +286,38 @@ def _edge(doc: PartDocument, sel) -> dict:
     if doc.body is None:
         raise DocumentError("the part has no body yet")
     edges = doc.body.edges()
+    if "|" in str(sel):  # a persistent name from get_topology: the two faces the edge lies between
+        from .naming import find_edge
+        hit = find_edge(doc.body, str(sel).split("|"))
+        if hit is None:
+            raise DocumentError(f"unknown edge {sel!r}; call get_topology for current edge ids and names")
+        return edge_ref(hit, doc.body)
     try:
         return edge_ref(edges[int(str(sel).replace("Edge", ""))], doc.body)
     except (ValueError, IndexError):
         raise DocumentError(f"unknown edge {sel!r}; call get_topology for current edge ids") from None
 
 
+def _is_edge_sel(s) -> bool:
+    """'Edge7', or an edge's persistent name ('faceA|faceB')."""
+    return isinstance(s, str) and (s.startswith("Edge") or "|" in s)
+
+
+def _is_face_sel(s) -> bool:
+    """'Face3', or a face's persistent name ('Boss-Extrude1:cap+': feature, colon, what made the face)."""
+    return isinstance(s, str) and not _is_edge_sel(s) and (s.startswith("Face") or ":" in s)
+
+
 def _plane_spec(doc: PartDocument, plane):
-    if isinstance(plane, str) and plane.startswith("Face"):
+    if _is_face_sel(plane):
         return _face(doc, plane)
     return plane
 
 
 def _axis_spec(doc: PartDocument, axis):
-    if isinstance(axis, str) and axis.startswith("Edge"):
+    if _is_edge_sel(axis):
         return _edge(doc, axis)
-    if isinstance(axis, str) and axis.startswith("Face"):
+    if _is_face_sel(axis):
         return _face(doc, axis)
     return axis
 
@@ -1003,8 +1025,10 @@ def get_feature(name: str) -> dict:
 @command(mutates=False, category="query")
 def get_topology() -> dict:
     """List current faces and edges with ids (Face0.., Edge0..), type, a point on each, normals,
-    areas/lengths and radii. Use these ids for fillet, chamfer, shell, hole, sketch-on-face, etc.
-    Ids are only valid until the next model change. In assemblies ids are 'Component/Face#'."""
+    areas/lengths and radii. Use the ids for fillet, chamfer, shell, hole, sketch-on-face, etc.
+    Ids are only valid until the next model change; `name`, where present, stays valid across edits
+    (a face is named after the feature and sketch entity that made it, an edge 'faceA|faceB' after the two
+    faces it lies between) and is accepted wherever an id is. In assemblies ids are 'Component/Face#'."""
     return APP.active_doc.topology()
 
 
@@ -1512,10 +1536,11 @@ def measure(a: str, b: str) -> dict:
         raise DocumentError("the part has no body")
 
     def pick(s):
-        if s.startswith("Face"):
-            return body.faces()[int(s[4:])]
-        if s.startswith("Edge"):
-            return body.edges()[int(s[4:])]
+        from .geom import resolve_edge, resolve_face
+        if _is_edge_sel(s):
+            return resolve_edge(body, _edge(APP.doc, s))
+        if _is_face_sel(s):
+            return resolve_face(body, _face(APP.doc, s))
         raise DocumentError(f"cannot measure {s!r}")
     sa, sb = pick(a), pick(b)
     return {"distance": sa.distance_to(sb), "a": a, "b": b}
@@ -4251,7 +4276,7 @@ def composite_curve(items: list[str]) -> dict:
     """Composite Curve: join sketches, curves (3D sketches, helixes, projected curves) and model edges
     ('EdgeN') end to end into one curve."""
     doc = APP.doc
-    feat = doc.add_feature("composite_curve", {"items": [_edge(doc, i) if str(i).startswith("Edge") else i for i in items]})
+    feat = doc.add_feature("composite_curve", {"items": [_edge(doc, i) if _is_edge_sel(i) else i for i in items]})
     return {"feature": feat["name"], **doc.ctx.info.get(feat["name"], {})}
 
 
@@ -4705,9 +4730,9 @@ def reference_plane(reference: str = "Front", offset: float = 0.0, flip: bool = 
 
 
 def _point_spec(doc: PartDocument, pt):
-    if isinstance(pt, str) and pt.startswith("Edge"):
+    if _is_edge_sel(pt):
         return _edge(doc, pt)
-    if isinstance(pt, str) and pt.startswith("Face"):
+    if _is_face_sel(pt):
         return _face(doc, pt)
     return pt
 

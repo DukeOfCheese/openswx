@@ -20,7 +20,7 @@ Open-source parametric part modeling with a SOLIDWORKS-style workflow — and a 
   mesh); lattice-Boltzmann flow; plastics fill; 3-axis CAM with G-code; costing; inspection reports.
 - **Familiar UI** (desktop app or browser): CommandManager, FeatureManager design tree, PropertyManager with
   live preview, SOLIDWORKS mouse navigation and shortcuts.
-- **Agents**: <!-- counts -->385 commands, 370 of them MCP tools ([full list](docs/commands.md))<!-- /counts -->, over stdio or
+- **Agents**: <!-- counts -->386 commands, 371 of them MCP tools ([full list](docs/commands.md))<!-- /counts -->, over stdio or
   streamable HTTP. Agent actions show up live in the UI's Agent activity pane.
 - **Interop**: opens SOLIDWORKS parts, assemblies and drawings (`.sldprt`, `.sldasm`, `.slddrw`; 2015 and
   later) natively, with no SOLIDWORKS installation - see *Status* for how much of the feature history comes
@@ -83,7 +83,11 @@ Then ask, e.g. *"Make a 120×60×10 mm mounting plate with four Ø8 holes 12 mm 
 Ø36 boss with a counterbored hole, fillet the corners R6, material 6061."* See
 [`tools/agent_demo.py`](tools/agent_demo.py) for a scripted agent that does exactly that.
 
-Every command is an MCP tool; the full list with arguments is in [`docs/commands.md`](docs/commands.md).
+A connection lists the `core` tools first (under 50: part modelling essentials, plus `batch` for several
+commands in one atomic call). `list_toolsets` shows the other areas and `enable_toolset("assembly")` adds one;
+`--toolsets core,drawing` or `--toolsets all` (or `OPENSWX_TOOLSETS`) sets what is listed from the start.
+`get_topology` gives each face and edge an id and a persistent `name` that survives later edits.
+The full list with arguments is in [`docs/commands.md`](docs/commands.md).
 Start with `new_part`, `create_sketch`, `sketch_rectangle` / `sketch_circle` / `sketch_line`, `sketch_dimension`,
 `extrude` / `cut_extrude`, `fillet`, `get_topology` (face and edge ids for selection), `get_mass_properties` and
 `get_view_image`. End conditions accept names or SOLIDWORKS `swEndConditions_e` values (Blind=0, ThroughAll=1,
