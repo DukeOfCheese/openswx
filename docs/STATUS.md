@@ -12,6 +12,7 @@ state), and how the program got here, pass by pass, in [`PLAN.md`](PLAN.md) (a l
   tables, PDF / DXF / SVG).
 - **Analysis**: static, frequency, buckling, thermal, nonlinear, fatigue, drop; lattice-Boltzmann flow;
   plastics fill; 3-axis CAM. Long solves run as background jobs.
+- **Rendering**: real-time PBR, or path traced (Render Tools > Quality) for soft shadows and reflections.
 - **Review**: design review, requirements checked like tests, tolerance stack-up, design studies, document
   compare, 3D-print orientation.
 - **Files**: native `.oswprt` / `.oswasm` / `.oswdrw` (versioned JSON, with the commands that built the

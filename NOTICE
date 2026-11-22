@@ -12,6 +12,13 @@ Bundled in this source tree
 three.js (openswx/web/vendor/three.module.min.js)
   MIT License, Copyright 2010-2024 three.js authors. See openswx/web/vendor/three.LICENSE.
 
+three-gpu-pathtracer 0.0.23 (openswx/web/vendor/three-gpu-pathtracer.module.js)
+  MIT License, Copyright (c) 2021 Garrett Johnson. See openswx/web/vendor/three-gpu-pathtracer.LICENSE.
+  (Its import of three.js' postprocessing/Pass.js points at openswx/web/vendor/three-Pass.js, that file
+  from three.js r170, MIT.)
+three-mesh-bvh 0.8.3 (openswx/web/vendor/three-mesh-bvh.module.js)
+  MIT License, Copyright (c) 2018 Garrett Johnson. See openswx/web/vendor/three-mesh-bvh.LICENSE.
+
 Used as dependencies (installed separately; included in the desktop builds)
 ---------------------------------------------------------------------------
 OpenCASCADE Technology, through the OCP bindings (cadquery-ocp)

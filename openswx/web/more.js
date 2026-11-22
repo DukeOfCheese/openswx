@@ -555,9 +555,11 @@ const MIXIN = {
       <div class="field"><label>Exposure</label><input id="rex" type="range" min="0.3" max="2.5" step="0.05" value="${r.exposure || 1}" style="width:100%"></div>
       <div class="field"><label>Background</label><div style="display:flex;gap:8px;align-items:center"><input id="rbg" type="color" value="${r.background || "#e9ebee"}"><label class="pm-check"><input id="rbgu" type="checkbox" ${r.background ? "checked" : ""}> use this colour</label></div></div>
       <div class="field"><label>Resolution</label><select id="rres"><option value="1">Screen</option><option value="2" selected>2× screen</option><option value="3">3× screen</option></select></div>
+      <div class="field"><label>Quality</label><select id="rq"><option value="0">Fast (real-time shading)</option><option value="64">Path traced, 64 samples</option><option value="256" selected>Path traced, 256 samples</option><option value="1024">Path traced, 1024 samples</option></select></div>
       <div id="rprev" style="margin-top:8px"></div>`, async () => {
-      const s = this.renderSettings();
-      const url = this.renderPhoto(s, parseInt($("#rres").value));
+      const s = this.renderSettings(), samples = parseInt($("#rq").value) || 0, scale = parseInt($("#rres").value);
+      const url = samples ? await this.renderPathTracedWithProgress(s, scale, samples) : this.renderPhoto(s, scale);
+      if (!url) return; // cancelled
       await this.run("set_render_scene", s);
       const name = `${this.model.name}-render.png`;
       if (this.desk?.save_data_url) { const path = await this.askPath("save", name, ["PNG image (*.png)"], "Save Rendering"); if (path) await this.desk.save_data_url(path, url); }
@@ -605,6 +607,99 @@ const MIXIN = {
     for (const m of made) m.dispose();
     pm.dispose(); env.dispose(); r.dispose();
     return url;
+  },
+
+  /** Path-traced rendering with a progress toast and Cancel; resolves to a PNG data URL, or null if cancelled. */
+  async renderPathTracedWithProgress(s, scale, samples) {
+    const t = el("div", "toast"); t.style.minWidth = "260px";
+    t.innerHTML = `<div><b>Path tracing</b> <span class="pt-msg">loading...</span></div>
+      <div style="height:6px;background:#0002;border-radius:3px;margin:6px 0"><div class="pt-bar" style="height:6px;width:0;background:#2b7de9;border-radius:3px"></div></div>
+      <button class="btn pt-cancel">Cancel</button>`;
+    document.querySelector("#toasts").append(t);
+    let cancelled = false;
+    t.querySelector(".pt-cancel").onclick = () => { cancelled = true; };
+    try {
+      return await this.renderPathTraced(s, scale, samples, (done, phase) => {
+        t.querySelector(".pt-bar").style.width = `${Math.round(100 * done / samples)}%`;
+        t.querySelector(".pt-msg").textContent = phase === "compiling" ? "preparing the renderer (the first time can take a minute)..."
+          : `${Math.floor(done)} / ${samples} samples`;
+      }, () => cancelled);
+    } catch (e) {
+      this.toast(`Path tracing failed: ${escapeHtml(e.message || String(e))} (Fast quality still works)`, "err");
+      return null;
+    } finally { t.remove(); }
+  },
+
+  /** The same scene as renderPhoto, path traced (three-gpu-pathtracer, loaded on first use): soft shadows,
+   *  reflections and indirect light computed rather than approximated. onProgress(samples, phase) - phase
+   *  "compiling" while the GPU builds the tracer's shader (only the first render of a session: the renderer
+   *  is kept and reused), then "tracing"; isCancelled() stops it. Resolves to a PNG data URL, or null if
+   *  cancelled. */
+  async renderPathTraced(s, scale = 1, samples = 256, onProgress = () => {}, isCancelled = () => false) {
+    const { WebGLPathTracer, GradientEquirectTexture } = await import("./vendor/three-gpu-pathtracer.module.js");
+    const vp = this.vp, S = SCENES[s.scene] || SCENES.studio;
+    const W = Math.round(vp.w * scale), H = Math.round(vp.h * scale);
+    if (!this._pathTracer) { // one WebGL context and tracer for the session: its shader takes long to compile
+      const r = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+      if (!r.capabilities.isWebGL2) { r.dispose(); throw new Error("this browser has no WebGL2"); }
+      r.toneMapping = THREE.ACESFilmicToneMapping; r.outputColorSpace = THREE.SRGBColorSpace;
+      const pt = new WebGLPathTracer(r);
+      pt.tiles.set(2, 2); pt.bounces = 6; pt.renderDelay = 0; pt.minSamples = 0; pt.fadeDuration = 0; pt.rasterizeScene = false;
+      this._pathTracer = { r, pt };
+    }
+    const { r, pt } = this._pathTracer;
+    r.setSize(W, H, false); r.toneMappingExposure = s.exposure || 1;
+    const scene = new THREE.Scene(), made = [];
+    const env = new GradientEquirectTexture(256); // a sky over the scene's walls: the light the model sees
+    env.topColor.set(S.sky ? S.sky[0] : S.lights); env.bottomColor.set(S.walls); env.exponent = 1.5; env.update();
+    scene.environment = env; scene.environmentIntensity = 0.9;
+    scene.background = new THREE.Color(s.background || S.bg);
+    const box = vp.bbox.clone(), c = box.getCenter(new THREE.Vector3()), rad = box.getSize(new THREE.Vector3()).length() / 2 || 50;
+    const mat = this.model?.material || {};
+    for (const [, m] of vp.faces) {
+      if (!vp.componentShown(m.userData.id)) continue;
+      const pbr = pbrFor(m.userData.base ?? 0xb4bac2, mat); pbr.polygonOffset = false; made.push(pbr);
+      scene.add(new THREE.Mesh(m.geometry, pbr));
+    }
+    if (s.floor) {
+      const fm = new THREE.MeshStandardMaterial({ color: S.floor, roughness: 0.85, metalness: 0 }); made.push(fm);
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(rad * 400, rad * 400), fm);
+      floor.rotation.x = -Math.PI / 2; floor.position.set(c.x, box.min.y - 0.01, c.z); scene.add(floor);
+    }
+    const sun = new THREE.DirectionalLight(0xffffff, s.shadows ? 2.2 : 0); // (path tracing always casts shadows: no sun = none)
+    sun.position.set(c.x + rad * 1.5, c.y + rad * 4, c.z + rad * 2); sun.target.position.copy(c);
+    scene.add(sun, sun.target);
+    const cam = vp.camera.clone();
+    if (cam.isPerspectiveCamera) cam.aspect = W / H;
+    else { // the viewport's orthographic camera spans +/-1e5 mm: in single precision the tracer's hits then lose ~0.01 mm,
+      // enough for bounced rays to hit their own surface (striping). Same view, from just outside the model:
+      // (slid along its own axis only, so the picture is exactly the viewport's)
+      const back = new THREE.Vector3(0, 0, 1).applyQuaternion(cam.quaternion);
+      cam.position.addScaledVector(back, rad * 3 - cam.position.clone().sub(c).dot(back)); cam.near = rad * 0.5; cam.far = rad * 400;
+    }
+    cam.updateProjectionMatrix(); cam.updateMatrixWorld();
+    try {
+      pt.setScene(scene, cam);
+      pt.reset();
+      const t0 = performance.now(), pause = () => new Promise((res) => setTimeout(res, 0));
+      let traced = 0;
+      while (pt.samples < samples) {
+        if (isCancelled()) return null;
+        pt.renderSample();
+        if (pt.isCompiling) { // the first render: the GPU is building the shader (it can take a minute)
+          onProgress(0, "compiling");
+          if (performance.now() - t0 > 300000) throw new Error("the GPU did not finish compiling the path tracer in 5 minutes");
+          await new Promise((res) => setTimeout(res, 100));
+          continue;
+        }
+        onProgress(Math.min(pt.samples, samples), "tracing");
+        if (++traced > samples * 64) throw new Error("the path tracer made no progress");
+        if (traced % 4 === 0) await pause(); // let the page breathe (and the toast update) between tiles
+      }
+      return r.domElement.toDataURL("image/png");
+    } finally {
+      for (const m of made) m.dispose(); env.dispose(); // (the renderer and tracer stay for the next render)
+    }
   },
 
   // ---------------------------------------------------------------- assembly tools

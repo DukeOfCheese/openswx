@@ -151,3 +151,32 @@ def test_assembly_dialogs(page):
 
 def test_no_script_errors(page):
     assert page.errors == []
+
+
+def test_path_traced_render(page):
+    """Render Tools' path tracer (vendored three-gpu-pathtracer) on the current part: a few samples at a
+    quarter of the screen size, then checked to be a picture of something, not the background alone.
+    Headless CI browsers emulate the GPU in software, where the tracer's first shader compile can take
+    minutes: past the time limit the test is skipped rather than failed."""
+    page.evaluate("""() => {
+        window.__pt = {state: 'running'};
+        (async () => {
+            await T.run('activate_document', {name: 'UiPart'}); await window.app.refresh();
+            const url = await window.app.renderPathTraced({scene: 'studio', floor: true, shadows: true, exposure: 1, background: null},
+                                                          0.25, 4, (n, phase) => { window.__pt.phase = phase; });
+            const img = new Image(); await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+            const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+            const g = c.getContext('2d'); g.drawImage(img, 0, 0); const d = g.getImageData(0, 0, c.width, c.height).data;
+            let differ = 0, n = 0;
+            for (let i = 0; i < d.length; i += 4 * 7) { n++; if (Math.abs(d[i] - d[0]) + Math.abs(d[i + 1] - d[1]) + Math.abs(d[i + 2] - d[2]) > 30) differ++; }
+            window.__pt = {state: 'done', width: img.width, different: differ / n};
+        })().catch(e => { window.__pt = {state: 'error', error: String(e)}; });
+    }""")
+    deadline = time.time() + 240
+    while time.time() < deadline and page.evaluate("window.__pt.state") == "running":
+        time.sleep(1)
+    r = page.evaluate("window.__pt")
+    if r["state"] == "running" or "no WebGL2" in r.get("error", ""):
+        pytest.skip(f"path tracing not possible in this browser in time ({r})")
+    assert r["state"] == "done", r
+    assert r["width"] > 50 and r["different"] > 0.02  # the part is in the picture
