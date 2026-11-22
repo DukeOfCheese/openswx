@@ -20,7 +20,7 @@ Snapshot
 ## Status after the first pass (2026-11-23)
 
 The specs below are as written on 2026-11-22; this table says what has been done about each since
-(commits `df95ff6` onwards, 289 tests). "Done" means implemented with tests that pass on Windows;
+(commits `df95ff6` onwards, 291 tests). "Done" means implemented with tests that pass on Windows;
 nothing here has been run on GitHub's runners, on macOS or Linux, or in the desktop window.
 
 | Item | State | What was done / what is left |
@@ -39,7 +39,7 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | C5 logging | done | `applog.py`, `save_diagnostic_report` |
 | D1 untested commands | done | Every command is named in a test; a test enforces it for new ones. Found and fixed on the way: component numbers reused after a delete, PDM where-used missing linked parts, property commands not marking the document changed |
 | D2 test file split | done | Nine files by area + `core_helpers.py` |
-| D3 UI tests | **open** | No automated UI test. The dialogs added in this pass were driven once by hand in a browser (token link, Options, Dimension Tolerances, Design Review, Requirements, a study as a job); Document Recovery, Export Script, Hand-off Pack and the desktop window were not |
+| D3 UI tests | written, **not run** | `tests/ui/test_ui_smoke.py` (Playwright: token link, a part, every new dialog, a study as a job, assembly dialogs) and a `ui` job in the test workflow. Skipped locally (Playwright is not installed here), so it has never run; the same steps were driven once by hand in a browser. No screenshot comparison |
 | D4 conformance | done | `tests/conformance/*.json` (7 cases), `tools/conformance.py record / run` |
 | D5 static checks, deps | partly | ruff (errors only) in CI and `pyproject.toml`; `ezdxf` declared. **Left:** a lock file, type checking, the `sklearn` stub |
 | D6 survey in the repo | partly | `tools/survey.py` (resumable run, summary, compare), bookkeeping tested with a stand-in. **Not run** against the SOLIDWORKS sample corpus; no result table checked in |
@@ -56,7 +56,7 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | H2-H6 solvers, CAM, rendering | **open** | None started |
 | I1 Linux build | **open** | |
 | I2 code signing | **open** | Needs certificates |
-| I3 update check | **open** | Needs the repository's release feed |
+| I3 update check | done | Help > Check for Updates (`updates.py`): asks the GitHub releases of the repository in the `update_repository` setting, only when the user asks; nothing is downloaded. **Left:** set the repository once there is one |
 | I4 benchmarks | partly | `tools/bench.py`. **Left:** tracking per release, lazy imports, bundle audit |
 | I5 PyPI | partly | Classifiers and keywords. Not published; no project URLs until there is a remote |
 | I6 stray build folders | **open** | Left alone: they are the owner's build output |
@@ -66,7 +66,7 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | J4 requirements as tests | done | `add_requirement` / `check_requirements`, `openswx check`. **Left:** factor-of-safety requirements tied to a study |
 | J5 design studies | partly | `design_study` (sweeps, best feasible run). **Left:** optimisers, Pareto plots, topology optimisation |
 | J6 headless CLI | done | `convert`, `render`, `massprops`, `check`, `drawing`, `script`, `diff` |
-| J7 library API | **open** | The command functions are importable (`from openswx import session as S`); no typed object API, no Jupyter widget |
+| J7 library API | partly | `openswx.api.Part` / `Sketch`: a small chained object API over the commands, with a PNG representation for notebooks. **Left:** assemblies and drawings, full typing, an interactive viewer widget |
 | J8 plugins | done | `openswx.plugins` entry points. CAM posts, pipe standards and Toolbox tables were not moved out of the core |
 | J15 3D-print workflow | partly | `print_orientation` (overhang, support estimate, bed fit for the six ways up); STL / 3MF in and out. **Left:** lattice infill, per-body print settings |
 | J9, J10, J12, J16, J17 | **open** | Bridges to other CAD, sketch from image, sharing, standard-parts catalogue, tutorials |

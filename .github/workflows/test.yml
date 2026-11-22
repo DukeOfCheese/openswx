@@ -47,3 +47,23 @@ jobs:
           ruff check --select E9,F63,F7,F82 openswx tests tools packaging
       - name: Test
         run: python -m pytest -q --durations=20
+
+  ui:
+    # the real page in a headless browser against a real server (tests/ui; skipped where Playwright is absent)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: System libraries (OpenCASCADE needs OpenGL)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1 libglu1-mesa libegl1
+      - name: Install
+        run: |
+          python -m pip install -e ".[dev]" playwright
+          python -m playwright install --with-deps chromium
+      - name: UI tests
+        run: python -m pytest tests/ui -q -rs

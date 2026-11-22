@@ -5,7 +5,7 @@ from . import settings
 from .document import DocumentError
 from .session import command
 
-__all__ = ["get_settings", "set_settings", "list_plugins"]
+__all__ = ["get_settings", "set_settings", "list_plugins", "check_for_updates"]
 
 
 @command(mutates=False, category="tools", mcp=False)
@@ -33,3 +33,12 @@ def list_plugins() -> dict:
     or why it failed to load."""
     from . import plugins
     return {"plugins": plugins.load_all()}
+
+
+@command(mutates=False, category="tools", mcp=False)
+def check_for_updates() -> dict:
+    """Help > Check for Updates: ask the release feed (the GitHub repository in the update_repository setting)
+    whether a newer version exists. Only a version number and a link come back; nothing is downloaded. Not
+    run automatically."""
+    from . import updates
+    return updates.check()

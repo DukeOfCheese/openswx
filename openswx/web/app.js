@@ -314,7 +314,7 @@ class App {
         ["Appearance...", "", () => this.appearanceDialog()], ["Properties...", "", () => this.propertiesDialog()], ["Options...", "", () => this.optionsDialog()]],
       Window: () => [...(this.docs?.documents || []).map((d) => [`${d.name === this.model.name ? "✓ " : ""}${d.name}`.replace(/ > /g, " › "), "", () => this.switchDocument(d.name)]),
         "-", ["Next Document", "Ctrl+Tab", () => this.nextDocument()], ["Close", "Ctrl+W", () => this.run("close_document").then(() => this.vp.zoomFit())]],
-      Help: [["Keyboard Shortcuts", "", () => this.showTask("help")], ["Agent (MCP) Setup", "", () => this.mcpDialog()], ["Save Diagnostic Report...", "", () => this.diagnosticReport()], ["About openswx", "", () => this.about()]],
+      Help: [["Keyboard Shortcuts", "", () => this.showTask("help")], ["Agent (MCP) Setup", "", () => this.mcpDialog()], ["Save Diagnostic Report...", "", () => this.diagnosticReport()], ["Check for Updates", "", () => this.checkUpdates()], ["About openswx", "", () => this.about()]],
     };
     const bar = $("#menubar");
     for (const [name, items] of Object.entries(M)) {
@@ -2616,6 +2616,13 @@ class App {
       <p>Claude Code:</p><pre class="code">claude mcp add --transport http openswx ${location.origin}/mcp --header "Authorization: Bearer &lt;token&gt;"</pre>
       <p>The token is your openswx secret: print it with <code>openswx token</code> (desktop app: <code>openswx-cli token</code>). Requests without it are refused.</p>
       <p>Stdio (starts its own app + UI):</p><pre class="code">${escapeHtml(JSON.stringify(stdio, null, 1))}</pre>`, null, "agent");
+  }
+
+  async checkUpdates() {
+    const r = await this.api("/api/command", { name: "check_for_updates", args: {} });
+    if (!r.ok) return this.toast(r.error, "err");
+    const u = r.result;
+    this.modal("Check for Updates", `<p>This is openswx ${escapeHtml(u.current)}.</p><p>${escapeHtml(u.error || u.message)}</p>${u.update_available && u.url ? `<p><a href="${escapeHtml(u.url)}" target="_blank" rel="noopener">${escapeHtml(u.url)}</a></p>` : ""}`, null, "help");
   }
 
   async diagnosticReport() {
