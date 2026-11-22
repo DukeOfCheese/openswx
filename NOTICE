@@ -1,0 +1,30 @@
+openswx
+Copyright 2026 the openswx authors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+openswx is a clean-room implementation. It contains no SOLIDWORKS code or artwork and is not affiliated
+with or endorsed by Dassault Systemes. SOLIDWORKS is a trademark of Dassault Systemes. Parasolid is a
+trademark of Siemens Industry Software.
+
+Bundled in this source tree
+---------------------------
+three.js (openswx/web/vendor/three.module.min.js)
+  MIT License, Copyright 2010-2024 three.js authors. See openswx/web/vendor/three.LICENSE.
+
+Used as dependencies (installed separately; included in the desktop builds)
+---------------------------------------------------------------------------
+OpenCASCADE Technology, through the OCP bindings (cadquery-ocp)
+  GNU LGPL 2.1 with the Open CASCADE exception; the bindings are Apache-2.0.
+build123d            Apache-2.0
+NumPy                BSD-3-Clause
+SciPy                BSD-3-Clause
+FastAPI              MIT
+Starlette            BSD-3-Clause
+Uvicorn              BSD-3-Clause
+MCP Python SDK       MIT
+ezdxf                MIT
+pywebview            BSD-3-Clause (desktop builds)
+PyInstaller bootloader   GPL-2.0 with the bootloader exception (desktop builds)
+
+The desktop builds carry each bundled package's own licence file in its .dist-info folder.

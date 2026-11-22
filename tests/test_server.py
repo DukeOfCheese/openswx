@@ -35,7 +35,7 @@ def test_mcp_tools_and_calls():
 
 
 def test_rest_api_and_origin_tagging():
-    with TestClient(create_app(mount_mcp=False)) as c:
+    with TestClient(create_app(mount_mcp=False, token=None), base_url="http://127.0.0.1:8765") as c:
         assert c.get("/").status_code == 200
         r = c.post("/api/command", json={"name": "new_part", "args": {}})
         assert r.json()["ok"]

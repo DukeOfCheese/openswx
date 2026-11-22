@@ -17,12 +17,18 @@ from . import session as S
 WEB = Path(__file__).parent / "web"
 
 
-def create_app(mount_mcp: bool = True) -> FastAPI:
+def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "127.0.0.1") -> FastAPI:
+    """The server application. `token`: what /api/ and /mcp ask for ("auto": the user's saved token; None: no
+    token, for tests and --no-token). `host`: the address being served; anything but loopback also accepts
+    requests addressed to other names (see security.py)."""
+    from . import security
+    if token == "auto":
+        token = security.user_token()
     mcp = None
     if mount_mcp:
         from .mcp_server import build_mcp
         mcp = build_mcp()
-        mcp_app = mcp.streamable_http_app(streamable_http_path="/")
+        mcp_app = mcp.streamable_http_app(streamable_http_path="/", host=host)
 
     @contextlib.asynccontextmanager
     async def lifespan(app):
@@ -33,6 +39,7 @@ def create_app(mount_mcp: bool = True) -> FastAPI:
             yield
 
     app = FastAPI(title="openswx", lifespan=lifespan)
+    app.add_middleware(security.Guard, token=token, loopback_only=security.is_loopback(host))
 
     @app.middleware("http")
     async def no_stale_ui(request: Request, call_next):
@@ -160,6 +167,7 @@ def create_app(mount_mcp: bool = True) -> FastAPI:
     return app
 
 
-def run(host: str = "127.0.0.1", port: int = 8765, mount_mcp: bool = True, log_level: str = "warning") -> None:
+def run(host: str = "127.0.0.1", port: int = 8765, mount_mcp: bool = True, log_level: str = "warning",
+        token: str | None = "auto") -> None:
     import uvicorn
-    uvicorn.run(create_app(mount_mcp), host=host, port=port, log_level=log_level)
+    uvicorn.run(create_app(mount_mcp, token=token, host=host), host=host, port=port, log_level=log_level)

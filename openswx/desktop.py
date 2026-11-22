@@ -186,8 +186,10 @@ def run(port: int = 8765, file: str | None = None) -> int:
         reporter.start()
         try:
             import uvicorn
+            from . import security
             from .web_server import create_app  # imports the session: the geometry kernel
-            app = create_app()
+            token = security.user_token()
+            app = create_app(token=token)
         except Exception as exc:  # noqa: BLE001 - shown on the splash instead of hanging on it
             import traceback
             done.set()
@@ -214,8 +216,9 @@ def run(port: int = 8765, file: str | None = None) -> int:
                 break
             time.sleep(0.05)
         show(100, "Starting the user interface")
-        window.load_url(f"http://127.0.0.1:{p}/")
-        print(f"openswx: agents can connect over MCP at http://127.0.0.1:{p}/mcp", file=sys.stderr)
+        window.load_url(f"http://127.0.0.1:{p}/?token={token}")  # (kept as a cookie; the page reloads without it)
+        print(f"openswx: agents can connect over MCP at http://127.0.0.1:{p}/mcp "
+              "(header Authorization: Bearer <token>; the token: `openswx-cli token`)", file=sys.stderr)
 
     webview.start(boot, private_mode=False)
     for server in servers:

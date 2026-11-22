@@ -1,15 +1,18 @@
 """Example agent: drives a running openswx over MCP (streamable HTTP) to build a flanged bracket.
 
-    python -m openswx serve          # in one terminal (open http://127.0.0.1:8765 to watch)
-    python tools/agent_demo.py       # in another
+    python -m openswx serve          # in one terminal (open the link it prints to watch)
+    python tools/agent_demo.py       # in another (sends your openswx token: OPENSWX_TOKEN or `openswx token`)
 """
 from __future__ import annotations
 
 import asyncio
 import base64
 import json
+import os
 import sys
+from pathlib import Path
 
+import httpx2
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
@@ -17,7 +20,10 @@ URL = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8765/mcp"
 
 
 async def main() -> None:
-    async with streamable_http_client(URL) as streams:
+    home = Path(os.environ.get("OPENSWX_HOME") or Path.home() / ".openswx")  # (where `openswx token` keeps it)
+    token = os.environ.get("OPENSWX_TOKEN") or (home / "token").read_text().strip()
+    async with httpx2.AsyncClient(headers={"Authorization": f"Bearer {token}"}, timeout=300) as http, \
+            streamable_http_client(URL, http_client=http) as streams:
         read, write = streams[0], streams[1]
         async with ClientSession(read, write) as s:
             await s.initialize()

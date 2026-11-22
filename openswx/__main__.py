@@ -4,6 +4,7 @@
   python -m openswx serve [--port 8765]        web UI + REST + MCP (streamable HTTP at /mcp)
   python -m openswx mcp [--port 8765] [--no-ui] MCP over stdio for agents, plus the live web UI
   python -m openswx sldinfo FILE.SLDPRT [--extract DIR]
+  python -m openswx token                      the token agents send to MCP over HTTP (Authorization: Bearer)
   openswx-cli register-file-types [--exe EXE]  .oswprt/.oswasm open in openswx; Open with for CAD files
   openswx-cli unregister-file-types           remove those file associations again
 """
@@ -29,6 +30,9 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--port", type=int, default=8765)
     s.add_argument("--open", action="store_true", help="open the browser")
     s.add_argument("--file", help="part to open on start (.oswprt/.step)")
+    s.add_argument("--no-token", action="store_true", help="do not ask for the token (this computer only)")
+    s.add_argument("--allow-remote", action="store_true", help="allow --host to be an address other computers can reach")
+    sub.add_parser("token", help="print the token for the web UI link and for agents (MCP over HTTP)")
     m = sub.add_parser("mcp", help="run the MCP server over stdio")
     m.add_argument("--host", default="127.0.0.1")
     m.add_argument("--port", type=int, default=8765)
@@ -40,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--exe", help="program to register (default: openswx.exe next to this program)")
     sub.add_parser("unregister-file-types", help="remove the file associations register-file-types added")
     argv = list(sys.argv[1:] if argv is None else argv)
-    if not argv or (argv[0] not in ("desktop", "serve", "mcp", "sldinfo", "register-file-types", "unregister-file-types", "-h", "--help")):
+    if not argv or (argv[0] not in ("desktop", "serve", "mcp", "token", "sldinfo", "register-file-types", "unregister-file-types", "-h", "--help")):
         argv = ["desktop", *argv]  # double-clicking openswx.exe (or opening a file with it) starts the app
     a = ap.parse_args(argv)
 
@@ -49,27 +53,51 @@ def main(argv: list[str] | None = None) -> int:
         return run_desktop(a.port, a.file)
 
     if a.cmd == "serve":
+        from . import security
+        remote = not security.is_loopback(a.host)
+        if remote and not a.allow_remote:
+            print(f"openswx: --host {a.host} lets other computers reach openswx; add --allow-remote if that is intended",
+                  file=sys.stderr)
+            return 2
+        if remote and a.no_token:
+            print("openswx: --no-token is only for this computer (not with --allow-remote)", file=sys.stderr)
+            return 2
+        token = None if a.no_token else security.user_token()
         from . import session as S
         from .web_server import run
         if a.file:
             S.open_part(a.file)
+        url = f"http://{a.host}:{a.port}/"
+        link = url + (f"?token={token}" if token else "")
         if a.open:
-            threading.Timer(1.0, lambda: webbrowser.open(f"http://{a.host}:{a.port}/")).start()
-        print(f"openswx UI: http://{a.host}:{a.port}/   MCP (streamable HTTP): http://{a.host}:{a.port}/mcp", file=sys.stderr)
-        run(a.host, a.port)
+            threading.Timer(1.0, lambda: webbrowser.open(link)).start()
+        print(f"openswx UI: {link}\nMCP (streamable HTTP): {url}mcp"
+              + ("   header  Authorization: Bearer <token>  (the token: `openswx token`)" if token else ""), file=sys.stderr)
+        run(a.host, a.port, token=token)
+        return 0
+
+    if a.cmd == "token":
+        from . import security
+        print(security.user_token())
         return 0
 
     if a.cmd == "mcp":
         from .mcp_server import build_mcp
         if not a.no_ui:
+            from . import security
+            if not security.is_loopback(a.host):
+                print("openswx: the live UI of `mcp` is for this computer only (use `serve --allow-remote`)", file=sys.stderr)
+                return 2
+            token = security.user_token()
+
             def ui():
                 try:
                     from .web_server import run
-                    run(a.host, a.port, mount_mcp=False, log_level="error")
+                    run(a.host, a.port, mount_mcp=False, log_level="error", token=token)
                 except (OSError, SystemExit) as exc:  # port busy: agents still work headless
                     print(f"openswx: web UI not started ({exc})", file=sys.stderr)
             threading.Thread(target=ui, daemon=True).start()
-            print(f"openswx: live UI at http://{a.host}:{a.port}/", file=sys.stderr)
+            print(f"openswx: live UI at http://{a.host}:{a.port}/?token={token}", file=sys.stderr)
         build_mcp().run("stdio")
         return 0
 

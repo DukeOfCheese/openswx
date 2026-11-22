@@ -56,8 +56,13 @@ self-contained and can be zipped and copied to another Windows PC (needs the Edg
 ```bash
 python -m venv .venv
 .venv\Scripts\pip install -e .[dev]        # Windows   (Linux/macOS: .venv/bin/pip)
-python -m openswx serve --open             # UI at http://127.0.0.1:8765, MCP at http://127.0.0.1:8765/mcp
+python -m openswx serve --open             # prints the UI link (http://127.0.0.1:8765/?token=...); MCP at /mcp
 ```
+
+The server only answers this computer and asks for your token (a per-user secret kept in `~/.openswx/token`):
+open the UI through the link `serve` prints, which stores it as a cookie. `--no-token` turns the token off for
+local development; `--host` with an address other computers can reach needs `--allow-remote`. The rules are in
+[`openswx/security.py`](openswx/security.py).
 
 Your first part (same as SOLIDWORKS): **Extruded Boss/Base** → pick *Top Plane* → draw a rectangle (R) →
 **Exit Sketch** (top-right corner) → set *Depth* → **OK**. Click a face → mini toolbar → *Sketch* to sketch
@@ -68,8 +73,10 @@ on it. Double-click a dimension while editing a sketch to change it.
 **HTTP** (while `openswx serve` runs):
 
 ```bash
-claude mcp add --transport http openswx http://127.0.0.1:8765/mcp
+claude mcp add --transport http openswx http://127.0.0.1:8765/mcp --header "Authorization: Bearer $(python -m openswx token)"
 ```
+
+(The token stays the same between runs, so this is done once. With the desktop app: `openswx-cli token`.)
 
 **stdio** (starts its own app and the live UI on port 8765):
 
@@ -116,6 +123,9 @@ python tools/difftest/difftest.py --solidworks          # compare against SOLIDW
 Interoperability research notes: [`docs/re/README.md`](docs/re/README.md). Build plan and status:
 [`docs/PLAN.md`](docs/PLAN.md). openswx is a clean-room implementation: it contains no SOLIDWORKS code or
 artwork; compatibility comes from documented APIs, file-format analysis and observed behaviour.
+
+Licence: Apache-2.0 ([`LICENSE`](LICENSE), third-party notices in [`NOTICE`](NOTICE)). Contributing, including the
+clean-room rule: [`CONTRIBUTING.md`](CONTRIBUTING.md). Known gaps and their specs: [`docs/GAPS.md`](docs/GAPS.md).
 
 ## Status / limitations
 
