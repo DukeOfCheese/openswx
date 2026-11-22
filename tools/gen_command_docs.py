@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT))
 os.environ.setdefault("OPENSWX_CACHE", "off")
 os.environ.setdefault("OPENSWX_AUTOSAVE", "off")
 os.environ.setdefault("OPENSWX_LOG", "off")
+os.environ["OPENSWX_PLUGINS"] = "off"  # (the reference lists the built-in commands, whatever is installed here)
 
 ORDER = ["document", "query", "edit", "view", "sketch", "features", "bodies", "surfaces", "sheet_metal", "weldments",
          "mold", "configurations", "equations", "library", "assembly", "routing", "drawing", "mbd", "inspection",

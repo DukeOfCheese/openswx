@@ -150,3 +150,61 @@ def test_cli(tmp_path, capsys):
     assert main(["diff", src, bad]) == 1
     assert "Boss-Extrude1" in json.loads(capsys.readouterr().out)["features"]["changed"]
     assert main(["massprops", str(tmp_path / "missing.oswprt")]) == 2
+
+
+def test_tolerance_stack():
+    S.new_part("Stack")
+    sk = S.create_sketch("Top")["sketch"]
+    r = S.sketch_rectangle(sk, [0, 0], [50, 20])["result"]
+    S.sketch_dimension(sk, "length", [r["entities"][0]], 50)
+    S.sketch_dimension(sk, "length", [r["entities"][1]], 20)
+    S.extrude(sk, 12)
+    dims = S.get_equations()["dimensions"]
+    long_ = next(k for k, v in dims.items() if k.endswith("@" + sk) and abs(v - 50) < 1e-9)
+    short = next(k for k, v in dims.items() if k.endswith("@" + sk) and abs(v - 20) < 1e-9)
+    S.set_dimension_tolerance(long_, "symmetric", plus=0.1)
+    S.set_dimension_tolerance(short, "bilateral", plus=0.05, minus=0.15)
+    r = S.tolerance_stack([{"dimension": long_, "sign": 1}, {"dimension": short, "sign": -1}])
+    assert r["nominal"] == 30
+    # worst case: 50.1 - 19.85 and 49.9 - 20.05
+    assert (r["worst_case"]["min"], r["worst_case"]["max"]) == (pytest.approx(29.85), pytest.approx(30.25))
+    # statistical: mean shift +0.05 (the short side's band is off-centre), half bands 0.1 and 0.1
+    assert r["statistical"]["min"] == pytest.approx(30.05 - math.sqrt(0.02))
+    assert [c["share_pct"] for c in r["contributors"]] == [50.0, 50.0]
+    # a dimension without a tolerance takes the general one (ISO 2768-m: +/- 0.2 for 6-30 mm)
+    g = S.tolerance_stack([{"dimension": "D1@Boss-Extrude1"}], general_class="m")
+    assert g["contributors"][0]["from"] == "ISO 2768-m" and g["worst_case"] == {"min": 11.8, "max": 12.2}
+    with pytest.raises(S.CommandError):
+        S.tolerance_stack([{"dimension": "D9@Nope"}])
+
+
+def test_design_study_sweeps_and_restores():
+    S.new_part("Study")
+    S.set_global_variable("w", 20)
+    sk = S.create_sketch("Top")["sketch"]
+    r = S.sketch_rectangle(sk, [0, 0], [20, 10])["result"]
+    S.sketch_dimension(sk, "length", [r["entities"][0]], 20)
+    S.sketch_dimension(sk, "length", [r["entities"][1]], 10)
+    S.extrude(sk, 5)
+    dims = S.get_equations()["dimensions"]
+    wdim = next(k for k, v in dims.items() if k.endswith("@" + sk) and abs(v - 20) < 1e-9)
+    hdim = next(k for k, v in dims.items() if k.endswith("@" + sk) and abs(v - 10) < 1e-9)
+    S.set_equation(wdim, '"w"')
+    S.add_requirement("Stiff enough", "volume", ">=", 1500)
+    v0, undo0 = S.get_mass_properties()["volume"], len(S.APP.doc._undo)
+    st = S.design_study({"w": [20, 30, 40], hdim: [10, 12]}, measures=["volume", "longest_side"],
+                        objective={"quantity": "volume", "goal": "min"})
+    assert st["count"] == 6
+    table = {(r["values"]["w"], r["values"][hdim]): r for r in st["runs"]}
+    assert table[(30.0, 12.0)]["volume"] == pytest.approx(30 * 12 * 5) and table[(40.0, 10.0)]["longest_side"] == 40
+    assert not table[(20.0, 10.0)]["feasible"] and table[(20.0, 10.0)]["requirements_failed"] == ["Stiff enough"]
+    assert st["best"]["values"] == {"w": 30.0, hdim: 10.0}  # the lightest that still meets the requirement
+    assert S.get_mass_properties()["volume"] == pytest.approx(v0) and len(S.APP.doc._undo) == undo0 + 1
+    kept = S.design_study({"w": [30, 40]}, objective={"quantity": "volume", "goal": "max"}, mode="paired", keep_best=True)
+    assert kept["kept_best"] and S.get_mass_properties()["volume"] == pytest.approx(40 * 10 * 5)
+    S.undo()
+    assert S.get_mass_properties()["volume"] == pytest.approx(v0)
+    with pytest.raises(S.CommandError):
+        S.design_study({"nope": [1]})
+    with pytest.raises(S.CommandError, match="max_runs"):
+        S.design_study({"w": list(range(20, 60))}, max_runs=10)

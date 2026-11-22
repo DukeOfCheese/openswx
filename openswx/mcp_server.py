@@ -103,6 +103,8 @@ def toolset_commands(name: str) -> list[str]:
         return [n for n in CORE if S.COMMANDS[n]["mcp"]]
     if name == "all":
         return [n for n, m in S.COMMANDS.items() if m["mcp"]]
+    if name == "plugins":
+        return [n for n, m in S.COMMANDS.items() if m["mcp"] and m.get("plugin")]
     if name not in TOOLSETS:
         raise KeyError(name)
     cats = TOOLSETS[name][1]
@@ -119,7 +121,7 @@ def starting_toolsets(toolsets: str | list[str] | None = None) -> list[str]:
         except ValueError:  # a setting typed wrongly must not stop agents connecting
             return ["core"]
     names = [t.strip() for t in (raw.split(",") if isinstance(raw, str) else raw) if t.strip()] or ["core"]
-    bad = [t for t in names if t not in ("core", "all", *TOOLSETS)]
+    bad = [t for t in names if t not in ("core", "all", "plugins", *TOOLSETS)]
     if bad:
         raise ValueError(f"unknown toolset(s) {bad}; expected core, all or one of {sorted(TOOLSETS)}")
     return names
@@ -167,7 +169,10 @@ def build_mcp(toolsets: str | list[str] | None = None) -> MCPServer:
         covers, how many tools it has and whether it is already enabled."""
         out = {"core": {"description": "Part modelling essentials", "tools": len(toolset_commands("core")),
                         "enabled": "core" in enabled or "all" in enabled}}
-        for name, (desc, _cats) in TOOLSETS.items():
+        sets = dict(TOOLSETS)
+        if toolset_commands("plugins"):
+            sets["plugins"] = ("Commands added by installed plugins", ())
+        for name, (desc, _cats) in sets.items():
             cmds = toolset_commands(name)
             out[name] = {"description": desc, "tools": len(cmds), "enabled": all(c in listed or c == "get_view_image" for c in cmds)}
         return {"toolsets": out, "listed_tools": len(listed) + 3}
@@ -179,7 +184,7 @@ def build_mcp(toolsets: str | list[str] | None = None) -> MCPServer:
         try:
             cmds = toolset_commands(name)
         except KeyError:
-            raise ToolError(f"unknown toolset {name!r}; expected one of {['core', *TOOLSETS, 'all']}") from None
+            raise ToolError(f"unknown toolset {name!r}; expected one of {['core', *TOOLSETS, 'plugins', 'all']}") from None
         new = add(cmds)
         enabled.add(name)
         if new:

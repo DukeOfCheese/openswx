@@ -4989,3 +4989,7 @@ from .commands_app import *  # noqa: E402,F401,F403
 from .commands_tol import *  # noqa: E402,F401,F403
 from .commands_review import *  # noqa: E402,F401,F403
 from .commands_settings import *  # noqa: E402,F401,F403
+
+from . import plugins as _plugins  # noqa: E402
+
+_plugins.load_all()  # (installed packages that add commands: see plugins.py)

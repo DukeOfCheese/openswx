@@ -8,6 +8,18 @@ version = "0.1.0"
 description = "Open-source parametric CAD with a SOLIDWORKS-style workflow and a built-in MCP server for agents"
 readme = "README.md"
 requires-python = ">=3.11"
+keywords = ["cad", "parametric", "solidworks", "mcp", "opencascade", "step", "parasolid"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Manufacturing",
+  "Intended Audience :: Science/Research",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Multimedia :: Graphics :: 3D Modeling",
+  "Topic :: Scientific/Engineering",
+]
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 dependencies = [
@@ -17,6 +29,7 @@ dependencies = [
   "fastapi",
   "uvicorn[standard]",
   "mcp>=2.3",
+  "ezdxf",  # DXF import / export (imported directly; build123d depends on it too)
 ]
 
 [project.optional-dependencies]
@@ -31,6 +44,11 @@ packages = ["openswx"]
 
 [tool.setuptools.package-data]
 openswx = ["web/*", "web/vendor/*"]
+
+[tool.ruff]
+line-length = 140
+# errors only for now (what CI checks): syntax, undefined names, misused comparisons
+lint.select = ["E9", "F63", "F7", "F82"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

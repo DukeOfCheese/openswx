@@ -12,7 +12,7 @@ from .document import DocumentError
 from .session import APP, command
 
 __all__ = ["export_script", "compare_documents", "add_requirement", "delete_requirement", "check_requirements",
-           "review_model", "export_handoff_pack"]
+           "review_model", "export_handoff_pack", "tolerance_stack", "design_study"]
 
 
 def _kind(doc) -> str:
@@ -424,3 +424,137 @@ def export_handoff_pack(folder: str, zip_file: bool = True, formats: list[str] |
                     z.write(f, f.name)
         result["zip"] = str(zp.resolve())
     return result
+
+
+# ====================================================================== tolerance stack-up, design study
+@command(mutates=False, category="evaluate")
+def tolerance_stack(contributors: list[dict], general_class: Literal["f", "m", "c", "v"] | None = None) -> dict:
+    """Tolerance stack-up along one direction: `contributors` is the chain of model dimensions that make up a
+    gap or overall size, each {"dimension": "D1@Sketch1", "sign": 1} (sign -1 for dimensions that subtract).
+    Uses each dimension's own tolerance (set_dimension_tolerance); one without takes the ISO 2768 general
+    tolerance of `general_class` (default: the setting). Returns the nominal result, the worst-case limits and
+    the statistical (root-sum-square) limits, with each contributor's share - the largest is the one worth
+    tightening."""
+    from . import settings
+    from . import tolerance as T
+    from .inspection import general_tolerance
+    doc = APP.doc
+    cls = general_class or settings.get("general_tolerance")
+    if not contributors:
+        raise DocumentError("give at least one contributor")
+    tols = getattr(doc, "tolerances", {})
+    rows, nominal, wc_lo, wc_hi, mid, var = [], 0.0, 0.0, 0.0, 0.0, 0.0
+    for c in contributors:
+        name, sign = c.get("dimension"), (-1.0 if float(c.get("sign", 1)) < 0 else 1.0)
+        if name not in doc.dim_values:
+            raise DocumentError(f"no dimension {name!r} (names: get_equations)")
+        value = float(doc.dim_values[name])
+        source = "dimension"
+        try:
+            dev = T.deviations(value, tols.get(name))
+        except T.ToleranceError as exc:
+            raise DocumentError(f"{name}: {exc}") from exc
+        if dev is None:
+            g = general_tolerance("linear", abs(value), cls)
+            if g is None:
+                raise DocumentError(f"{name} ({value:g} mm) has no tolerance and is below the range of ISO 2768; set one")
+            dev, source = (-g, g), f"ISO 2768-{cls}"
+        lo, hi = (dev[0], dev[1]) if sign > 0 else (-dev[1], -dev[0])
+        nominal += sign * value
+        wc_lo += lo
+        wc_hi += hi
+        mid += (lo + hi) / 2
+        half = (hi - lo) / 2
+        var += half * half
+        rows.append({"dimension": name, "sign": int(sign), "value": value, "lower": round(dev[0], 6), "upper": round(dev[1], 6),
+                     "from": source, "band": round(hi - lo, 6)})
+    rss = math.sqrt(var)
+    total_band = sum(r["band"] for r in rows) or 1.0
+    for r in rows:
+        r["share_pct"] = round(100 * r["band"] / total_band, 1)
+    r6 = lambda v: round(v, 6)  # noqa: E731
+    return {"nominal": r6(nominal), "worst_case": {"min": r6(nominal + wc_lo), "max": r6(nominal + wc_hi)},
+            "statistical": {"min": r6(nominal + mid - rss), "max": r6(nominal + mid + rss),
+                            "note": "root sum square of the half bands about the mean: each tolerance taken as +/- 3 sigma"},
+            "contributors": rows}
+
+
+@command(category="evaluate")
+def design_study(variables: dict[str, list[float]], measures: list[str] | None = None, objective: dict | None = None,
+                 mode: Literal["grid", "paired"] = "grid", keep_best: bool = False, max_runs: int = 200) -> dict:
+    """Parametric design study: rebuild the part for each combination of values and tabulate the results.
+    variables: {"width": [20, 30, 40], "D1@Sketch2": [5, 8]} - global variables or sketch dimensions with the
+    values to try (grid: every combination; paired: first with first, second with second, ...). measures:
+    quantities per run (default mass and volume; any requirement quantity: surface_area, size_x/y/z,
+    longest_side, min_thickness, errors). objective: {"quantity": "mass", "goal": "min"} picks the best run
+    among those that rebuild and meet every requirement of the document. The part is put back as it was
+    unless keep_best=True, which leaves it at the best run (one Undo step either way)."""
+    import itertools
+
+    from . import session as S
+    doc = APP.doc
+    if not variables or any(not v for v in variables.values()):
+        raise DocumentError("give each variable at least one value")
+    measures = list(measures or ["mass", "volume"])
+    for q in measures + ([objective["quantity"]] if objective else []):
+        if q not in QUANTITIES or q in ("dimension", "components", "interferences"):
+            raise DocumentError(f"cannot tabulate {q!r}; choose from mass, volume, surface_area, size_x, size_y, size_z, "
+                                "longest_side, min_thickness, bodies, errors")
+    if objective and objective.get("goal") not in ("min", "max"):
+        raise DocumentError('objective must be {"quantity": ..., "goal": "min" or "max"}')
+    names = list(variables)
+    for n in names:
+        if n not in doc.variables and n not in doc.dim_values:
+            raise DocumentError(f"{n!r} is neither a global variable nor a dimension of this part")
+    if mode == "paired":
+        if len({len(v) for v in variables.values()}) != 1:
+            raise DocumentError("paired mode needs the same number of values for every variable")
+        combos = list(zip(*(variables[n] for n in names)))
+    else:
+        combos = list(itertools.product(*(variables[n] for n in names)))
+    if len(combos) > max_runs:
+        raise DocumentError(f"{len(combos)} runs is over max_runs={max_runs}; try fewer values or raise it")
+
+    def apply(combo):
+        for n, v in zip(names, combo):
+            if n in doc.variables:
+                S.set_global_variable.__wrapped__(n, float(v))
+            else:
+                S.set_dimension.__wrapped__(n, float(v))
+
+    doc._checkpoint()
+    n_undo = len(doc._undo)
+    start = json.dumps(doc.to_dict())
+    runs = []
+    best = None
+    try:
+        for combo in combos:
+            row = {"values": dict(zip(names, map(float, combo)))}
+            try:
+                apply(combo)
+                cache: dict = {}
+                row.update({q: round(_quantity(doc, q, None, cache), 6) for q in measures})
+                if objective and objective["quantity"] not in row:
+                    row[objective["quantity"]] = round(_quantity(doc, objective["quantity"], None, cache), 6)
+                failed = [r["name"] for r in check_requirements.__wrapped__()["requirements"] if not r["passes"]]
+                row["rebuilds"] = _quantity(doc, "errors", None, {}) == 0
+                row["requirements_failed"] = failed
+                row["feasible"] = row["rebuilds"] and not failed
+            except (S.CommandError, DocumentError, ValueError, KeyError) as exc:
+                row.update(rebuilds=False, feasible=False, error=str(exc))
+            runs.append(row)
+        if objective:
+            ok = [r for r in runs if r.get("feasible") and objective["quantity"] in r]
+            if ok:
+                best = (min if objective["goal"] == "min" else max)(ok, key=lambda r: r[objective["quantity"]])
+    finally:
+        doc.load_dict(json.loads(start))
+        del doc._undo[n_undo:]
+    kept = False
+    if keep_best and best is not None:
+        apply([best["values"][n] for n in names])
+        del doc._undo[n_undo:]
+        kept = True
+    doc.dirty = True
+    return {"variables": names, "runs": runs, "count": len(runs), "feasible": sum(1 for r in runs if r.get("feasible")),
+            "best": best, "kept_best": kept}

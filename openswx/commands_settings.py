@@ -5,7 +5,7 @@ from . import settings
 from .document import DocumentError
 from .session import command
 
-__all__ = ["get_settings", "set_settings"]
+__all__ = ["get_settings", "set_settings", "list_plugins"]
 
 
 @command(mutates=False, category="tools", mcp=False)
@@ -25,3 +25,11 @@ def set_settings(values: dict | None = None, reset: bool = False) -> dict:
         return {"settings": settings.update(values) if values else settings.all_settings()}
     except settings.SettingsError as exc:
         raise DocumentError(str(exc)) from exc
+
+
+@command(mutates=False, category="tools")
+def list_plugins() -> dict:
+    """Installed openswx plugins (packages with an `openswx.plugins` entry point): the commands each added,
+    or why it failed to load."""
+    from . import plugins
+    return {"plugins": plugins.load_all()}

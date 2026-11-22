@@ -20,7 +20,7 @@ Open-source parametric part modeling with a SOLIDWORKS-style workflow — and a 
   mesh); lattice-Boltzmann flow; plastics fill; 3-axis CAM with G-code; costing; inspection reports.
 - **Familiar UI** (desktop app or browser): CommandManager, FeatureManager design tree, PropertyManager with
   live preview, SOLIDWORKS mouse navigation and shortcuts.
-- **Agents**: <!-- counts -->403 commands, 386 of them MCP tools ([full list](docs/commands.md))<!-- /counts -->, over stdio or
+- **Agents**: <!-- counts -->406 commands, 389 of them MCP tools ([full list](docs/commands.md))<!-- /counts -->, over stdio or
   streamable HTTP. Agent actions show up live in the UI's Agent activity pane.
 - **Interop**: opens SOLIDWORKS parts, assemblies and drawings (`.sldprt`, `.sldasm`, `.slddrw`; 2015 and
   later) natively, with no SOLIDWORKS installation - see *Status* for how much of the feature history comes

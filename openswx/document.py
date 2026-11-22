@@ -800,17 +800,22 @@ class PartDocument:
         body = self.body
         if body is None:
             return {"faces": [], "edges": []}
-        from .naming import edge_faces, label_of_face
-        faces = [face_info(i, f) for i, f in enumerate(body.faces())]
-        edges = [edge_info(i, e) for i, e in enumerate(body.edges())]
-        for info, f in zip(faces, body.faces()):  # persistent names: valid after later edits, unlike the ids
-            label = label_of_face(f, body)
+        from .naming import labels_of
+        body_faces, body_edges = body.faces(), body.edges()
+        faces = [face_info(i, f) for i, f in enumerate(body_faces)]
+        edges = [edge_info(i, e) for i, e in enumerate(body_edges)]
+        labels = labels_of(body) or {}
+        sides: dict[int, list] = {}  # edge hash -> [(edge, name of a face it bounds)]: one pass over the faces
+        for info, f in zip(faces, body_faces):  # persistent names: valid after later edits, unlike the ids
+            label = labels.get(hash(f))
             if label:
                 info["name"] = label
-        for info, e in zip(edges, body.edges()):
-            sides = edge_faces(body, e)
-            if sides and len(sides) == 2:
-                info["name"] = "|".join(sides)  # an edge is named by the two faces it lies between
+            for e in f.edges():
+                sides.setdefault(hash(e), []).append((e, label))
+        for info, e in zip(edges, body_edges):
+            names = [lab for other, lab in sides.get(hash(e), ()) if other.is_same(e)]
+            if len(names) == 2 and all(names):
+                info["name"] = "|".join(sorted(names))  # an edge is named by the two faces it lies between
         return {"faces": faces, "edges": edges}
 
     def mesh(self) -> dict:
