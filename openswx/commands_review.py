@@ -248,6 +248,8 @@ def _passes(current: float, req: dict) -> bool:
         return abs(current - req["value"]) <= req.get("tolerance", 1e-6)
     if req["op"] == "!=":
         return abs(current - req["value"]) > req.get("tolerance", 1e-6)
+    if req["op"] in ("<=", ">=") and abs(current - req["value"]) <= req.get("tolerance", 1e-6):
+        return True  # at the limit: a volume of 1499.9999999 meets ">= 1500" (rounding differs between platforms)
     return bool(_OPS[req["op"]](current, req["value"]))
 
 
