@@ -47,14 +47,19 @@ def main(argv: list[str] | None = None) -> int:
     r = sub.add_parser("register-file-types", help="open .oswprt/.oswasm in openswx and add it to Open with (this user)")
     r.add_argument("--exe", help="program to register (default: openswx.exe next to this program)")
     sub.add_parser("unregister-file-types", help="remove the file associations register-file-types added")
+    from . import cli  # (headless one-shot tools: convert, render, massprops, check, drawing, script, diff)
+    cli.add_parsers(sub)
     argv = list(sys.argv[1:] if argv is None else argv)
-    if not argv or (argv[0] not in ("desktop", "serve", "mcp", "token", "sldinfo", "register-file-types", "unregister-file-types", "-h", "--help")):
+    if not argv or (argv[0] not in ("desktop", "serve", "mcp", "token", "sldinfo", "register-file-types", "unregister-file-types", "-h", "--help", *cli.COMMANDS)):
         argv = ["desktop", *argv]  # double-clicking openswx.exe (or opening a file with it) starts the app
     a = ap.parse_args(argv)
     if getattr(a, "workspace", None):
         os.environ["OPENSWX_WORKSPACE"] = str(Path(a.workspace).resolve())
     if getattr(a, "toolsets", None):
         os.environ["OPENSWX_TOOLSETS"] = a.toolsets
+
+    if a.cmd in cli.COMMANDS:
+        return cli.run(a)
 
     if a.cmd == "desktop":
         from .desktop import run as run_desktop

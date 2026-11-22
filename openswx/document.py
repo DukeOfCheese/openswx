@@ -19,7 +19,7 @@ FORMAT = "openswx-part"
 VERSION = 1  # (migrate.CURRENT[FORMAT]; see migrate.py before changing it)
 _KNOWN_KEYS = {"format", "version", "name", "units", "material", "appearance", "properties", "drawing", "study", "features",
                "rollback", "counters", "next_id", "variables", "configurations", "active_config", "folders",
-               "design_table", "named_views", "pmi", "render", "tolerances"}
+               "design_table", "named_views", "pmi", "render", "tolerances", "journal", "requirements"}
 DEFAULT_TREE = ["History", "Sensors", "Annotations", "Material", "Front Plane", "Top Plane", "Right Plane", "Origin"]
 CONSUMES_SKETCH = {"extrude", "cut_extrude", "revolve", "cut_revolve", "sweep", "cut_sweep", "loft", "cut_loft",
                    "base_flange", "structural_member", "sketched_bend", "revolved_surface", "swept_surface",
@@ -94,6 +94,7 @@ class PartDocument:
         self.dirty = False
         self._undo: list[str] = []
         self._redo: list[str] = []
+        self.journal: list | None = []  # (a new document: everything done to it gets recorded)
         self.rebuild()
 
     # ------------------------------------------------------------------ persistence
@@ -107,6 +108,9 @@ class PartDocument:
             "folders": self.folders, "design_table": self.design_table, "named_views": getattr(self, "named_views", {}),
             "pmi": getattr(self, "pmi", []), "render": getattr(self, "render", {}),
             "tolerances": getattr(self, "tolerances", {}),  # {"D1@Sketch1": {"type": ...}} (tolerance.py)
+            "requirements": getattr(self, "requirements", []),
+            # the commands that built the document, when all of them are known (export_script replays them)
+            **({"journal": self.journal} if getattr(self, "journal", None) is not None else {}),
             **getattr(self, "_extra", {}),  # (keys of the file this version does not use: written back)
         }
 
@@ -137,6 +141,8 @@ class PartDocument:
         self.pmi = d.get("pmi", [])
         self.render = d.get("render", {})
         self.tolerances = d.get("tolerances", {})
+        self.requirements = d.get("requirements", [])
+        self.journal = d.get("journal")  # (None: the file does not say how it was built)
         self.rebuild()
 
     def save(self, path: str | None = None) -> str:

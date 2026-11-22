@@ -795,6 +795,52 @@ const MIXIN = {
     }, "smart_dim");
   },
 
+  // Tools > Design Review: findings with what to do about each
+  async reviewDialog() {
+    const r = await this.evalCall("review_model", {});
+    if (!r) return;
+    const colour = { error: "#c62828", warning: "#b26a00", info: "#555" };
+    const rows = r.findings.map((f) => `<tr><td style="color:${colour[f.severity]}"><b>${f.severity}</b></td><td>${escapeHtml(f.subject)}</td><td>${escapeHtml(f.message)}${f.fix ? `<br><span style="color:#666">→ ${escapeHtml(f.fix)}</span>` : ""}</td></tr>`).join("");
+    this.modal(`Design Review: ${r.counts.error} errors, ${r.counts.warning} warnings`, r.findings.length
+      ? `<div style="max-height:55vh;overflow:auto"><table class="dw-bom"><tr><th></th><th>About</th><th>Finding</th></tr>${rows}</table></div>`
+      : "<p>Nothing to report: the part rebuilds, its sketches are defined and its requirements pass.</p>", null, "check");
+  },
+
+  // Tools > Requirements: limits the design must keep meeting (checked here, in the review and by `openswx check`)
+  async requirementsDialog() {
+    const r = await this.evalCall("check_requirements", {});
+    if (!r) return;
+    const rows = r.requirements.map((q) => `<tr><td>${q.passes ? "✔" : "✘"}</td><td>${escapeHtml(q.name)}</td><td>${q.quantity}${q.target ? " " + escapeHtml(q.target) : ""} ${q.op} ${q.value}</td><td>${q.current ?? escapeHtml(q.error || "")}</td><td><button class="btn rq-del" data-n="${escapeHtml(q.name)}">Delete</button></td></tr>`).join("");
+    const quantities = ["mass", "volume", "surface_area", "size_x", "size_y", "size_z", "longest_side", "min_thickness", "dimension", "bodies", "errors", "components", "interferences"];
+    this.modal("Requirements", `${r.requirements.length ? `<table class="dw-bom"><tr><th></th><th>Name</th><th>Requirement</th><th>Now</th><th></th></tr>${rows}</table>` : "<p>No requirements yet.</p>"}
+      <p style="margin-top:10px"><b>Add</b> (mass in g, lengths in mm; OK adds it)</p>
+      <div class="field"><label>Name</label><input id="rqn"></div>
+      <div class="field"><label>Quantity</label><select id="rqq">${quantities.map((x) => `<option>${x}</option>`).join("")}</select></div>
+      <div class="field"><label>Dimension (for "dimension")</label><input id="rqt" placeholder="D1@Sketch1"></div>
+      <div class="field"><label>Must be</label><select id="rqo">${["<", "<=", ">", ">=", "==", "!="].map((x) => `<option>${escapeHtml(x)}</option>`).join("")}</select><input id="rqv" type="number" step="any"></div>`,
+    async () => {
+      const name = $("#rqn").value.trim();
+      if (!name) return;
+      await this.run("add_requirement", { name, quantity: $("#rqq").value, op: $("#rqo").value, value: parseFloat($("#rqv").value) || 0, target: $("#rqt").value.trim() || null });
+      setTimeout(() => this.requirementsDialog(), 0);
+    }, "check");
+    for (const b of document.querySelectorAll(".rq-del")) b.onclick = async () => { await this.run("delete_requirement", { name: b.dataset.n }).catch(() => null); this.requirementsDialog(); };
+  },
+
+  async exportScript() {
+    const path = await this.askPath("save", `${this.model.name}.py`, ["Python script (*.py)"], "Export Script");
+    if (!path) return;
+    const r = await this.api("/api/command", { name: "export_script", args: { path } });
+    if (r.ok) this.toast(`Saved ${r.result.commands} commands to ${escapeHtml(r.result.path)}`); else this.toast(r.error, "err");
+  },
+
+  async handoffPack() {
+    const path = await this.askPath("save", `${this.model.name}-pack`, ["Folder"], "Hand-off Pack (a folder and a .zip beside it)");
+    if (!path) return;
+    const r = await this.api("/api/command", { name: "export_handoff_pack", args: { folder: path.replace(/\.zip$/i, "") } });
+    if (r.ok) this.toast(`${r.result.files.length} files in ${escapeHtml(r.result.folder)}${r.result.not_included.length ? ` (${r.result.not_included.length} not included: see manifest.json)` : ""}`); else this.toast(r.error, "err");
+  },
+
   async macroRun() {
     const path = await this.askPath("open", "", ["Python macro (*.py)"], "Run Macro");
     if (!path) return;

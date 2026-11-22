@@ -105,6 +105,7 @@ class AssemblyDocument:
         self._undo: list[str] = []
         self._redo: list[str] = []
         self.mate_counter = 0
+        self.journal: list | None = []  # (see PartDocument.journal)
         self.features: list[dict] = []  # component patterns / mirror components
         self.explode: dict = {"steps": [], "active": False}
         self.drawing: dict = {}
@@ -121,6 +122,8 @@ class AssemblyDocument:
                 "alternate_positions": getattr(self, "alternate_positions", {}),
                 "large_assembly_mode": getattr(self, "large_assembly_mode", False), "render": getattr(self, "render", {}),
                 "electrical": getattr(self, "electrical", {}), "composer": getattr(self, "composer", {}),
+                "requirements": getattr(self, "requirements", []),
+                **({"journal": self.journal} if getattr(self, "journal", None) is not None else {}),
                 **getattr(self, "_extra", {})}  # (keys of the file this version does not use: written back)
 
     def load_dict(self, d: dict) -> None:
@@ -131,7 +134,9 @@ class AssemblyDocument:
             raise DocumentError(str(exc)) from exc
         self._extra = migrate.extras(d, {"format", "version", "name", "mate_counter", "components", "mates", "features",
                                          "explode", "drawing", "study", "named_views", "alternate_positions",
-                                         "large_assembly_mode", "render", "electrical", "composer"})
+                                         "large_assembly_mode", "render", "electrical", "composer", "journal", "requirements"})
+        self.requirements = d.get("requirements", [])
+        self.journal = d.get("journal")
         self.name = d.get("name", self.name)
         self.mate_counter = d.get("mate_counter", len(d.get("mates", [])))
         self.components = [Component(c["name"], c["part"], c.get("link"), c["x"], c.get("fixed", False), c.get("derived"))

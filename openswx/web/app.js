@@ -274,7 +274,7 @@ class App {
           ["Assembly > Defeature...", "", () => this.defeatureDialog()]] : [["Defeature...", "", () => this.defeatureDialog()]]),
         ["Design Library...", "", () => this.designLibraryDialog()], ["PDM Vault...", "", () => this.pdmDialog()],
         ["Macro > Record / Stop", "", () => this.macroRecord()], ["Macro > Stop and Save...", "", () => this.macroStop()], ["Macro > Run...", "", () => this.macroRun()], "-",
-        ["Equations...", "", () => this.equationsDialog()], ["Dimension Tolerances...", "", () => this.toleranceDialog()], ["Design Table...", "", () => this.designTableDialog()], ["Material...", "", () => this.materialDialog()],
+        ["Equations...", "", () => this.equationsDialog()], ["Dimension Tolerances...", "", () => this.toleranceDialog()], ["Requirements...", "", () => this.requirementsDialog()], ["Design Review", "", () => this.reviewDialog()], ["Export Script (.py)...", "", () => this.exportScript()], ["Hand-off Pack...", "", () => this.handoffPack()], ["Design Table...", "", () => this.designTableDialog()], ["Material...", "", () => this.materialDialog()],
         ["Appearance...", "", () => this.appearanceDialog()], ["Properties...", "", () => this.propertiesDialog()], ["Options...", "", () => this.optionsDialog()]],
       Window: () => [...(this.docs?.documents || []).map((d) => [`${d.name === this.model.name ? "✓ " : ""}${d.name}`.replace(/ > /g, " › "), "", () => this.switchDocument(d.name)]),
         "-", ["Next Document", "Ctrl+Tab", () => this.nextDocument()], ["Close", "Ctrl+W", () => this.run("close_document").then(() => this.vp.zoomFit())]],

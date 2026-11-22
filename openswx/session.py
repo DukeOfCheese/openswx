@@ -150,6 +150,8 @@ def command(mutates: bool = True, category: str = "general", mcp: bool = True):
                     if APP.macro is not None and outer is None and not fn.__name__.startswith("macro_"):
                         APP.macro.append({"command": fn.__name__,
                                           "args": json.loads(json.dumps(dict(bound.arguments), default=str))})
+                if depth == 0:
+                    _journal(fn.__name__, bound.arguments)
                 if outer is None:
                     from . import recovery
                     recovery.start(APP)  # (autosave thread: started by the first change, see recovery.py)
@@ -170,6 +172,7 @@ FILE_ARGS = {
     "pdm_set_vault": ("path",), "pdm_check_in": ("path",), "export_edrawing": ("path",), "macro_stop": ("path",),
     "run_macro": ("path",), "cam_gcode": ("path",), "inspection_report": ("path",), "electrical_import_wires": ("path",),
     "electrical_formboard": ("path",), "composer_export": ("path",), "save_diagnostic_report": ("path",),
+    "export_script": ("path",), "export_handoff_pack": ("folder",), "compare_documents": ("a", "b"),
 }
 
 
@@ -189,7 +192,7 @@ def _check_workspace(name: str, arguments) -> None:
         v = arguments.get(arg)
         if not isinstance(v, str) or not v:
             continue
-        if arg == "source" and v in APP.documents:  # (an open document's name, not a file)
+        if arg in ("source", "a", "b") and v in APP.documents:  # (an open document's name, not a file)
             continue
         p = Path(v)
         target = (p if p.is_absolute() else ws / p).resolve()  # (resolve follows links: no way out through one)
@@ -197,6 +200,28 @@ def _check_workspace(name: str, arguments) -> None:
             raise CommandError(f"{name}: {v!r} is outside the agent workspace {str(ws)!r}; agents may only read and "
                                f"write files there (relative paths are taken from it)")
         arguments[arg] = str(target)
+
+
+# Commands that are about files and the session, not about what the document is: never part of its script.
+NO_JOURNAL = {"new_part", "new_assembly", "open_part", "save_part", "save_drawing_document", "activate_document",
+              "close_document", "export_file", "export_bom", "export_drawing", "export_sketch_dxf",
+              "export_flat_pattern_dxf", "export_edrawing", "pack_and_go", "motion_export", "undo", "redo",
+              "recover_document", "discard_recovered", "save_custom_material", "delete_custom_material",
+              "inspection_report", "composer_export", "electrical_formboard", "export_script", "export_handoff_pack"}
+
+
+def _journal(name: str, arguments) -> None:
+    """Record a command in the active document's journal (the script that rebuilds it; see export_script).
+    Undo and redo need no entry: the journal is part of the state they put back."""
+    if name in NO_JOURNAL or name.startswith(("pdm_", "macro_")) or name == "run_macro":
+        return
+    doc = APP.documents.get(APP.active)
+    if doc is None or getattr(doc, "journal", None) is None:
+        return
+    try:
+        doc.journal.append({"command": name, "args": json.loads(json.dumps(dict(arguments), default=str))})
+    except (TypeError, ValueError):
+        doc.journal = None  # (an argument that cannot be written down: the script would be incomplete)
 
 
 def _fingerprint(doc) -> str | None:
@@ -4845,3 +4870,4 @@ from .commands_more import *  # noqa: E402,F401,F403
 from .commands_mfg import *  # noqa: E402,F401,F403
 from .commands_app import *  # noqa: E402,F401,F403
 from .commands_tol import *  # noqa: E402,F401,F403
+from .commands_review import *  # noqa: E402,F401,F403
