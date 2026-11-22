@@ -16,6 +16,18 @@ const download = (name, text, type = "text/plain") => { const a = document.creat
 
 const MIXIN = {
   // ---------------------------------------------------------------- CAM
+  async camFinish3d() {
+    const r = await this.cmdForm("CAM - 3D Parallel Finishing", "cam_finish_3d", [
+      ["tool", "Tool", "select", "ball", [["ball", "Ball end mill"], ["bull", "Bull nose end mill"], ["flat", "Flat end mill"]]],
+      ["tool_diameter", "Tool diameter (mm)", "number", 6], ["corner_radius", "Corner radius (bull nose; blank: D/8)", "number", ""],
+      ["stepover", "Stepover (mm, blank: 0.15 D ball / 0.4 D)", "number", ""],
+      ["direction", "Passes along", "select", "x", [["x", "X"], ["y", "Y"]]], ["leave", "Stock to leave (mm)", "number", 0]],
+    { ic: "cut_extrude", note: "Adds to the generated toolpaths: the tool follows curved and sloped faces instead of stepping down them." });
+    if (!r) return;
+    this.toast(`${escapeHtml(r.operation.name)}: ${r.operation.length_mm} mm, ${r.operation.time_min} min${r.operation.scallop_mm ? `, scallop ${r.operation.scallop_mm} mm` : ""}.`);
+    if (this.camShow) this.camShow();
+  },
+
   async camDialog() {
     const r = await this.cmdForm("CAM - Generate Toolpaths", "cam_generate", [
       ["setup", "Setup (the side the tool comes from)", "select", "+Z", ["+Z", "-Z", "+X", "-X", "+Y", "-Y"]],

@@ -13,7 +13,7 @@ import numpy as np
 from .document import DocumentError
 from .session import APP, Vec3, command, unlocked
 
-__all__ = ["cam_generate", "cam_gcode", "cam_toolpaths", "plastics_materials", "plastics_fill", "plastics_results",
+__all__ = ["cam_generate", "cam_finish_3d", "cam_gcode", "cam_toolpaths", "plastics_materials", "plastics_fill", "plastics_results",
            "inspection_characteristics", "inspection_set", "inspection_settings", "inspection_report",
            "electrical_connector", "electrical_route_segment", "electrical_wires", "electrical_import_wires",
            "electrical_harness", "electrical_formboard", "electrical_clear", "electrical_info",
@@ -53,6 +53,25 @@ def cam_generate(setup: Literal["+Z", "-Z", "+X", "-X", "+Y", "-Y"] = "+Z", tool
         raise DocumentError(str(exc)) from exc
     APP.cam_result = (doc.name, doc.revision, r)
     return _cam_summary(r)
+
+
+@command(mutates=False, category="cam")
+def cam_finish_3d(tool_diameter: float = 6.0, tool: Literal["ball", "bull", "flat"] = "ball", corner_radius: float | None = None,
+                  stepover: float | None = None, direction: Literal["x", "y"] = "x", leave: float = 0.0, flutes: int = 2) -> dict:
+    """CAM: add a 3D parallel finishing operation to the last cam_generate - straight passes `stepover` apart
+    (default 0.15 D for a ball mill, 0.4 D otherwise) along x or y, the tool following the part's surface:
+    curved and sloped faces are finished smoothly instead of in Z-level steps. tool: ball, bull (bull nose,
+    with corner_radius, default D/8) or flat. The path lies on the tool's drop-cutter surface, so it cannot cut
+    into the part (to within the raster); for a ball mill the result gives the scallop height the stepover
+    leaves. The operation joins the others in cam_gcode and cam_toolpaths."""
+    from .cam import finish_3d
+    _doc, r = _cam()
+    try:
+        with unlocked():
+            op = finish_3d(r, tool_diameter, tool, corner_radius, stepover, direction, leave, flutes)
+    except ValueError as exc:
+        raise DocumentError(str(exc)) from exc
+    return {"operation": {k: v for k, v in op.items() if k != "moves"}, "tool": r["tools"][op["tool"] - 1], **_cam_summary(r)}
 
 
 def _cam_summary(r: dict) -> dict:

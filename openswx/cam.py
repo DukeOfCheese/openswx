@@ -629,3 +629,126 @@ def toolpath_display(result: dict) -> list[dict]:
                 feed.append(cur)
         out.append({"op": op["name"], "kind": op["kind"], "feed": feed, "rapid": rapid})
     return out
+
+
+# ---------------------------------------------------------------------------------------------- 3D finishing
+def tool_profile(kind: str, radius: float, corner_radius: float, d: np.ndarray) -> np.ndarray:
+    """Height of the tool's cutting surface above its tip at radial distance d from the axis (d <= radius):
+    flat 0; ball r - sqrt(r2 - d2); bull nose flat in the middle with a corner radius."""
+    if kind == "flat":
+        return np.zeros_like(d)
+    if kind == "ball":
+        return radius - np.sqrt(np.maximum(radius * radius - d * d, 0.0))
+    c = corner_radius
+    e = np.maximum(d - (radius - c), 0.0)
+    return c - np.sqrt(np.maximum(c * c - e * e, 0.0))
+
+
+def drop_cutter(H: np.ndarray, cell: float, kind: str, radius: float, corner_radius: float = 0.0) -> np.ndarray:
+    """Tool-tip height that just touches the height map H at every cell: the highest of (surface under the
+    tool - the tool's own profile there), over the tool's footprint. The tool can go no lower without cutting
+    into the part, so a path on this surface cannot gouge (to within the raster)."""
+    k = int(math.floor(radius / cell))
+    out = np.full(H.shape, -np.inf)
+    nx, ny = H.shape
+    for di in range(-k, k + 1):
+        for dj in range(-k, k + 1):
+            d = cell * math.hypot(di, dj)
+            if d > radius:
+                continue
+            p = float(tool_profile(kind, radius, corner_radius, np.array(d)))
+            src = H[max(0, di):nx + min(0, di), max(0, dj):ny + min(0, dj)]
+            dst = out[max(0, -di):nx + min(0, -di), max(0, -dj):ny + min(0, -dj)]
+            np.maximum(dst, src - p, out=dst)
+    return out
+
+
+def _thin(points: list[tuple], tol: float) -> list[tuple]:
+    """A polyline with the points dropped that lie within tol of the chord that replaces them (greedy: each
+    chord is stretched as far as every point it skips allows)."""
+    if len(points) < 3:
+        return points
+    P = np.asarray(points, float)
+    out, a, i = [points[0]], 0, 2
+    while i < len(P):
+        seg = P[i] - P[a]
+        L = float(np.linalg.norm(seg))
+        mid = P[a + 1:i] - P[a]
+        dev = (np.linalg.norm(np.cross(mid, seg), axis=1) / L).max() if L > 1e-12 else np.linalg.norm(mid, axis=1).max()
+        if dev > tol:
+            a = i - 1
+            out.append(points[a])
+        i += 1
+    out.append(points[-1])
+    return out
+
+
+def finish_3d(result: dict, tool_diameter: float = 6.0, tool: str = "ball", corner_radius: float | None = None,
+              stepover: float | None = None, direction: str = "x", leave: float = 0.0, flutes: int = 2) -> dict:
+    """Add a 3D parallel finishing operation to a generate() result: straight passes `stepover` apart, the
+    tool riding on the drop-cutter surface of the part. Returns the operation (also appended to the result)."""
+    if tool not in ("ball", "bull", "flat"):
+        raise ValueError("tool must be ball, bull or flat")
+    if direction not in ("x", "y"):
+        raise ValueError("direction must be x or y")
+    r = tool_diameter / 2
+    if r <= 0:
+        raise ValueError("the tool diameter must be positive")
+    c = 0.0
+    if tool == "bull":
+        c = float(corner_radius if corner_radius is not None else r / 4)
+        if not 0 < c < r:
+            raise ValueError("a bull-nose corner radius must be between 0 and the tool radius")
+    grid, part_H, _S = result["_raster"]
+    cell = grid.cell
+    if r < 2 * cell:
+        raise ValueError(f"the tool is too small for this raster ({cell:g} mm cells): regenerate with a finer tolerance")
+    stepover = float(stepover or (0.15 * tool_diameter if tool == "ball" else 0.4 * tool_diameter))
+    if not 0 < stepover < tool_diameter:
+        raise ValueError("the stepover must be between 0 and the tool diameter")
+    finite = np.isfinite(part_H)
+    if not finite.any():
+        raise ValueError("there is no part under the tool")
+    floor = float(part_H[finite].min())
+    H = np.where(finite, part_H, floor)  # beside the part the tool may go down to its lowest level
+    Z = drop_cutter(H, cell, tool, r, c) + leave
+    if direction == "y":
+        Z, xs, ys = Z.T, grid.ys, grid.xs
+    else:
+        xs, ys = grid.xs, grid.ys
+    # passes over the part's own extent (plus the tool radius, so edges are finished from outside)
+    rows = np.nonzero(finite.any(axis=0) if direction == "x" else finite.any(axis=1))[0]
+    cols = np.nonzero(finite.any(axis=1) if direction == "x" else finite.any(axis=0))[0]
+    pad = int(math.ceil(r / cell))
+    j0, j1 = max(0, rows.min() - pad), min(len(ys) - 1, rows.max() + pad)
+    i0, i1 = max(0, cols.min() - pad), min(len(xs) - 1, cols.max() + pad)
+    step = max(1, int(round(stepover / cell)))
+    safe = result["safe_z"]
+    moves, flip, tol = [], False, cell * 0.05
+    for j in range(j0, j1 + 1, step):
+        idx = range(i1, i0 - 1, -1) if flip else range(i0, i1 + 1)
+        line = [(float(xs[i]), float(ys[j]), float(Z[i, j])) for i in idx]
+        if direction == "y":
+            line = [(p[1], p[0], p[2]) for p in line]
+        line = _thin(line, tol)
+        moves.append(("rapid", (line[0][0], line[0][1], safe)))
+        moves.append(("plunge", line[0]))
+        moves += [("feed", p) for p in line[1:]]
+        moves.append(("rapid", (line[-1][0], line[-1][1], safe)))
+        flip = not flip
+    number = len(result["tools"]) + 1
+    t = {"number": number, "type": {"ball": "ball end mill", "bull": "bull nose end mill", "flat": "flat end mill"}[tool],
+         "diameter": tool_diameter, "flutes": flutes, **feeds(result["material"], tool_diameter, flutes)}
+    if tool == "bull":
+        t["corner_radius"] = c
+    result["tools"].append(t)
+    actual = step * cell
+    scallop = (r - math.sqrt(max(r * r - (actual / 2) ** 2, 0.0))) if tool == "ball" else \
+              (c - math.sqrt(max(c * c - min(actual / 2, c) ** 2, 0.0))) if tool == "bull" else 0.0
+    op = {"name": f"Finish 3D parallel ({t['type']} D{tool_diameter:g}, stepover {actual:.3g} mm)", "kind": "finish3d",
+          "tool": number, "moves": moves, "stepover": round(actual, 4), "scallop_mm": round(scallop, 5), "leave": leave}
+    length, tmin = _op_time(op, t)
+    op["length_mm"], op["time_min"] = round(length, 1), round(tmin, 3)
+    result["operations"].append(op)
+    result["cycle_time_min"] = round(float(result["cycle_time_min"] + tmin + TOOL_CHANGE_S / 60), 2)
+    return op

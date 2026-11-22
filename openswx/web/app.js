@@ -32,7 +32,7 @@ const CURVE_TYPES = ["sketch3d", "helix", "projected_curve", "composite_curve", 
 Object.assign(SPECS, MORE_SPECS); Object.assign(TYPE_ICON, MORE_TYPE_ICON); Object.assign(FEATURE_TO_SPEC, MORE_FEATURE_TO_SPEC);
 
 // commands that can take minutes: started with start_job so the window stays responsive
-const LONG_JOBS = new Map([["simulation_run", "Static study"], ["frequency_run", "Frequency study"], ["buckling_run", "Buckling study"],
+const LONG_JOBS = new Map([["cam_finish_3d", "3D finishing"], ["simulation_run", "Static study"], ["frequency_run", "Frequency study"], ["buckling_run", "Buckling study"],
   ["thermal_run", "Thermal study"], ["nonlinear_run", "Nonlinear study"], ["harmonic_run", "Harmonic study"], ["step_response_run", "Transient study"],
   ["drop_test_run", "Drop test"], ["cfd_external", "Flow simulation"], ["cfd_internal", "Flow simulation"], ["flow_simulation", "Flow simulation"],
   ["plastics_fill", "Fill analysis"], ["cam_generate", "CAM toolpaths"]]);
@@ -295,7 +295,7 @@ class App {
           ["Electrical > Formboard Drawing...", "", () => this.formboardSave()], ["Electrical > Clear", "", () => this.run("electrical_clear", {})],
           ["Composer > Steps from Exploded View...", "", () => this.composerAuto()], ["Composer > Add Step...", "", () => this.composerStep()],
           ["Composer > Publish Instructions...", "", () => this.composerExport()], ["Composer > Clear Steps", "", () => this.run("composer_clear", {})]]
-          : [["CAM > Generate Toolpaths...", "", () => this.camDialog()], ["CAM > Show Toolpaths", "", () => this.camShow()],
+          : [["CAM > Generate Toolpaths...", "", () => this.camDialog()], ["CAM > Add 3D Finishing...", "", () => this.camFinish3d()], ["CAM > Show Toolpaths", "", () => this.camShow()],
             ["CAM > Hide Toolpaths", "", () => this.camHide()], ["CAM > Save G-code...", "", () => this.camGcode()],
             ["Plastics > Fill Analysis...", "", () => this.plasticsDialog()], ["Plastics > Fill Time", "", () => this.plasticsPlot("fill_time")],
             ["Plastics > Pressure at End of Fill", "", () => this.plasticsPlot("pressure")], ["Plastics > Wall Thickness", "", () => this.plasticsPlot("thickness")],
