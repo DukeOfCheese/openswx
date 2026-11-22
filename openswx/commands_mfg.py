@@ -13,7 +13,7 @@ import numpy as np
 from .document import DocumentError
 from .session import APP, Vec3, command, unlocked
 
-__all__ = ["cam_generate", "cam_finish_3d", "cam_gcode", "cam_toolpaths", "plastics_materials", "plastics_fill", "plastics_results",
+__all__ = ["cam_generate", "cam_finish_3d", "cam_gcode", "cam_toolpaths", "plastics_materials", "plastics_fill", "plastics_gate_advisor", "plastics_results",
            "inspection_characteristics", "inspection_set", "inspection_settings", "inspection_report",
            "electrical_connector", "electrical_route_segment", "electrical_wires", "electrical_import_wires",
            "electrical_harness", "electrical_formboard", "electrical_clear", "electrical_info",
@@ -53,6 +53,59 @@ def cam_generate(setup: Literal["+Z", "-Z", "+X", "-X", "+Y", "-Y"] = "+Z", tool
         raise DocumentError(str(exc)) from exc
     APP.cam_result = (doc.name, doc.revision, r)
     return _cam_summary(r)
+
+
+@command(mutates=False, category="plastics")
+def plastics_gate_advisor(candidates: int = 6, points: list | None = None, material: str = "ABS",
+                          fill_time: float | None = None, max_pressure: float = 150.0,
+                          clamp_axis: Literal["X", "Y", "Z"] = "Z") -> dict:
+    """Plastics: where to put the gate. Tries a single gate at each candidate - the middles of the part's
+    `candidates` largest faces, plus any `points` [x, y, z] given - with a quick, coarse fill analysis each,
+    and ranks them: lowest injection pressure first (the shortest, most balanced flow), then fewest weld-line
+    cells and air traps. Returns the table and the best point; run plastics_fill on it for the full result.
+    A short shot is ranked last whatever its pressure."""
+    from .geom import closest_point
+    from .plastics import fill, material as plastic
+    doc = _part()
+    if not 1 <= candidates <= 20:
+        raise DocumentError("candidates must be between 1 and 20")
+    faces = sorted(doc.body.faces(), key=lambda f: -f.area)[:candidates]
+    spots = []
+    for f in faces:
+        q, _ = closest_point(f, f.center())
+        spots.append(([round(float(q.X), 4), round(float(q.Y), 4), round(float(q.Z), 4)], "face centre"))
+    for pt in points or []:
+        spots.append(([float(v) for v in pt], "given"))
+    seen, unique = set(), []
+    for pt, why in spots:
+        key = tuple(round(v, 2) for v in pt)
+        if key not in seen:
+            seen.add(key)
+            unique.append((pt, why))
+    try:
+        mat = plastic(material, None, None)
+    except ValueError as exc:
+        raise DocumentError(str(exc)) from exc
+    rows = []
+    with unlocked():
+        for pt, why in unique:
+            try:
+                r = fill(doc.body, [pt], mat, fill_time, max_pressure, None, max_cells=6000, clamp_axis=clamp_axis)
+            except ValueError as exc:
+                rows.append({"gate": pt, "from": why, "error": str(exc)})
+                continue
+            rows.append({"gate": pt, "from": why, "max_injection_pressure_MPa": r["max_injection_pressure_MPa"],
+                         "filled_pct": r["filled_pct"], "short_shot": r["short_shot"], "weld_line_cells": r["weld_line_cells"],
+                         "air_traps": len(r["air_traps"]), "clamp_force_tonne": r["clamp_force_tonne"],
+                         "last_to_fill": r["last_to_fill"]})
+    ok = [r for r in rows if "error" not in r]
+    if not ok:
+        raise DocumentError("no candidate gate could be analysed: " + "; ".join(r["error"] for r in rows[:3]))
+    ok.sort(key=lambda r: (r["short_shot"], r["max_injection_pressure_MPa"], r["weld_line_cells"], r["air_traps"]))
+    for i, r in enumerate(ok, 1):
+        r["rank"] = i
+    return {"material": mat["name"], "best": ok[0]["gate"], "candidates": ok + [r for r in rows if "error" in r],
+            "note": "single-gate, coarse-mesh comparison: confirm the best with plastics_fill"}
 
 
 @command(mutates=False, category="cam")

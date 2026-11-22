@@ -20,7 +20,7 @@ Snapshot
 ## Status after the first pass (2026-11-23)
 
 The specs below are as written on 2026-11-22; this table says what has been done about each since
-(commits `df95ff6` onwards, 307 tests). "Done" means implemented with tests that pass on Windows;
+(commits `df95ff6` onwards, 308 tests). "Done" means implemented with tests that pass on Windows;
 nothing here has been run on GitHub's runners, on macOS or Linux, or in the desktop window.
 
 | Item | State | What was done / what is left |
@@ -56,8 +56,9 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | H2 simulation | partly | Result probes, an HTML study report and a mesh-convergence study (`simulation_probe`, `simulation_report`, `simulation_convergence`). **Left:** a body-fitted tetrahedral mesher (needs gmsh or netgen as a dependency), mesh controls, remote and bearing loads, shells and beams |
 | H3 sketch solver | partly | No search when every relation already holds; grouped-column Jacobian from 12 unknowns; one SVD: 2.9 s -> 1.3 s on the benchmark. Not re-surveyed against SOLIDWORKS sketches. **Left:** decomposition into rigid clusters, minimal conflicting sets |
 | H4 CAM | partly | 3D parallel finishing with ball, bull-nose and flat tools on a drop-cutter surface (`cam_finish_3d`). **Left:** rest machining, adaptive roughing, 2D operations from picked faces, tabs, lead-in / out, setup sheets, turning |
-| H5, H6 flow, plastics, rendering | **open** | None started |
-| I1 Linux build | **open** | |
+| H5 flow, plastics | partly | `plastics_gate_advisor`: ranks candidate gate positions by injection pressure, weld lines and air traps. **Left:** non-isothermal fill with a frozen layer, packing; flow: wall refinement, rotating regions, conjugate heat transfer |
+| H6 rendering | **open** | Not started (a path tracer in the browser needs a new vendored library) |
+| I1 Linux build | written, **not run** | `packaging/build_linux.sh` (PyInstaller folder as a tarball, licence files included, a command-line check before packing) and a manual `build-linux` workflow. Never run on Linux; not an AppImage; not yet in the release workflow |
 | I2 code signing | **open** | Needs certificates |
 | I3 update check | done | Help > Check for Updates (`updates.py`): asks the GitHub releases of the repository in the `update_repository` setting, only when the user asks; nothing is downloaded. **Left:** set the repository once there is one |
 | I4 benchmarks | partly | `tools/bench.py`. **Left:** tracking per release, lazy imports, bundle audit |
