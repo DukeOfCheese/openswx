@@ -1475,7 +1475,8 @@ def frequency_run(modes: int = 5, element_size: float | None = None) -> dict:
         regions = [(sol, m["elastic_modulus"] / material["elastic_modulus"], m["density"] / material["density"])
                    for shape, m in mats for sol in shape.solids()]
     try:
-        r = solve_modal(doc.body, material, fixtures, modes, element_size or doc.study.get("element_size"), regions=regions)
+        with unlocked():
+            r = solve_modal(doc.body, material, fixtures, modes, element_size or doc.study.get("element_size"), regions=regions)
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.modal_result = (doc.revision, r)
@@ -1509,7 +1510,8 @@ def buckling_run(modes: int = 3, element_size: float | None = None) -> dict:
         raise DocumentError("the part has no body")
     fixtures, loads, _con = _resolve_study(doc)
     try:
-        r = solve_buckling(doc.body, doc.material, fixtures, loads, modes, element_size or doc.study.get("element_size"))
+        with unlocked():
+            r = solve_buckling(doc.body, doc.material, fixtures, loads, modes, element_size or doc.study.get("element_size"))
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.buckling_result = (doc.revision, r)
@@ -1588,11 +1590,13 @@ def thermal_run(element_size: float | None = None, transient: bool = False, dura
             from .materials import lookup
             mat = doc.material
             cp = mat.get("specific_heat") or (lookup(mat.get("name", "")) or {}).get("specific_heat")
-            r = solve_thermal_transient(doc.body, mat.get("thermal_conductivity"), mat.get("density"), cp, *loads,
-                                        initial=initial_temperature, duration=duration, steps=steps,
-                                        element_size=element_size)
+            with unlocked():
+                r = solve_thermal_transient(doc.body, mat.get("thermal_conductivity"), mat.get("density"), cp, *loads,
+                                            initial=initial_temperature, duration=duration, steps=steps,
+                                            element_size=element_size)
         else:
-            r = solve_thermal(doc.body, doc.material.get("thermal_conductivity"), *loads, element_size)
+            with unlocked():
+                r = solve_thermal(doc.body, doc.material.get("thermal_conductivity"), *loads, element_size)
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.thermal_result = (doc.revision, r)

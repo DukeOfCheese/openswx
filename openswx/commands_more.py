@@ -1039,7 +1039,8 @@ def nonlinear_run(steps: int = 10, hardening: float = 0.05, element_size: float 
     from .fea_more import solve_nonlinear
     doc, (fixtures, loads, _con) = _part_study()
     try:
-        r = solve_nonlinear(doc.body, doc.material, fixtures, loads, steps, hardening, element_size or doc.study.get("element_size"))
+        with unlocked():
+            r = solve_nonlinear(doc.body, doc.material, fixtures, loads, steps, hardening, element_size or doc.study.get("element_size"))
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.sim_result = (doc.revision, r)
@@ -1091,7 +1092,8 @@ def drop_test_run(height: float, impact_faces: list[str], direction: Vec3 = (0, 
         raise DocumentError("pick the faces the part lands on")
     faces = [resolve_face(doc.body, _face(doc, f)) for f in impact_faces]
     try:
-        r = solve_drop(doc.body, doc.material, faces, height, direction, element_size or doc.study.get("element_size"))
+        with unlocked():
+            r = solve_drop(doc.body, doc.material, faces, height, direction, element_size or doc.study.get("element_size"))
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.sim_result = (doc.revision, r)

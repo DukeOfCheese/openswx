@@ -21,7 +21,7 @@ Snapshot
 
 The specs below are as written on 2026-11-22; this table says what has been done about each since
 (commits `df95ff6` to `317c25f`, 278 tests). "Done" means implemented with tests that pass on Windows;
-nothing here has been run on GitHub's runners, on macOS or Linux, or clicked through in the desktop window.
+nothing here has been run on GitHub's runners, on macOS or Linux, or in the desktop window.
 
 | Item | State | What was done / what is left |
 |---|---|---|
@@ -35,11 +35,11 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or clicked thr
 | C1 autosave, recovery | done | `recovery.py`, recovery dialog, close guards. The desktop close prompt is untested (the window was not launched). One recovery copy per document, not five |
 | C2 file versions | done | `migrate.py`, golden files, unknown keys kept. **Left:** a published JSON Schema |
 | C3 undo memory | done | `snapshots.py`: long strings stored once. Not a structural diff: the small per-step JSON is still a full copy |
-| C4 jobs, lock | partly | `jobs.py`, `start_job` / `job_status` / `cancel_job`; the static study, flow, plastics and CAM release the lock while computing; UI progress and Cancel. **Left:** the other studies (frequency, buckling, thermal, ...) still hold the lock; commands still act on the one active document; only the flow solver reports progress |
+| C4 jobs, lock | partly | `jobs.py`, `start_job` / `job_status` / `cancel_job`; the static study, flow, plastics and CAM release the lock while computing; UI progress and Cancel. Every study releases the lock while it solves. **Left:** commands still act on the one active document; only the flow solver reports progress |
 | C5 logging | done | `applog.py`, `save_diagnostic_report` |
 | D1 untested commands | done | Every command is named in a test; a test enforces it for new ones. Found and fixed on the way: component numbers reused after a delete, PDM where-used missing linked parts, property commands not marking the document changed |
 | D2 test file split | done | Nine files by area + `core_helpers.py` |
-| D3 UI tests | **open** | Still only a syntax check. Every dialog added in this pass is untested in a browser |
+| D3 UI tests | **open** | No automated UI test. The dialogs added in this pass were driven once by hand in a browser (token link, Options, Dimension Tolerances, Design Review, Requirements, a study as a job); Document Recovery, Export Script, Hand-off Pack and the desktop window were not |
 | D4 conformance | done | `tests/conformance/*.json` (7 cases), `tools/conformance.py record / run` |
 | D5 static checks, deps | partly | ruff (errors only) in CI and `pyproject.toml`; `ezdxf` declared. **Left:** a lock file, type checking, the `sklearn` stub |
 | D6 survey in the repo | partly | `tools/survey.py` (resumable run, summary, compare), bookkeeping tested with a stand-in. **Not run** against the SOLIDWORKS sample corpus; no result table checked in |
