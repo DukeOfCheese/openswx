@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import copy
 import math
+import os
 
 import numpy as np
 from build123d import Axis, Edge, Face, Plane, Vector, Wire
@@ -895,9 +896,9 @@ class Sketch:
             fun = _TimedResiduals(lambda v: self._residuals(v, idx)[0], x0, SOLVE_SECONDS + 0.02 * n)
             opts = dict(method="trf", xtol=1e-14, ftol=1e-14, gtol=1e-14, max_nfev=400 * (n + 1))
             try:
-                if float(np.abs(res0).max()) <= 1e-11:
+                if not _LEGACY and float(np.abs(res0).max()) <= 1e-11:
                     pass  # every relation and dimension already holds (new geometry was added, nothing moved): no search
-                elif n > SPARSE_FROM:  # a Jacobian from grouped columns of the sparsity pattern (same values, fewer evaluations)
+                elif n > _sparse_from():  # a Jacobian from grouped columns of the sparsity pattern (same values, fewer evaluations)
                     pat = self._sparsity(idx, owners, n)
                     least_squares(fun, x0, jac=lambda v: _numeric_jac(fun, v, pat), **opts)
                     if float(np.abs(fun(fun.best_x)).max(initial=0.0)) > 1e-8:
@@ -908,7 +909,7 @@ class Sketch:
                 pass  # a sketch that will not converge (conflicting constraints): keep the closest point found
             x = fun.best_x
             res, _ = self._residuals(x, idx)
-            jac = _numeric_jac(fun.f, x, self._sparsity(idx, owners, n) if n > SPARSE_FROM else None)
+            jac = _numeric_jac(fun.f, x, self._sparsity(idx, owners, n) if n > _sparse_from() else None)
         else:
             x, res, jac = x0, np.zeros(0), np.zeros((0, n))
         # write back
@@ -1267,6 +1268,15 @@ SOLVE_SECONDS = 4.0  # time box for one sketch solve (plus 20 ms per unknown)
 
 class _OutOfTime(Exception):
     pass
+
+
+# OPENSWX_SKETCH_SOLVER=legacy: the solver as it was before the 2026-11 speed-up (always search, grouped Jacobian
+# only over 40 unknowns) - for comparing survey runs (tools/survey.py) with and without the change
+_LEGACY = os.environ.get("OPENSWX_SKETCH_SOLVER", "").strip().lower() == "legacy"
+
+
+def _sparse_from() -> int:
+    return 40 if _LEGACY else SPARSE_FROM
 
 
 SPARSE_FROM = 12  # unknowns above which the Jacobian is built by column groups (was 40: every sketch of a few
