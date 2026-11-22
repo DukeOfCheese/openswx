@@ -48,6 +48,8 @@ Type: filesandordirs; Name: "{#RuntimeDir}\_internal"
 [Files]
 Source: "{#LauncherDir}\openswx.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#LauncherDir}\openswx-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
+Source: "..\NOTICE"; DestDir: "{app}"; DestName: "NOTICE.txt"; Flags: ignoreversion
 Source: "{#SourceDir}\*"; DestDir: "{#RuntimeDir}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [UninstallDelete]

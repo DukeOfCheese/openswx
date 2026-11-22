@@ -35,7 +35,11 @@ def root() -> Path:
 
 
 def interval() -> float:
-    v = os.environ.get("OPENSWX_AUTOSAVE", "60").strip().lower()
+    v = os.environ.get("OPENSWX_AUTOSAVE")
+    if v is None:  # (the environment wins; else Tools > Options)
+        from . import settings
+        return float(settings.get("autosave_seconds"))
+    v = v.strip().lower()
     if v in ("off", "no", "false", ""):
         return 0.0
     try:

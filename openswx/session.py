@@ -389,7 +389,20 @@ def _dim_id(dim: str) -> tuple[str | None, str]:
 @command(category="document")
 def new_part(name: str | None = None) -> dict:
     """Create a new, empty part document (like File > New > Part) and make it active."""
-    return APP.new_document(name).summary()
+    doc = APP.new_document(name)
+    from . import settings
+    doc.units = settings.get("units")  # (Tools > Options: units of new documents)
+    return doc.summary()
+
+
+def _sw_properties(doc, info: dict) -> None:
+    """Carry a SOLIDWORKS file's summary and custom properties (docProps) over as custom properties, without
+    replacing any the document already has. Who last saved the file is left out."""
+    skip = {"lastmodifiedby", "last saved by", "revision", "totaltime"}
+    for k, v in (info.get("properties") or {}).items():
+        if isinstance(v, (str, int, float)) and str(v).strip() and k.lower() not in skip and k not in doc.properties:
+            doc.properties[str(k)] = str(v)
+    doc.dirty = False
 
 
 @command(category="document")
@@ -503,6 +516,7 @@ def open_part(path: str, history: bool = True) -> dict:
             else:
                 doc._undo.clear()
                 doc.path, doc.dirty = None, False
+                _sw_properties(doc, info)
                 return {"model": doc.summary(), "geometry": "feature history rebuilt from the file (editable)",
                         "feature_history": {"features": report["features"],
                                             "volume_mm3": round(report["volume"], 6),
@@ -519,6 +533,7 @@ def open_part(path: str, history: bool = True) -> dict:
                 APP.active = next(iter(APP.documents), None)
                 native_error = str(exc)
             else:
+                _sw_properties(doc, info)
                 return {"model": doc.summary(), "geometry": "read natively from the embedded Parasolid data",
                         "notes": feat["params"].get("notes", []) + ([f"feature history not rebuilt: {history_error}"]
                                                                     if history_error else []),
@@ -4973,3 +4988,4 @@ from .commands_mfg import *  # noqa: E402,F401,F403
 from .commands_app import *  # noqa: E402,F401,F403
 from .commands_tol import *  # noqa: E402,F401,F403
 from .commands_review import *  # noqa: E402,F401,F403
+from .commands_settings import *  # noqa: E402,F401,F403

@@ -172,6 +172,9 @@ def run(port: int = 8765, file: str | None = None) -> int:
         dirty = [n for n, d in session.APP.documents.items() if getattr(d, "dirty", False)]
         if not dirty:
             return True
+        from . import settings
+        if not settings.get("confirm_close"):
+            return True
         names = ", ".join(dirty[:5]) + (" ..." if len(dirty) > 5 else "")
         return bool(window.create_confirmation_dialog("openswx", f"Close without saving the changes to {names}?"))
 

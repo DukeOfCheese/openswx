@@ -110,7 +110,14 @@ def toolset_commands(name: str) -> list[str]:
 
 
 def starting_toolsets(toolsets: str | list[str] | None = None) -> list[str]:
-    raw = toolsets if toolsets is not None else os.environ.get("OPENSWX_TOOLSETS", "core")
+    raw = toolsets if toolsets is not None else os.environ.get("OPENSWX_TOOLSETS")
+    if raw is None:  # (the environment wins; else Tools > Options)
+        from . import settings
+        raw = settings.get("mcp_toolsets")
+        try:
+            return starting_toolsets(raw)
+        except ValueError:  # a setting typed wrongly must not stop agents connecting
+            return ["core"]
     names = [t.strip() for t in (raw.split(",") if isinstance(raw, str) else raw) if t.strip()] or ["core"]
     bad = [t for t in names if t not in ("core", "all", *TOOLSETS)]
     if bad:

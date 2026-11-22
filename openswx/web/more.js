@@ -850,6 +850,32 @@ const MIXIN = {
     if (r) await this.loadSketch();
   },
 
+  // Tools > Options: the user's settings (saved in the openswx home folder)
+  async optionsDialog() {
+    const r = await this.api("/api/command", { name: "get_settings", args: {} });
+    if (!r.ok) return this.toast(r.error, "err");
+    const { settings, about, file } = r.result;
+    const rows = Object.entries(about).map(([k, a]) => {
+      const v = settings[k];
+      let input;
+      if (typeof a.default === "boolean") input = `<input id="op_${k}" type="checkbox" ${v ? "checked" : ""}>`;
+      else if (a.choices) input = `<select id="op_${k}">${a.choices.map((c) => `<option${c === v ? " selected" : ""}>${escapeHtml(c)}</option>`).join("")}</select>`;
+      else if (typeof a.default === "number") input = `<input id="op_${k}" type="number" min="${a.min ?? ""}" max="${a.max ?? ""}" value="${v}" style="width:90px">`;
+      else input = `<input id="op_${k}" value="${escapeHtml(String(v))}" style="width:180px">`;
+      return `<div class="field"><label>${escapeHtml(a.doc)}</label>${input}</div>`;
+    }).join("");
+    this.modal("Options", `${rows}<p class="muted">Saved in ${escapeHtml(file)}. Autosave and MCP toolsets apply from the next start.</p>`, async () => {
+      const values = {};
+      for (const [k, a] of Object.entries(about)) {
+        const e = document.getElementById(`op_${k}`);
+        values[k] = typeof a.default === "boolean" ? e.checked : typeof a.default === "number" ? parseFloat(e.value) : e.value;
+      }
+      const s = await this.api("/api/command", { name: "set_settings", args: { values } });
+      if (!s.ok) { this.toast(s.error, "err"); throw new Error(s.error); }
+      this.toast("Options saved.");
+    }, "properties");
+  },
+
   async macroRun() {
     const path = await this.askPath("open", "", ["Python macro (*.py)"], "Run Macro");
     if (!path) return;
