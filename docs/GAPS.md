@@ -52,7 +52,7 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | G part | partly | Derived configurations (a child follows its parent), display states (saved appearances), requirements in place of sensors, sheet-metal gauge tables. **Left:** Instant3D beyond the depth handle, freeze bar, and the sheet-metal (lofted bend, unfold / fold, tab and slot, convert to sheet metal, vents), weldment, surface and mesh items listed |
 | G assembly | partly | Assembly configurations (component suppression and mate values per configuration) and display states, with dialogs. **Left:** flexible subassemblies, lightweight components, belt / chain, collision and physics while dragging, physics-based motion, mate controller, layout sketches, exploded line sketch |
 | G drawings | partly | Ordinate / baseline / chain dimensions; tolerance display. **Left:** the rest of the list |
-| H1 C++ port decision | **open** | A decision for the owner; the conformance suite it depends on now exists |
+| H1 C++ port decision | decided | Parked (2026-11-23): the owner's reason for the port was macOS support, which the Python application already has through `packaging/build.py`. Recorded in `PLAN.md`. Hot loops go to compiled extensions case by case if the benchmarks call for it |
 | H2 simulation | partly | Result probes, an HTML study report and a mesh-convergence study (`simulation_probe`, `simulation_report`, `simulation_convergence`). **Left:** a body-fitted tetrahedral mesher (needs gmsh or netgen as a dependency), mesh controls, remote and bearing loads, shells and beams |
 | H3 sketch solver | partly | No search when every relation already holds; grouped-column Jacobian from 12 unknowns; one SVD: 2.9 s -> 1.3 s on the benchmark. Not re-surveyed against SOLIDWORKS sketches. **Left:** decomposition into rigid clusters, minimal conflicting sets |
 | H4 CAM | partly | 3D parallel finishing with ball, bull-nose and flat tools on a drop-cutter surface (`cam_finish_3d`). **Left:** rest machining, adaptive roughing, 2D operations from picked faces, tabs, lead-in / out, setup sheets, turning |
@@ -63,7 +63,7 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | I3 update check | done | Help > Check for Updates (`updates.py`): asks the GitHub releases of the repository in the `update_repository` setting, only when the user asks; nothing is downloaded. **Left:** set the repository once there is one |
 | I4 benchmarks | partly | `tools/bench.py`. **Left:** tracking per release, lazy imports, bundle audit |
 | I5 PyPI | partly | Classifiers and keywords. Not published; no project URLs until there is a remote |
-| I6 stray build folders | **open** | Left alone: they are the owner's build output |
+| I6 stray build folders | done | `build/`, `build-new/`, the two build logs and the stack dump deleted on the owner's say; `dist/` and `dist-new/` (the built apps and installers) kept by choice |
 | J1 review loop | done | `review_model` |
 | J2 design as text | done | `export_script` (documents record their commands); run it as a macro or with `python` |
 | J3 semantic diff | partly | `compare_documents`, `openswx diff`, and a Git textconv driver (`openswx script`, see `STATUS.md`). **Left:** coloured 3D overlay, merge |

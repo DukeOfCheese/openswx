@@ -178,7 +178,15 @@ Backlog in priority order (tick as done; each needs backend cmd + MCP + UI butto
       Verified against SOLIDWORKS 2025 (Parasolid 36.1): 16/16 parts (incl. a B_SURFACE with intersection
       edges) exact in volume/area from .x_t, .x_b and
       .sldprt. Writer and blends: see passes 7-8.
-## Porting strategy (agreed direction: develop in Python, then port to C++)
+## Porting strategy (parked 2026-11-23)
+> The owner's reason for the port was to run on macOS as well. The Python application already does: the same
+> code is packaged for macOS by packaging/build.py (openswx.app and a .pkg, Apple silicon and Intel), with
+> nothing Windows-only in the engine. A C++ core is therefore not needed for that goal and is not scheduled.
+> If start-up time or solver speed call for it later, single hot loops move to compiled extensions, measured
+> with tools/bench.py and checked with tests/conformance. The rules below are kept as the record of the
+> earlier direction (the conformance cases and the frozen command contract are in place regardless).
+
+Earlier direction: develop in Python, then port to C++.
 Python = executable specification; C++ = shipping core. Rules from now on:
 1. Kernel stays OpenCASCADE (build123d/OCP calls map ~1:1 to OCCT C++), so geometry needs no re-design.
 2. Language-neutral conformance tests: tests/conformance/*.json = command sequences + expected volume/area/topology;
