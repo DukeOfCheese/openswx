@@ -6,6 +6,7 @@ import tempfile
 # the user's own openswx folder (settings, token, custom materials, logs) is not the tests' to read or write
 os.environ.setdefault("OPENSWX_HOME", tempfile.mkdtemp(prefix="openswx-tests-"))
 os.environ.setdefault("OPENSWX_CACHE", "off")
+os.environ.setdefault("OPENSWX_ISOLATE", "off")  # (readers run in-process: a child per file would triple the run time)
 os.environ.setdefault("OPENSWX_PLUGINS", "off")  # (plugins installed on this machine are not under test)
 os.environ.setdefault("OPENSWX_AUTOSAVE", "off")
 os.environ.setdefault("OPENSWX_LOG", "off")  # (test runs do not write to the user's application log)  # (no autosave thread or recovery files from test runs)

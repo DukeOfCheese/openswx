@@ -1031,16 +1031,32 @@ def _read_mesh(path: str):
     return (out[0] if len(out) == 1 else Compound(out)), notes
 
 
+def _read_foreign(path: str, config: int | None = None):
+    """(shape, notes) of a SOLIDWORKS part or Parasolid file. Read in a child process with a time limit
+    (isolated.py), so a file the kernel hangs or crashes on costs that file and not the application; a body
+    already in the disk cache is used directly."""
+    import multiprocessing
+
+    from . import isolated
+    if not isolated.enabled() or multiprocessing.current_process().name != "MainProcess":
+        return isolated.read_geometry_here(path, config)
+    if path.lower().endswith(".sldprt"):
+        from . import cache
+        hit = cache.get_shape("body", cache.key(path, "sldprt-body", config))
+        if hit is not None:
+            return hit[0], hit[1].get("notes", [])
+    try:
+        return isolated.read_geometry(path, config)
+    except isolated.IsolationError as exc:
+        raise DocumentError(str(exc)) from exc
+
+
 def _import_file(doc: PartDocument, path: str, config: int | None = None) -> dict:
     from build123d import import_brep, import_step
     p = Path(path)
     ext, notes = p.suffix.lower(), []
-    if ext in (".x_t", ".x_b", ".xmt_txt", ".xmt_bin"):
-        from .parasolid import read_xt_shape
-        shape, notes = read_xt_shape(str(p))
-    elif ext == ".sldprt":
-        from .sldprt import read_sldprt
-        shape, notes = read_sldprt(str(p), config)
+    if ext in (".x_t", ".x_b", ".xmt_txt", ".xmt_bin", ".sldprt"):
+        shape, notes = _read_foreign(str(p), config)
     elif ext in (".igs", ".iges"):
         shape, notes = _read_iges(str(p))
     elif ext in (".stl", ".3mf"):
