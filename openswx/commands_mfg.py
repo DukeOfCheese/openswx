@@ -11,7 +11,7 @@ from typing import Literal
 import numpy as np
 
 from .document import DocumentError
-from .session import APP, Vec3, command
+from .session import APP, Vec3, command, unlocked
 
 __all__ = ["cam_generate", "cam_gcode", "cam_toolpaths", "plastics_materials", "plastics_fill", "plastics_results",
            "inspection_characteristics", "inspection_set", "inspection_settings", "inspection_report",
@@ -46,8 +46,9 @@ def cam_generate(setup: Literal["+Z", "-Z", "+X", "-X", "+Y", "-Y"] = "+Z", tool
     from .cam import generate
     doc = _part()
     try:
-        r = generate(doc.body, setup, tool_diameter, flutes, stepdown, stepover, leave, stock_margin, stock_top,
-                     material, drill, max_drill_diameter, tolerance)
+        with unlocked():
+            r = generate(doc.body, setup, tool_diameter, flutes, stepdown, stepover, leave, stock_margin, stock_top,
+                         material, drill, max_drill_diameter, tolerance)
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.cam_result = (doc.name, doc.revision, r)
@@ -138,7 +139,8 @@ def plastics_fill(gates: list, material: str = "ABS", melt_temperature: float | 
             gs.append([float(v) for v in g])
     try:
         mat = plastic(material, melt_temperature, mold_temperature)
-        r = fill(doc.body, gs, mat, fill_time, max_pressure, element_size, clamp_axis=clamp_axis)
+        with unlocked():
+            r = fill(doc.body, gs, mat, fill_time, max_pressure, element_size, clamp_axis=clamp_axis)
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.plastics_result = (doc.name, doc.revision, r, gates)

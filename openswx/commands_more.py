@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Literal
 
 from .document import DocumentError
-from .session import APP, Vec2, Vec3, _edge, _ext_params, _face, _feat, command
+from .session import APP, Vec2, Vec3, _edge, _ext_params, _face, _feat, command, unlocked
 
 __all__ = ["flex", "deform", "freeform", "fillet_profile", "fillet_xpert", "parting_line", "parting_surface",
            "shut_off_surfaces", "tooling_split", "insert_part", "mirror_part", "cosmetic_thread", "ruled_surface",
@@ -1189,7 +1189,8 @@ def cfd_external(speed: float = 10.0, direction: Vec3 = (1, 0, 0), fluid: Litera
     if speed <= 0:
         raise DocumentError("speed must be positive")
     try:
-        r = external_flow(doc.body, direction, speed, fluid, cells_across, budget=max_seconds)
+        with unlocked():
+            r = external_flow(doc.body, direction, speed, fluid, cells_across, budget=max_seconds)
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.cfd_result = (doc.revision, r)
@@ -1208,7 +1209,8 @@ def cfd_internal(axis: Literal["X", "Y", "Z"] = "X", speed: float = 1.0, fluid: 
     if speed <= 0:
         raise DocumentError("speed must be positive")
     try:
-        r = internal_flow(doc.body, axis, speed, fluid, cells_across, budget=max_seconds)
+        with unlocked():
+            r = internal_flow(doc.body, axis, speed, fluid, cells_across, budget=max_seconds)
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.cfd_result = (doc.revision, r)

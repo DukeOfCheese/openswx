@@ -5,6 +5,7 @@ application version so connected UIs refresh live (SSE).
 """
 from __future__ import annotations
 
+import contextlib
 import functools
 import hashlib
 import inspect
@@ -17,7 +18,7 @@ import time
 from pathlib import Path
 from typing import Any, Literal
 
-from . import applog
+from . import applog, jobs
 from .document import DocumentError, PartDocument
 from .features import END_CONDITIONS, FeatureError, encode_shape, mass_properties
 from .geom import edge_ref, face_ref
@@ -44,6 +45,13 @@ class Application:
         self.buckling_result = None
         self.context: dict | None = None  # editing a part in an assembly's context: {"assembly", "component", "part"}
         self.macro: list[dict] | None = None  # commands recorded since macro_start (None: not recording)
+        self.running: dict[int, tuple] = {}  # thread id -> (command, start time) of the commands in progress
+
+    @property
+    def busy(self):
+        """(command, start time) of the longest-running command, or None."""
+        r = list(self.running.values())
+        return min(r, key=lambda e: e[1]) if r else None
 
     def new_document(self, name: str | None = None) -> PartDocument:
         self._doc_counter += 1
@@ -110,9 +118,9 @@ def command(mutates: bool = True, category: str = "general", mcp: bool = True):
             if not APP.lock.acquire(timeout=30):  # never hang a client forever behind a stuck command
                 busy = getattr(APP, "busy", None)
                 raise CommandError(f"openswx is busy with {busy[0] if busy else 'another command'}; try again")
-            outer = getattr(APP, "busy", None)  # nested commands keep the outermost name
+            outer = None if depth == 0 else True  # (a command called by a command is not the outermost)
             if outer is None:
-                APP.busy = (fn.__name__, time.time())
+                APP.running[threading.get_ident()] = (fn.__name__, time.time())
             watch = None  # a document without unsaved changes: did this command change it? (see _mark_dirty)
             if mutates and outer is None and not getattr(_TL, "preview", False):
                 watch = APP.documents.get(APP.active)
@@ -136,13 +144,15 @@ def command(mutates: bool = True, category: str = "general", mcp: bool = True):
                 raise CommandError(str(exc)) from exc
             except CommandError:
                 raise
+            except jobs.Cancelled as exc:
+                raise CommandError("cancelled") from exc
             except Exception:  # a defect, not a user error: the traceback is what a bug report needs
                 _LOG.exception("%s (%s) crashed after %.3f s", fn.__name__, origin, time.perf_counter() - t0)
                 raise
             finally:
                 _TL.depth = depth
                 if outer is None:
-                    APP.busy = None
+                    APP.running.pop(threading.get_ident(), None)
                 APP.lock.release()
             if mutates and not getattr(_TL, "preview", False):
                 with APP.lock:
@@ -244,6 +254,22 @@ def _mark_dirty(doc) -> None:
         doc._clean = None
     elif getattr(doc, "_clean", None) is not None and _fingerprint(doc) != doc._clean:
         doc.dirty, doc._clean = True, None
+
+
+@contextlib.contextmanager
+def unlocked():
+    """Let other commands run during a long computation. Use inside a command, around work on data it has
+    already read (the body, the study): the command lock is released for the block and taken back after it,
+    so the user can keep rotating, measuring - even editing - while a solver runs. Results must be stored
+    after the block, against the revision read before it."""
+    if getattr(_TL, "preview", False) or getattr(_TL, "depth", 0) != 1:
+        yield  # (inside another command, or a preview on a throw-away copy: keep the lock)
+        return
+    state = APP.lock._release_save()
+    try:
+        yield
+    finally:
+        APP.lock._acquire_restore(state)
 
 
 def call(name: str, args: dict | None = None, origin: str | None = None) -> Any:
@@ -1336,8 +1362,9 @@ def simulation_run(element_size: float | None = None) -> dict:
         material["yield_strength"] = min(m.get("yield_strength") or m.get("tensile_strength") or 1e18 for _, _, m in mats)
         regions = [(sol, m["elastic_modulus"] / material["elastic_modulus"]) for _, shape, m in mats for sol in shape.solids()]
     try:
-        r = solve_static(doc.body, material, fixtures, loads, element_size or doc.study.get("element_size"), regions=regions,
-                         connectors=connectors)
+        with unlocked():
+            r = solve_static(doc.body, material, fixtures, loads, element_size or doc.study.get("element_size"),
+                             regions=regions, connectors=connectors)
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.sim_result = (doc.revision, r)

@@ -8,7 +8,7 @@ from . import recovery
 from .document import DocumentError, PartDocument
 from .session import APP, command
 
-__all__ = ["list_recovered", "recover_document", "discard_recovered", "save_diagnostic_report", "batch"]
+__all__ = ["list_recovered", "recover_document", "discard_recovered", "save_diagnostic_report", "batch", "start_job", "job_status", "cancel_job"]
 
 
 @command(mutates=False, category="document")
@@ -109,3 +109,45 @@ def batch(commands: list[dict], atomic: bool = True) -> dict:
         if APP.documents.get(n) is d and len(d._undo) > n_undo + 1:
             del d._undo[n_undo + 1:]
     return {"results": results, "count": len(results)}
+
+
+# ====================================================================== background jobs
+@command(mutates=False, category="tools")
+def start_job(name: str, args: dict | None = None) -> dict:
+    """Start a long command (simulation_run, cfd_external, cfd_internal, plastics_fill, cam_generate, ...) in the
+    background and return at once with a job id. Poll job_status(id) for its progress and, when it is done,
+    its result; cancel_job(id) stops it. The application stays usable meanwhile. Any command can be started
+    this way; the solvers named above also let other commands run while they compute."""
+    from . import jobs
+    from . import session as S
+    if name not in S.COMMANDS:
+        raise DocumentError(f"unknown command {name!r}")
+    if name in ("start_job", "batch"):
+        raise DocumentError(f"{name} cannot run as a job")
+    origin = getattr(S._TL, "origin", "agent")
+    jid = jobs.start(name, lambda: S.call(name, args or {}, origin))
+    return jobs.public(jobs.get(jid))
+
+
+@command(mutates=False, category="tools")
+def job_status(id: str | None = None) -> dict:
+    """A background job's state (running / done / error / cancelled), progress (0-1, when the solver reports
+    it), seconds so far and - once done - its result. Without an id: every job of this session."""
+    from . import jobs
+    if id is None:
+        return {"jobs": [jobs.public(j, with_result=False) for j in jobs.all_jobs()]}
+    job = jobs.get(id)
+    if job is None:
+        raise DocumentError(f"no job {id!r}")
+    return jobs.public(job)
+
+
+@command(mutates=False, category="tools")
+def cancel_job(id: str) -> dict:
+    """Cancel a running job. Solvers that report progress stop at their next step; others finish their
+    current computation and the result is discarded."""
+    from . import jobs
+    job = jobs.get(id)
+    if job is None:
+        raise DocumentError(f"no job {id!r}")
+    return {**jobs.public(job, with_result=False), "cancel_requested": jobs.cancel(id)}

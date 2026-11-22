@@ -31,6 +31,12 @@ const FEATURE_TO_SPEC = { extrude: "extrude", cut_extrude: "cut_extrude", revolv
 const CURVE_TYPES = ["sketch3d", "helix", "projected_curve", "composite_curve", "xyz_curve"];
 Object.assign(SPECS, MORE_SPECS); Object.assign(TYPE_ICON, MORE_TYPE_ICON); Object.assign(FEATURE_TO_SPEC, MORE_FEATURE_TO_SPEC);
 
+// commands that can take minutes: started with start_job so the window stays responsive
+const LONG_JOBS = new Map([["simulation_run", "Static study"], ["frequency_run", "Frequency study"], ["buckling_run", "Buckling study"],
+  ["thermal_run", "Thermal study"], ["nonlinear_run", "Nonlinear study"], ["harmonic_run", "Harmonic study"], ["step_response_run", "Transient study"],
+  ["drop_test_run", "Drop test"], ["cfd_external", "Flow simulation"], ["cfd_internal", "Flow simulation"], ["flow_simulation", "Flow simulation"],
+  ["plastics_fill", "Fill analysis"], ["cam_generate", "CAM toolpaths"]]);
+
 class App {
   constructor() {
     this.graphics = $("#graphics");
@@ -78,8 +84,34 @@ class App {
     return r.json();
   }
 
+  // Long solves run as background jobs (start_job): a progress toast with Cancel, and the UI stays usable.
+  async commandOrJob(name, args = {}) {
+    if (!LONG_JOBS.has(name)) return this.api("/api/command", { name, args });
+    const started = await this.api("/api/command", { name: "start_job", args: { name, args } });
+    if (!started.ok) return started;
+    const id = started.result.id;
+    const t = el("div", "toast"); t.style.minWidth = "260px";
+    t.innerHTML = `<div><b>${escapeHtml(LONG_JOBS.get(name))}</b> <span class="jb-msg"></span></div>
+      <div style="height:6px;background:#0002;border-radius:3px;margin:6px 0"><div class="jb-bar" style="height:6px;width:0;background:#2b7de9;border-radius:3px"></div></div>
+      <button class="btn jb-cancel">Cancel</button>`;
+    $("#toasts").append(t);
+    t.querySelector(".jb-cancel").onclick = () => { this.api("/api/command", { name: "cancel_job", args: { id } }); t.querySelector(".jb-msg").textContent = "cancelling..."; };
+    try {
+      for (;;) {
+        await new Promise((r) => setTimeout(r, 400));
+        const st = await this.api("/api/command", { name: "job_status", args: { id } });
+        if (!st.ok) return st;
+        const j = st.result;
+        t.querySelector(".jb-bar").style.width = `${Math.round((j.progress ?? 0) * 100)}%`;
+        if (j.state === "running") { if (!t.querySelector(".jb-msg").textContent.startsWith("cancel")) t.querySelector(".jb-msg").textContent = `${Math.round(j.seconds)} s`; continue; }
+        if (j.state === "done") return { ok: true, result: j.result };
+        return { ok: false, error: j.state === "cancelled" ? `${LONG_JOBS.get(name)} cancelled` : j.error };
+      }
+    } finally { t.remove(); }
+  }
+
   async run(name, args = {}, { quiet = false } = {}) {
-    const res = await this.api("/api/command", { name, args });
+    const res = await this.commandOrJob(name, args);
     if (!res.ok) { if (!quiet) this.toast(res.error, "err"); throw new Error(res.error); }
     await this.refresh();
     return res;
@@ -2307,7 +2339,7 @@ class App {
   }
 
   // ------------------------------------------------------------------ evaluate tools
-  async evalCall(name, args = {}) { const r = await this.api("/api/command", { name, args }); if (!r.ok) { this.toast(r.error, "err"); return null; } return r.result; }
+  async evalCall(name, args = {}) { const r = await this.commandOrJob(name, args); if (!r.ok) { this.toast(r.error, "err"); return null; } return r.result; }
 
   sectionDialog() {
     const upd = async () => {

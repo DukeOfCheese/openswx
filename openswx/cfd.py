@@ -224,6 +224,8 @@ def _run(lat: Lattice, boundary, steps: int, check, budget: float, window: int, 
         boundary(lat, rho, u)
         n += 1
         if n % every == 0:
+            from . import jobs
+            jobs.progress(max(n / steps, min(0.99, (time.monotonic() - t0) / max(budget, 1e-9))), f"flow step {n}")
             history.append(check(lat))
             if not math.isfinite(history[-1]):
                 raise ValueError("the flow went unstable: raise cells_across or lower the speed")
