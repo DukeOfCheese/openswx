@@ -108,6 +108,15 @@ class AssemblyDocument:
         self._redo: list = []
         self.mate_counter = 0
         self.journal: list | None = []  # (see PartDocument.journal)
+        # configurations: which components are suppressed and which mate values differ, per configuration.
+        # Suppressed components (and their mates) are parked: out of self.components / self.mates, so nothing
+        # that walks those lists (solving, mass, BOM, interference, drawings) sees them.
+        self.configurations: dict = {"Default": {"suppressed": [], "mate_values": {}}}
+        self.active_config = "Default"
+        self._parked: list = []  # [(index in the full list, Component)]
+        self._parked_mates: list = []  # [(index in the full list, mate)]
+        self.display_states: dict = {}  # name -> {"hidden": [component names]}
+        self.display_state: str | None = None
         self.features: list[dict] = []  # component patterns / mirror components
         self.explode: dict = {"steps": [], "active": False}
         self.drawing: dict = {}
@@ -118,8 +127,10 @@ class AssemblyDocument:
         return {"format": FORMAT, "version": 1, "name": self.name, "mate_counter": self.mate_counter,
                 "components": [{"name": c.name, "part": c.part, "link": c.link, "x": c.x.tolist(), "fixed": c.fixed,
                                 **({"derived": c.derived} if c.derived else {}), **({"envelope": True} if c.envelope else {}),
-                                **({"speedpak": True} if c.speedpak else {})} for c in self.components],
-                "mates": self.mates, "features": self.features, "explode": self.explode, "drawing": self.drawing, "study": self.study,
+                                **({"speedpak": True} if c.speedpak else {})} for c in self._all_components()],
+                "mates": self._all_mates(base=True), "features": self.features,
+                "configurations": self.configurations, "active_config": self.active_config,
+                "display_states": self.display_states, "display_state": self.display_state, "explode": self.explode, "drawing": self.drawing, "study": self.study,
                 "named_views": getattr(self, "named_views", {}),
                 "alternate_positions": getattr(self, "alternate_positions", {}),
                 "large_assembly_mode": getattr(self, "large_assembly_mode", False), "render": getattr(self, "render", {}),
@@ -136,7 +147,13 @@ class AssemblyDocument:
             raise DocumentError(str(exc)) from exc
         self._extra = migrate.extras(d, {"format", "version", "name", "mate_counter", "components", "mates", "features",
                                          "explode", "drawing", "study", "named_views", "alternate_positions",
-                                         "large_assembly_mode", "render", "electrical", "composer", "journal", "requirements"})
+                                         "large_assembly_mode", "render", "electrical", "composer", "journal", "requirements",
+                                         "configurations", "active_config", "display_states", "display_state"})
+        self._parked, self._parked_mates = [], []
+        self.configurations = d.get("configurations") or {"Default": {"suppressed": [], "mate_values": {}}}
+        self.active_config = d.get("active_config", "Default") if d.get("active_config") in self.configurations else "Default"
+        self.display_states = d.get("display_states", {})
+        self.display_state = d.get("display_state") if d.get("display_state") in self.display_states else None
         self.requirements = d.get("requirements", [])
         self.journal = d.get("journal")
         self.name = d.get("name", self.name)
@@ -156,6 +173,7 @@ class AssemblyDocument:
         self.render = d.get("render", {})
         self.electrical = d.get("electrical", {})
         self.composer = d.get("composer", {})
+        self._park()
         self.solve()
 
     def save(self, path: str | None = None) -> str:
@@ -171,6 +189,129 @@ class AssemblyDocument:
         p.write_text(json.dumps(self.to_dict(), indent=1), encoding="utf-8")
         self.path, self.name, self.dirty = str(p), p.stem, False
         return str(p)
+
+    # ------------------------------------------------------------------ configurations and display states
+    def _all_components(self) -> list:
+        out = list(self.components)
+        for i, c in sorted(self._parked, key=lambda e: e[0]):
+            out.insert(min(i, len(out)), c)
+        return out
+
+    def _all_mates(self, base: bool = False) -> list:
+        out = list(self.mates)
+        for i, m in sorted(self._parked_mates, key=lambda e: e[0]):
+            out.insert(min(i, len(out)), m)
+        if base:  # as saved: every mate with its Default value (the overrides are in the configurations)
+            out = [({**{k: v for k, v in m.items() if k != "_base"}, "value": m["_base"]} if "_base" in m else m) for m in out]
+        return out
+
+    def _unpark(self) -> None:
+        self.components, self.mates = self._all_components(), self._all_mates()
+        self._parked, self._parked_mates = [], []
+        for m in self.mates:
+            if "_base" in m:
+                m["value"] = m.pop("_base")
+
+    def _park(self) -> None:
+        """Put the active configuration in force: its suppressed components (with what is patterned from them,
+        and every mate touching them) leave the working lists, and its mate values replace the Default ones."""
+        self._unpark()
+        cfg = self.configurations.setdefault(self.active_config, {"suppressed": [], "mate_values": {}})
+        names = {c.name for c in self.components}
+        cfg["suppressed"] = [n for n in cfg.get("suppressed", []) if n in names]  # (deleted since: forgotten)
+        gone = set(cfg["suppressed"])
+        gone |= {c.name for c in self.components if c.derived and c.derived.get("seed") in gone}
+        if gone:
+            self._parked = [(i, c) for i, c in enumerate(self.components) if c.name in gone]
+            self.components = [c for c in self.components if c.name not in gone]
+            hit = lambda m: m["a"]["component"] in gone or m["b"]["component"] in gone  # noqa: E731
+            self._parked_mates = [(i, m) for i, m in enumerate(self.mates) if hit(m)]
+            self.mates = [m for m in self.mates if not hit(m)]
+        if self.active_config != "Default":
+            for m in self.mates:
+                v = cfg.get("mate_values", {}).get(m["name"])
+                if v is not None:
+                    m["_base"], m["value"] = m.get("value"), v
+
+    def add_configuration(self, name: str, copy_from: str | None = None) -> None:
+        if not name or name in self.configurations:
+            raise DocumentError(f"configuration {name!r} already exists" if name else "give the configuration a name")
+        src = self.configurations.get(copy_from or self.active_config)
+        if src is None:
+            raise DocumentError(f"no configuration {copy_from!r}")
+        self._checkpoint()
+        self.configurations[name] = copy.deepcopy(src)
+        self.active_config = name
+        self._park()
+        self.solve()
+
+    def activate_configuration(self, name: str) -> None:
+        if name not in self.configurations:
+            raise DocumentError(f"no configuration {name!r}; this assembly has {list(self.configurations)}")
+        self._checkpoint()
+        self.active_config = name
+        self._park()
+        self.solve()
+
+    def delete_configuration(self, name: str) -> None:
+        if name == "Default":
+            raise DocumentError("the Default configuration cannot be deleted")
+        if name not in self.configurations:
+            raise DocumentError(f"no configuration {name!r}")
+        self._checkpoint()
+        del self.configurations[name]
+        if self.active_config == name:
+            self.active_config = "Default"
+        self._park()
+        self.solve()
+
+    def suppress_component(self, name: str, suppressed: bool = True, configuration: str | None = None) -> None:
+        cfg_name = configuration or self.active_config
+        if cfg_name not in self.configurations:
+            raise DocumentError(f"no configuration {cfg_name!r}")
+        if name not in {c.name for c in self._all_components()}:
+            raise DocumentError(f"no component {name!r}")
+        self._checkpoint()
+        cfg = self.configurations[cfg_name]
+        cur = [n for n in cfg.get("suppressed", []) if n != name]
+        if suppressed:
+            cur.append(name)
+        elif cfg_name == self.active_config:
+            self._unpark()  # (so the name is known again when the list is pruned)
+        cfg["suppressed"] = cur
+        self._park()
+        self.solve()
+
+    def save_display_state(self, name: str, hidden: list[str]) -> None:
+        if not name:
+            raise DocumentError("give the display state a name")
+        known = {c.name for c in self._all_components()}
+        bad = [h for h in hidden if h not in known]
+        if bad:
+            raise DocumentError(f"no component(s) {bad}")
+        self._checkpoint()
+        self.display_states[name] = {"hidden": list(dict.fromkeys(hidden))}
+        self.display_state = name
+        self.revision += 1
+        self.dirty = True
+
+    def activate_display_state(self, name: str | None) -> None:
+        if name is not None and name not in self.display_states:
+            raise DocumentError(f"no display state {name!r}; this assembly has {list(self.display_states)}")
+        self._checkpoint()
+        self.display_state = name
+        self.revision += 1
+        self.dirty = True
+
+    def delete_display_state(self, name: str) -> None:
+        if name not in self.display_states:
+            raise DocumentError(f"no display state {name!r}")
+        self._checkpoint()
+        del self.display_states[name]
+        if self.display_state == name:
+            self.display_state = None
+        self.revision += 1
+        self.dirty = True
 
     def _checkpoint(self):
         self._undo.append(snapshots.pack(self.to_dict()))
@@ -506,6 +647,9 @@ class AssemblyDocument:
             raise DocumentError(f"no mate {name!r}")
         self._checkpoint()
         if value is not None:
+            if self.active_config != "Default":  # this configuration's own value; the others keep theirs
+                m.setdefault("_base", m.get("value"))
+                self.configurations[self.active_config].setdefault("mate_values", {})[name] = value
             m["value"] = value
         if aligned is not None:
             m["aligned"] = aligned
@@ -719,7 +863,10 @@ class AssemblyDocument:
                 "state": self.status.get("state"), "volume_mm3": round(mp["volume"], 6), "bodies": mp["bodies"],
                 "errors": {m: "mate not satisfied" for m in self.status.get("failing", [])},
                 "features": [], "material": {"name": None, "density": 1000.0}, "units": "mm", "rollback": None,
-                "configurations": ["Default"], "active_config": "Default", "named_views": getattr(self, "named_views", {}),
+                "configurations": list(self.configurations), "active_config": self.active_config,
+                "suppressed_components": [c.name for _, c in self._parked],
+                "display_states": list(self.display_states), "display_state": self.display_state,
+                "hidden_components": list(self.display_states.get(self.display_state, {}).get("hidden", [])) if self.display_state else [], "named_views": getattr(self, "named_views", {}),
                 "render": getattr(self, "render", {})}
 
     def topology(self) -> dict:

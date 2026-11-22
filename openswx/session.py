@@ -1953,23 +1953,25 @@ def get_equations() -> dict:
 @command(category="configurations")
 def add_configuration(name: str, copy_from: str | None = None) -> dict:
     """Add a configuration (copying suppression states/overrides from `copy_from`, default the active one)
-    and make it active."""
-    APP.doc.add_configuration(name, copy_from)
-    return APP.doc.summary()
+    and make it active. Parts: per-configuration feature suppression and dimension values. Assemblies:
+    per-configuration component suppression (suppress_component) and mate values (edit_mate while the
+    configuration is active)."""
+    APP.active_doc.add_configuration(name, copy_from)  # (parts and assemblies both have configurations)
+    return APP.active_doc.summary()
 
 
 @command(category="configurations")
 def activate_configuration(name: str) -> dict:
     """Show a configuration (ConfigurationManager double-click)."""
-    APP.doc.activate_configuration(name)
-    return APP.doc.summary()
+    APP.active_doc.activate_configuration(name)
+    return APP.active_doc.summary()
 
 
 @command(category="configurations")
 def delete_configuration(name: str) -> dict:
     """Delete a configuration (not Default)."""
-    APP.doc.delete_configuration(name)
-    return APP.doc.summary()
+    APP.active_doc.delete_configuration(name)
+    return APP.active_doc.summary()
 
 
 @command(category="configurations")
@@ -5009,6 +5011,7 @@ from .commands_app import *  # noqa: E402,F401,F403
 from .commands_tol import *  # noqa: E402,F401,F403
 from .commands_review import *  # noqa: E402,F401,F403
 from .commands_settings import *  # noqa: E402,F401,F403
+from .commands_asm import *  # noqa: E402,F401,F403
 
 from . import plugins as _plugins  # noqa: E402
 

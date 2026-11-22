@@ -142,6 +142,10 @@ class App {
       this.hiddenComps.clear(); this.vp.hiddenComponents = new Set();
     }
     this.vp.setMesh(mesh);
+    if ((this.model.kind || "part") === "assembly" && (this.model.display_state || null) !== (this.shownDisplayState ?? null)) {
+      this.shownDisplayState = this.model.display_state || null; // a display state was activated: show what it shows
+      this.hiddenComps = new Set(this.model.hidden_components || []); this.vp.setHiddenComponents([...this.hiddenComps]);
+    }
     this.afterRefreshMore();
     if (this.sk.active) await this.loadSketch();
     if (this.sk.showDims) await this.showFeatureDims(this.sk.showDims.feature, true);
@@ -306,7 +310,7 @@ class App {
           ["Assembly > Defeature...", "", () => this.defeatureDialog()]] : [["Defeature...", "", () => this.defeatureDialog()]]),
         ["Design Library...", "", () => this.designLibraryDialog()], ["PDM Vault...", "", () => this.pdmDialog()],
         ["Macro > Record / Stop", "", () => this.macroRecord()], ["Macro > Stop and Save...", "", () => this.macroStop()], ["Macro > Run...", "", () => this.macroRun()], "-",
-        ["Equations...", "", () => this.equationsDialog()], ["Dimension Tolerances...", "", () => this.toleranceDialog()], ["Requirements...", "", () => this.requirementsDialog()], ["Design Review", "", () => this.reviewDialog()], ["Export Script (.py)...", "", () => this.exportScript()], ["Hand-off Pack...", "", () => this.handoffPack()], "-", ["Options...", "", () => this.optionsDialog()], ["Design Table...", "", () => this.designTableDialog()], ["Material...", "", () => this.materialDialog()],
+        ["Equations...", "", () => this.equationsDialog()], ["Dimension Tolerances...", "", () => this.toleranceDialog()], ["Requirements...", "", () => this.requirementsDialog()], ["Design Review", "", () => this.reviewDialog()], ["Export Script (.py)...", "", () => this.exportScript()], ["Hand-off Pack...", "", () => this.handoffPack()], "-", ["Assembly > Display States...", "", () => this.displayStatesDialog()], ["Assembly > Configurations...", "", () => this.asmConfigDialog()], ["User Settings...", "", () => this.userSettingsDialog()], ["Design Table...", "", () => this.designTableDialog()], ["Material...", "", () => this.materialDialog()],
         ["Appearance...", "", () => this.appearanceDialog()], ["Properties...", "", () => this.propertiesDialog()], ["Options...", "", () => this.optionsDialog()]],
       Window: () => [...(this.docs?.documents || []).map((d) => [`${d.name === this.model.name ? "✓ " : ""}${d.name}`.replace(/ > /g, " › "), "", () => this.switchDocument(d.name)]),
         "-", ["Next Document", "Ctrl+Tab", () => this.nextDocument()], ["Close", "Ctrl+W", () => this.run("close_document").then(() => this.vp.zoomFit())]],

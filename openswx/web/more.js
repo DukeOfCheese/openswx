@@ -850,8 +850,8 @@ const MIXIN = {
     if (r) await this.loadSketch();
   },
 
-  // Tools > Options: the user's settings (saved in the openswx home folder)
-  async optionsDialog() {
+  // Tools > User Settings: saved for this user in the openswx home folder (System Options is per session / document)
+  async userSettingsDialog() {
     const r = await this.api("/api/command", { name: "get_settings", args: {} });
     if (!r.ok) return this.toast(r.error, "err");
     const { settings, about, file } = r.result;
@@ -864,7 +864,7 @@ const MIXIN = {
       else input = `<input id="op_${k}" value="${escapeHtml(String(v))}" style="width:180px">`;
       return `<div class="field"><label>${escapeHtml(a.doc)}</label>${input}</div>`;
     }).join("");
-    this.modal("Options", `${rows}<p class="muted">Saved in ${escapeHtml(file)}. Autosave and MCP toolsets apply from the next start.</p>`, async () => {
+    this.modal("User Settings", `${rows}<p class="muted">Saved in ${escapeHtml(file)}. Autosave and MCP toolsets apply from the next start.</p>`, async () => {
       const values = {};
       for (const [k, a] of Object.entries(about)) {
         const e = document.getElementById(`op_${k}`);
@@ -872,8 +872,47 @@ const MIXIN = {
       }
       const s = await this.api("/api/command", { name: "set_settings", args: { values } });
       if (!s.ok) { this.toast(s.error, "err"); throw new Error(s.error); }
-      this.toast("Options saved.");
+      this.toast("Settings saved.");
     }, "properties");
+  },
+
+  // Tools > Assembly > Display States: named sets of hidden components
+  async displayStatesDialog() {
+    if (this.model.kind !== "assembly") return this.toast("Display states belong to an assembly.", "err");
+    const m = this.model, hidden = [...this.hiddenComps];
+    const rows = (m.display_states || []).map((n) => `<tr><td>${n === m.display_state ? "●" : ""}</td><td>${escapeHtml(n)}</td><td><button class="btn ds-act" data-n="${escapeHtml(n)}">Show</button> <button class="btn ds-del" data-n="${escapeHtml(n)}">Delete</button></td></tr>`).join("");
+    this.modal("Display States", `${rows ? `<table class="dw-bom"><tr><th></th><th>State</th><th></th></tr>${rows}</table>` : "<p>No display states yet.</p>"}
+      <p><button class="btn ds-all">Show every component</button></p>
+      <div class="field"><label>Save what is hidden now (${hidden.length} component${hidden.length === 1 ? "" : "s"}) as</label><input id="dsn"></div>`, async () => {
+      const name = $("#dsn").value.trim();
+      if (name) await this.run("save_display_state", { name, hidden });
+    }, "eye");
+    const again = () => setTimeout(() => this.displayStatesDialog(), 0);
+    for (const b of document.querySelectorAll(".ds-act")) b.onclick = async () => { await this.run("activate_display_state", { name: b.dataset.n }).catch(() => null); again(); };
+    for (const b of document.querySelectorAll(".ds-del")) b.onclick = async () => { await this.run("delete_display_state", { name: b.dataset.n }).catch(() => null); again(); };
+    document.querySelector(".ds-all").onclick = async () => { await this.run("activate_display_state", { name: null }).catch(() => null); again(); };
+  },
+
+  // Tools > Assembly > Configurations: which components each configuration leaves out
+  async asmConfigDialog() {
+    if (this.model.kind !== "assembly") return this.toast("This dialog is for assemblies (parts: the ConfigurationManager tab).", "err");
+    const m = this.model, all = [...m.components.map((c) => c.name), ...(m.suppressed_components || [])].sort();
+    const sup = new Set(m.suppressed_components || []);
+    const cfgs = m.configurations.map((n) => `<option${n === m.active_config ? " selected" : ""}>${escapeHtml(n)}</option>`).join("");
+    const comps = all.map((n) => `<label class="pm-check"><input type="checkbox" class="ac-c" value="${escapeHtml(n)}" ${sup.has(n) ? "" : "checked"}> ${escapeHtml(n)}</label>`).join("");
+    this.modal("Assembly Configurations", `<div class="field"><label>Configuration (changing it shows that configuration)</label><select id="acs">${cfgs}</select>
+        <button class="btn" id="acd" ${m.active_config === "Default" ? "disabled" : ""}>Delete</button></div>
+      <div class="field"><label>New configuration (a copy of this one)</label><input id="acn"></div>
+      <p>Components in <b>${escapeHtml(m.active_config)}</b> (untick to suppress; mate values edited now belong to it):</p>
+      <div style="max-height:40vh;overflow:auto">${comps}</div>`, async () => {
+      for (const c of document.querySelectorAll(".ac-c")) {
+        if (c.checked === sup.has(c.value)) await this.run("suppress_component", { name: c.value, suppressed: !c.checked });
+      }
+      const name = $("#acn").value.trim();
+      if (name) await this.run("add_configuration", { name });
+    }, "properties");
+    $("#acs").onchange = async () => { await this.run("activate_configuration", { name: $("#acs").value }).catch(() => null); setTimeout(() => this.asmConfigDialog(), 0); };
+    $("#acd").onclick = async () => { await this.run("delete_configuration", { name: m.active_config }).catch(() => null); setTimeout(() => this.asmConfigDialog(), 0); };
   },
 
   async macroRun() {
