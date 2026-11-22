@@ -17,10 +17,61 @@ Snapshot
 | SOLIDWORKS sample parts rebuilt exactly | 525 of 841 (363 fully parametric) |
 | SOLIDWORKS sample mates imported | 125 of 155 on 40 small assemblies |
 
-Status (2026-11-22, not committed): **A1** done except shipping `LICENSE` / `NOTICE` in the installers and an
-About box. **A3** `test.yml` written, not yet run on GitHub (no remote). **B1** items 1-5 done
-(`openswx/security.py`, `tests/test_security.py`; the token is per user and persistent rather than per launch,
-so an agent's MCP configuration survives restarts); item 6 (macro paths) open.
+## Status after the first pass (2026-11-23)
+
+The specs below are as written on 2026-11-22; this table says what has been done about each since
+(commits `df95ff6` to `317c25f`, 278 tests). "Done" means implemented with tests that pass on Windows;
+nothing here has been run on GitHub's runners, on macOS or Linux, or clicked through in the desktop window.
+
+| Item | State | What was done / what is left |
+|---|---|---|
+| A1 licence | done | `LICENSE`, `NOTICE`, `CONTRIBUTING.md`; in the wheel and the Windows installer; About box. **Left:** the macOS package (`packaging/build.py` belongs to the uncommitted macOS work) |
+| A2 remote, branch, commits | **open** | Needs the owner: create the GitHub repository, rename `master`, push. The macOS packaging work is still uncommitted |
+| A3 CI on push | written, **not run** | `.github/workflows/test.yml` (Linux 3.11 / 3.13, Windows, macOS, ruff errors). First run will show whether the Linux job needs more system libraries |
+| A4 docs | done | `docs/commands.md` generated and checked by a test; README rewritten around it. **Left:** splitting `docs/PLAN.md` into status / roadmap / history |
+| B1 server guard | done | `security.py`: token, Host / Origin / Sec-Fetch-Site checks, JSON-only POST, `--allow-remote`. The token is per user and persistent (the spec said per launch) so agent configurations survive restarts. Macros: agents cannot run them (not an MCP tool) and `macro_stop` obeys the workspace |
+| B2 agent workspace | done | `--workspace` / `OPENSWX_WORKSPACE`. **Left:** an `overwrite` flag on file commands |
+| B3 parsers isolated | partly | `.sldprt` / Parasolid geometry is read in a child process with a time limit (`isolated.py`). **Left:** STEP / IGES / DXF / mesh and the parts of an `.sldasm` still read in-process; no fuzz job |
+| C1 autosave, recovery | done | `recovery.py`, recovery dialog, close guards. The desktop close prompt is untested (the window was not launched). One recovery copy per document, not five |
+| C2 file versions | done | `migrate.py`, golden files, unknown keys kept. **Left:** a published JSON Schema |
+| C3 undo memory | done | `snapshots.py`: long strings stored once. Not a structural diff: the small per-step JSON is still a full copy |
+| C4 jobs, lock | partly | `jobs.py`, `start_job` / `job_status` / `cancel_job`; the static study, flow, plastics and CAM release the lock while computing; UI progress and Cancel. **Left:** the other studies (frequency, buckling, thermal, ...) still hold the lock; commands still act on the one active document; only the flow solver reports progress |
+| C5 logging | done | `applog.py`, `save_diagnostic_report` |
+| D1 untested commands | done | Every command is named in a test; a test enforces it for new ones. Found and fixed on the way: component numbers reused after a delete, PDM where-used missing linked parts, property commands not marking the document changed |
+| D2 test file split | done | Nine files by area + `core_helpers.py` |
+| D3 UI tests | **open** | Still only a syntax check. Every dialog added in this pass is untested in a browser |
+| D4 conformance | done | `tests/conformance/*.json` (7 cases), `tools/conformance.py record / run` |
+| D5 static checks, deps | partly | ruff (errors only) in CI and `pyproject.toml`; `ezdxf` declared. **Left:** a lock file, type checking, the `sklearn` stub |
+| D6 survey in the repo | partly | `tools/survey.py` (resumable run, summary, compare), bookkeeping tested with a stand-in. **Not run** against the SOLIDWORKS sample corpus; no result table checked in |
+| E1 split `session.py` | **open** | Not attempted: ~270 functions sharing private helpers; a mechanical move needs a dependency pass per function. New commands went into separate modules (`commands_app`, `_tol`, `_review`, `_settings`) |
+| E2 MCP toolsets | done | Core set under 50 tools, `list_toolsets` / `enable_toolset`, annotations, `batch`, persistent names in `get_topology`, resources. **Left:** machine-readable error codes, output schemas, resource-changed notifications |
+| E3 settings, i18n, a11y | partly | `settings.py` + Tools > Options (units, autosave, toolsets, close prompt, tolerance class, picture size). **Left:** view colours, mouse mapping, shortcuts, translation, keyboard navigation |
+| F SOLIDWORKS interop | mostly **open** | Done: custom properties from `.sldprt`. Everything else in the table (history coverage, partial open, configurations, mates, `.slddrw` dimensions) needs the SOLIDWORKS development oracle and survey runs, which are only started on request |
+| F neutral formats | partly | `.stl` / `.3mf` import as faceted solids. **Left:** STEP AP242 with colours and structure, OBJ, binary Parasolid writer |
+| G sketch | partly | Equation-driven curves; dimension tolerances and fits. **Left:** blocks, sketch picture, style / fit splines, sketch dimension chains, spline relations |
+| G part | mostly **open** | Requirements cover what sensors do. **Left:** display states, derived configurations, Instant3D, the sheet-metal, weldment, surface and mesh items listed |
+| G assembly | **open** | None of the listed items |
+| G drawings | partly | Ordinate / baseline / chain dimensions; tolerance display. **Left:** the rest of the list |
+| H1 C++ port decision | **open** | A decision for the owner; the conformance suite it depends on now exists |
+| H2-H6 solvers, CAM, rendering | **open** | None started |
+| I1 Linux build | **open** | |
+| I2 code signing | **open** | Needs certificates |
+| I3 update check | **open** | Needs the repository's release feed |
+| I4 benchmarks | partly | `tools/bench.py`. **Left:** tracking per release, lazy imports, bundle audit |
+| I5 PyPI | partly | Classifiers and keywords. Not published; no project URLs until there is a remote |
+| I6 stray build folders | **open** | Left alone: they are the owner's build output |
+| J1 review loop | done | `review_model` |
+| J2 design as text | done | `export_script` (documents record their commands); run it as a macro or with `python` |
+| J3 semantic diff | partly | `compare_documents`, `openswx diff`. **Left:** coloured 3D overlay, a `git difftool` driver, merge |
+| J4 requirements as tests | done | `add_requirement` / `check_requirements`, `openswx check`. **Left:** factor-of-safety requirements tied to a study |
+| J5 design studies | partly | `design_study` (sweeps, best feasible run). **Left:** optimisers, Pareto plots, topology optimisation |
+| J6 headless CLI | done | `convert`, `render`, `massprops`, `check`, `drawing`, `script`, `diff` |
+| J7 library API | **open** | The command functions are importable (`from openswx import session as S`); no typed object API, no Jupyter widget |
+| J8 plugins | done | `openswx.plugins` entry points. CAM posts, pipe standards and Toolbox tables were not moved out of the core |
+| J9, J10, J12, J15-J17 | **open** | Bridges to other CAD, sketch from image, sharing, 3D-print workflow, standard-parts catalogue, tutorials |
+| J11 command palette | exists | The search box already covers commands; "find what references this" not added |
+| J13 hand-off pack | done | `export_handoff_pack` |
+| J14 tolerance stack-up | done | `tolerance_stack` along a chain of model dimensions (not across assembly mates) |
 
 Each item below has: what is missing, the evidence, a spec, and an acceptance check. Priorities: **P0** blocks
 a public release, **P1** is a correctness or data-loss risk, **P2** is parity, **P3** is polish.
