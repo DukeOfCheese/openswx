@@ -20,7 +20,7 @@ Snapshot
 ## Status after the first pass (2026-11-23)
 
 The specs below are as written on 2026-11-22; this table says what has been done about each since
-(commits `df95ff6` onwards, 299 tests). "Done" means implemented with tests that pass on Windows;
+(commits `df95ff6` onwards, 303 tests). "Done" means implemented with tests that pass on Windows;
 nothing here has been run on GitHub's runners, on macOS or Linux, or in the desktop window.
 
 | Item | State | What was done / what is left |
@@ -39,7 +39,7 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | C5 logging | done | `applog.py`, `save_diagnostic_report` |
 | D1 untested commands | done | Every command is named in a test; a test enforces it for new ones. Found and fixed on the way: component numbers reused after a delete, PDM where-used missing linked parts, property commands not marking the document changed |
 | D2 test file split | done | Nine files by area + `core_helpers.py` |
-| D3 UI tests | written, **not run** | `tests/ui/test_ui_smoke.py` (Playwright: token link, a part, every new dialog, a study as a job, assembly dialogs) and a `ui` job in the test workflow. Skipped locally (Playwright is not installed here), so it has never run; the same steps were driven once by hand in a browser. No screenshot comparison |
+| D3 UI tests | written, **not run** | `tests/ui/test_ui_smoke.py` (Playwright) and a `ui` job in the test workflow; skipped locally (Playwright is not installed here), so it has never run. By hand in a browser, twice: the token link, every dialog added in this pass (settings, tolerances, review, requirements, tutorials, update check, 3D finishing, assembly configurations and display states) and a study as a job. Not opened: Document Recovery, Export Script, Hand-off Pack, the desktop window. No screenshot comparison |
 | D4 conformance | done | `tests/conformance/*.json` (7 cases), `tools/conformance.py record / run` |
 | D5 static checks, deps | partly | ruff (errors only) in CI and `pyproject.toml`; `ezdxf` declared. **Left:** a lock file, type checking, the `sklearn` stub |
 | D6 survey in the repo | partly | `tools/survey.py` (resumable run, summary, compare), bookkeeping tested with a stand-in. **Not run** against the SOLIDWORKS sample corpus; no result table checked in |
@@ -73,7 +73,10 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | J8 plugins | done | `openswx.plugins` entry points. CAM posts, pipe standards and Toolbox tables were not moved out of the core |
 | J15 3D-print workflow | partly | `print_orientation` (overhang, support estimate, bed fit for the six ways up); STL / 3MF in and out. **Left:** lattice infill, per-body print settings |
 | J16 standard parts | partly | `standard_part`: ball bearings (ISO 15), parallel keys (DIN 6885), O-rings, generic T-slot extrusions, with BOM properties. **Left:** retaining rings, gears and pulleys, real extrusion profiles as weldment sections |
-| J9, J10, J12, J17 | **open** | Bridges to other CAD, sketch from image, sharing, tutorials |
+| J9 bridges | partly | FreeCAD `.FCStd`: the visible bodies come in as imported geometry (`fcstd.py`; tested with archives in FreeCAD's documented layout, not with files saved by FreeCAD). **Left:** FreeCAD history, Onshape, Fusion |
+| J12 sharing | partly | `serve --share` prints a view-only link (its own token): the page, the model, live updates and queries, nothing that changes the model or writes a file. The UI is not adapted for viewers (editing attempts show the refusal); no comments pinned to faces |
+| J17 onboarding | partly | Help > Tutorials: three step lists ticked off from the model. No highlighting of the next button, no sample parts |
+| J10 sketch from image | **open** | |
 | J11 command palette | exists | The search box already covers commands; "find what references this" not added |
 | J13 hand-off pack | done | `export_handoff_pack` |
 | J14 tolerance stack-up | done | `tolerance_stack` along a chain of model dimensions (not across assembly mates) |

@@ -856,6 +856,12 @@ def _import_file(doc: PartDocument, path: str, config: int | None = None) -> dic
         shape, notes = _read_foreign(str(p), config)
     elif ext in (".stl", ".3mf"):
         shape, notes = _read_mesh(str(p))
+    elif ext == ".fcstd":
+        from .fcstd import FcstdError, read_fcstd
+        try:
+            shape, notes = read_fcstd(str(p))
+        except FcstdError as exc:
+            raise DocumentError(str(exc)) from exc
     else:
         shape = import_step(str(p)) if ext in (".step", ".stp") else import_brep(str(p))
     if not shape.solids():

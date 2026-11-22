@@ -905,14 +905,32 @@ const MIXIN = {
       <div class="field"><label>New configuration (a copy of this one)</label><input id="acn"></div>
       <p>Components in <b>${escapeHtml(m.active_config)}</b> (untick to suppress; mate values edited now belong to it):</p>
       <div style="max-height:40vh;overflow:auto">${comps}</div>`, async () => {
-      for (const c of document.querySelectorAll(".ac-c")) {
-        if (c.checked === sup.has(c.value)) await this.run("suppress_component", { name: c.value, suppressed: !c.checked });
+      const name = $("#acn").value.trim(), ticks = [...document.querySelectorAll(".ac-c")].map((c) => [c.value, c.checked]);
+      if (name) await this.run("add_configuration", { name }); // first: the changes below then belong to the new one only
+      for (const [comp, shown] of ticks) {
+        if (shown === sup.has(comp)) await this.run("suppress_component", { name: comp, suppressed: !shown });
       }
-      const name = $("#acn").value.trim();
-      if (name) await this.run("add_configuration", { name });
     }, "properties");
     $("#acs").onchange = async () => { await this.run("activate_configuration", { name: $("#acs").value }).catch(() => null); setTimeout(() => this.asmConfigDialog(), 0); };
     $("#acd").onclick = async () => { await this.run("delete_configuration", { name: m.active_config }).catch(() => null); setTimeout(() => this.asmConfigDialog(), 0); };
+  },
+
+  // Help > Tutorials
+  tutorialDialog(which = null) {
+    const m = this.model || {};
+    if (which === null) {
+      const list = TUTORIALS.map((t, i) => `<p><button class="btn tut-open" data-i="${i}">${escapeHtml(t.name)}</button></p>`).join("");
+      this.modal("Tutorials", `<p>Each tutorial is a short list of steps. Steps are ticked from the model as you do them: close this, work, and reopen it from Help.</p>${list}`, null, "help");
+      for (const b of document.querySelectorAll(".tut-open")) b.onclick = () => this.tutorialDialog(+b.dataset.i);
+      return;
+    }
+    const t = TUTORIALS[which];
+    this.lastTutorial = which;
+    const wrong = t.kind === "assembly" ? false : (m.kind || "part") !== "part";
+    const rows = t.steps.map(([text, done], i) => { let ok = false; try { ok = !wrong && !!done(m); } catch { ok = false; } return `<tr><td>${ok ? "✔" : i + 1}</td><td style="${ok ? "color:#777" : ""}">${escapeHtml(text)}</td></tr>`; }).join("");
+    this.modal(t.name, `${wrong ? "<p>Open or start a part for this tutorial (File > New > Part).</p>" : ""}<table class="dw-bom">${rows}</table>
+      <p><button class="btn tut-back">All tutorials</button></p>`, null, "help");
+    document.querySelector(".tut-back").onclick = () => this.tutorialDialog();
   },
 
   async macroRun() {
@@ -923,7 +941,36 @@ const MIXIN = {
   },
 };
 
-export { kv, rgbRamp, css };
+// Help > Tutorials: each step says what to do and is ticked off from the model itself, so the list can be
+// reopened at any time to see what is left.
+const has = (m, type) => (m.features || []).some((f) => f.type === type && f.status !== "error");
+const TUTORIALS = [
+  { name: "Your first part: a plate with a hole", kind: "part", steps: [
+    ["Features tab > Extruded Boss/Base, then pick the Top Plane in the tree.", (m) => has(m, "sketch")],
+    ["Press R and drag a rectangle; Smart Dimension its sides if you like.", (m) => (m.features || []).some((f) => f.type === "sketch" && f.sketch_state)],
+    ["Exit Sketch (top-right corner), set the Depth and press OK.", (m) => has(m, "extrude") && (m.volume_mm3 || 0) > 0],
+    ["Click the top face, choose Sketch on the small toolbar, draw a circle (C).", (m) => (m.features || []).filter((f) => f.type === "sketch").length >= 2],
+    ["Features > Extruded Cut, Through All, OK.", (m) => (m.features || []).some((f) => f.name.startsWith("Cut-Extrude"))],
+    ["Pick an edge, Features > Fillet, set a radius, OK.", (m) => has(m, "fillet")],
+    ["Tools > Material (or the Material item in the tree): pick one; Evaluate > Mass Properties shows the mass.", (m) => !!(m.material && m.material.name)],
+    ["File > Save (Ctrl+S).", (m) => !!m.path && !m.dirty]] },
+  { name: "Design intent: dimensions, equations and a design review", kind: "part", steps: [
+    ["Start a sketch with a rectangle and add Smart Dimensions until it turns black (fully defined).", (m) => (m.features || []).some((f) => f.sketch_state === "fully_defined")],
+    ["Extrude it.", (m) => has(m, "extrude")],
+    ["Tools > Equations: add a global variable, then make a dimension equal to it (\"width\").", (m) => Object.keys(m.global_variables || {}).length > 0],
+    ["Tools > Dimension Tolerances: give one dimension a tolerance or a fit (H7).", (m) => Object.keys(m.tolerances || {}).length > 0],
+    ["Tools > Requirements: add one, for example mass < some value.", (m) => (m.requirements || []).length > 0],
+    ["Tools > Design Review: read the findings; nothing here is ticked for you - the review is the result.", () => false]] },
+  { name: "An assembly of two parts", kind: "assembly", steps: [
+    ["File > New > Assembly (with at least one part open or saved).", (m) => m.kind === "assembly"],
+    ["Insert Components: add a part twice; the first is fixed (f), the second floats (-).", (m) => (m.components || []).length >= 2],
+    ["Mate: pick a face on each, Coincident, OK. Add mates until the second part stops moving.", (m) => (m.mates || []).length >= 1],
+    ["Evaluate > Interference Detection.", () => false],
+    ["Tools > Assembly > Configurations: add one and untick a component to suppress it there.", (m) => (m.configurations || []).length >= 2],
+    ["File > Make Drawing from Assembly, then add a BOM and balloons.", (m) => !!(m.drawing && (m.drawing.sheets || []).length)]] },
+];
+
+export { kv, rgbRamp, css, TUTORIALS };
 
 export function installMore(App) {
   for (const [k, fn] of Object.entries(MIXIN)) App.prototype[k] = fn;

@@ -314,7 +314,7 @@ class App {
         ["Appearance...", "", () => this.appearanceDialog()], ["Properties...", "", () => this.propertiesDialog()], ["Options...", "", () => this.optionsDialog()]],
       Window: () => [...(this.docs?.documents || []).map((d) => [`${d.name === this.model.name ? "✓ " : ""}${d.name}`.replace(/ > /g, " › "), "", () => this.switchDocument(d.name)]),
         "-", ["Next Document", "Ctrl+Tab", () => this.nextDocument()], ["Close", "Ctrl+W", () => this.run("close_document").then(() => this.vp.zoomFit())]],
-      Help: [["Keyboard Shortcuts", "", () => this.showTask("help")], ["Agent (MCP) Setup", "", () => this.mcpDialog()], ["Save Diagnostic Report...", "", () => this.diagnosticReport()], ["Check for Updates", "", () => this.checkUpdates()], ["About openswx", "", () => this.about()]],
+      Help: [["Keyboard Shortcuts", "", () => this.showTask("help")], ["Tutorials...", "", () => this.tutorialDialog()], ["Agent (MCP) Setup", "", () => this.mcpDialog()], ["Save Diagnostic Report...", "", () => this.diagnosticReport()], ["Check for Updates", "", () => this.checkUpdates()], ["About openswx", "", () => this.about()]],
     };
     const bar = $("#menubar");
     for (const [name, items] of Object.entries(M)) {

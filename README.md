@@ -56,7 +56,8 @@ python -m openswx serve --open             # prints the UI link (http://127.0.0.
 
 The server only answers this computer and asks for your token (a per-user secret kept in `~/.openswx/token`):
 open the UI through the link `serve` prints, which stores it as a cookie. `--no-token` turns the token off for
-local development; `--host` with an address other computers can reach needs `--allow-remote`. The rules are in
+local development; `--host` with an address other computers can reach needs `--allow-remote`. `--share` also prints a
+view-only link: whoever opens it sees the model update live but cannot change it or save files. The rules are in
 [`openswx/security.py`](openswx/security.py).
 
 Your first part (same as SOLIDWORKS): **Extruded Boss/Base** → pick *Top Plane* → draw a rectangle (R) →

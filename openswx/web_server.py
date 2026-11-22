@@ -17,7 +17,8 @@ from . import session as S
 WEB = Path(__file__).parent / "web"
 
 
-def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "127.0.0.1") -> FastAPI:
+def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "127.0.0.1",
+               view_token: str | None = None) -> FastAPI:
     """The server application. `token`: what /api/ and /mcp ask for ("auto": the user's saved token; None: no
     token, for tests and --no-token). `host`: the address being served; anything but loopback also accepts
     requests addressed to other names (see security.py)."""
@@ -39,7 +40,7 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
             yield
 
     app = FastAPI(title="openswx", lifespan=lifespan)
-    app.add_middleware(security.Guard, token=token, loopback_only=security.is_loopback(host))
+    app.add_middleware(security.Guard, token=token, loopback_only=security.is_loopback(host), view_token=view_token)
 
     @app.middleware("http")
     async def no_stale_ui(request: Request, call_next):
@@ -71,6 +72,11 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
     @app.post("/api/command")
     async def run_command(req: Request):
         body = await req.json()
+        if req.scope.get("openswx.view_only"):  # a view-only link: queries only, and none that writes a file
+            meta = S.COMMANDS.get(body.get("name"))
+            if meta is None or meta["mutates"] or meta["category"] != "query" or body.get("name") in S.FILE_ARGS:
+                return JSONResponse({"ok": False, "error": "this is a view-only link: the model cannot be changed from it"},
+                                    status_code=403)
         try:
             result = await asyncio.to_thread(S.call, body["name"], body.get("args") or {}, "ui")
         except S.CommandError as exc:
@@ -168,6 +174,6 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
 
 
 def run(host: str = "127.0.0.1", port: int = 8765, mount_mcp: bool = True, log_level: str = "warning",
-        token: str | None = "auto") -> None:
+        token: str | None = "auto", view_token: str | None = None) -> None:
     import uvicorn
-    uvicorn.run(create_app(mount_mcp, token=token, host=host), host=host, port=port, log_level=log_level)
+    uvicorn.run(create_app(mount_mcp, token=token, host=host, view_token=view_token), host=host, port=port, log_level=log_level)

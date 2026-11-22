@@ -51,7 +51,7 @@ def open_part(path: str, history: bool = True) -> dict:
         APP.documents[doc.name] = doc
         APP.active = doc.name
         return doc.summary()
-    if ext in (".step", ".stp", ".brep", ".x_t", ".x_b", ".xmt_txt", ".xmt_bin", ".igs", ".iges", ".stl", ".3mf"):
+    if ext in (".step", ".stp", ".brep", ".x_t", ".x_b", ".xmt_txt", ".xmt_bin", ".igs", ".iges", ".stl", ".3mf", ".fcstd"):
         doc = APP.new_document(p.stem)
         _import_file(doc, str(p))
         return doc.summary()

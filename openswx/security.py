@@ -23,6 +23,9 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 COOKIE = "openswx_token"
+VIEW_COOKIE = "openswx_view"
+# what a view-only link may ask for: the page, the model as shown, live updates, pictures - and queries
+VIEW_GET = ("/api/state", "/api/mesh", "/api/events", "/api/image", "/api/commands", "/api/drawing", "/api/health")
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 OPEN_PATHS = {"/api/health"}  # (liveness only: says whether a command is running)
 
@@ -58,6 +61,27 @@ def user_token() -> str:
     return tok
 
 
+def view_token() -> str:
+    """The token of view-only links (serve --share): separate from the user's own, so a link can be handed out
+    and later invalidated (delete the file) without touching agents' access."""
+    p = token_path().with_name("view_token")
+    try:
+        saved = p.read_text(encoding="ascii").strip()
+        if len(saved) >= 32:
+            return saved
+    except (OSError, UnicodeError):
+        pass
+    tok = secrets.token_urlsafe(32)
+    try:
+        p.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="ascii") as fh:
+            fh.write(tok)
+    except OSError:
+        pass
+    return tok
+
+
 def _hostname(netloc: str) -> str:
     """'127.0.0.1:8765' -> '127.0.0.1', '[::1]:8765' -> '::1'."""
     netloc = netloc.strip().lower()
@@ -76,8 +100,8 @@ NO_TOKEN_PAGE = """<!doctype html><meta charset="utf-8"><title>openswx</title>
 class Guard:
     """ASGI middleware applying the rules above. token=None: no token is asked for (the other checks stay)."""
 
-    def __init__(self, app, token: str | None, loopback_only: bool = True):
-        self.app, self.token, self.loopback_only = app, token, loopback_only
+    def __init__(self, app, token: str | None, loopback_only: bool = True, view_token: str | None = None):
+        self.app, self.token, self.loopback_only, self.view_token = app, token, loopback_only, view_token
 
     async def __call__(self, scope, receive, send):
         if scope["type"] not in ("http", "websocket"):
@@ -110,6 +134,11 @@ class Guard:
             return await self.app(scope, receive, send)
 
         query = parse_qs(scope.get("query_string", b"").decode("latin-1"))
+        if path == "/" and "view" in query and self.view_token:  # a view-only link: its own cookie
+            if not hmac.compare_digest(query["view"][0].encode(), self.view_token.encode()):
+                return await refuse(401, "wrong link", NO_TOKEN_PAGE % host)
+            cookie = f"{VIEW_COOKIE}={self.view_token}; Path=/; HttpOnly; SameSite=Strict"
+            return await refuse(303, "", "", extra=[(b"location", b"/"), (b"set-cookie", cookie.encode())])
         if path == "/" and "token" in query:  # the link openswx prints: keep the token as a cookie, drop it from the URL
             if not self._ok(query["token"][0]):
                 return await refuse(401, "wrong token", NO_TOKEN_PAGE % host)
@@ -127,6 +156,18 @@ class Guard:
                 supplied.append(value)
         if any(self._ok(s) for s in supplied):
             return await self.app(scope, receive, send)
+        if self.view_token:  # a viewer: reads, and the commands web_server lets a viewer run
+            viewer = [headers.get("x-openswx-view", "")]
+            for part in headers.get("cookie", "").split(";"):
+                name, _, value = part.strip().partition("=")
+                if name == VIEW_COOKIE:
+                    viewer.append(value)
+            if any(v and hmac.compare_digest(v.encode(), self.view_token.encode()) for v in viewer):
+                allowed = (method == "GET" and (path == "/" or path in VIEW_GET)) or (method == "POST" and path == "/api/command")
+                if not allowed:
+                    return await refuse(403, "this is a view-only link")
+                scope["openswx.view_only"] = True
+                return await self.app(scope, receive, send)
         if path == "/":
             return await refuse(401, "token needed", NO_TOKEN_PAGE % host)
         return await refuse(401, "openswx token needed: send 'Authorization: Bearer <token>' (the token: `openswx token`)",

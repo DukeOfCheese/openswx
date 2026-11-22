@@ -31,6 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--open", action="store_true", help="open the browser")
     s.add_argument("--file", help="part to open on start (.oswprt/.step)")
     s.add_argument("--no-token", action="store_true", help="do not ask for the token (this computer only)")
+    s.add_argument("--share", action="store_true", help="also print a view-only link: whoever opens it sees the model live but cannot change it")
     s.add_argument("--workspace", help="folder agents (MCP) may read and write files in; elsewhere is refused")
     s.add_argument("--toolsets", help="MCP tools listed at first: core (default), all, or e.g. core,assembly,drawing")
     s.add_argument("--allow-remote", action="store_true", help="allow --host to be an address other computers can reach")
@@ -86,7 +87,14 @@ def main(argv: list[str] | None = None) -> int:
             threading.Timer(1.0, lambda: webbrowser.open(link)).start()
         print(f"openswx UI: {link}\nMCP (streamable HTTP): {url}mcp"
               + ("   header  Authorization: Bearer <token>  (the token: `openswx token`)" if token else ""), file=sys.stderr)
-        run(a.host, a.port, token=token)
+        view = security.view_token() if a.share and token else None
+        if a.share and not token:
+            print("openswx: --share needs the token (not with --no-token)", file=sys.stderr)
+            return 2
+        if view:
+            print(f"view-only link: {url}?view={view}" + ("" if remote else "   (this computer only; for others add --host and --allow-remote)"),
+                  file=sys.stderr)
+        run(a.host, a.port, token=token, view_token=view)
         return 0
 
     if a.cmd == "token":

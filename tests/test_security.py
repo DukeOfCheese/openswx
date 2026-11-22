@@ -95,3 +95,34 @@ def test_user_token_is_saved_once(tmp_path, monkeypatch):
     assert (tmp_path / "token").read_text() == first
     monkeypatch.setenv("OPENSWX_TOKEN", "from-the-environment")
     assert security.user_token() == "from-the-environment"
+
+
+def test_view_only_link(tmp_path, monkeypatch):
+    from openswx import session as S
+    monkeypatch.setenv("OPENSWX_HOME", str(tmp_path))
+    view = security.view_token()
+    assert len(view) >= 32 and security.view_token() == view and view != TOKEN
+    S.new_part("Shared")
+    with client(view_token=view) as c:
+        assert c.get("/?view=wrong").status_code == 401
+        r = c.get(f"/?view={view}")
+        assert r.status_code == 303 and security.VIEW_COOKIE in r.headers["set-cookie"]
+        c.cookies.set(security.VIEW_COOKIE, view)
+        assert c.get("/").status_code == 200 and c.get("/api/state").json()["model"]["name"] == "Shared"
+        assert c.get("/api/mesh").status_code == 200
+        assert c.post("/api/command", json={"name": "get_topology", "args": {}}).json()["ok"]  # a query
+        for name, args in (("create_sketch", {"plane": "Top"}), ("save_part", {"path": str(tmp_path / "x")}),
+                           ("export_script", {"path": str(tmp_path / "x.py")}), ("run_macro", {"path": "x.py"}),
+                           ("save_diagnostic_report", {"path": str(tmp_path / "r.zip")}), ("no_such", {})):
+            r = c.post("/api/command", json={"name": name, "args": args})
+            assert r.status_code == 403 and "view-only" in r.json()["error"], name
+        assert c.post("/api/preview", json={"name": "extrude", "args": {}}).status_code == 403
+        assert c.post("/api/upload", json={"filename": "a.step", "data": ""}).status_code == 403
+        assert c.get("/api/download?format=step").status_code == 403  # the model itself is not handed out
+        assert not list(tmp_path.glob("x*")) and not S.get_model()["features"]
+    with client() as c:  # without --share there are no view links
+        c.cookies.set(security.VIEW_COOKIE, view)
+        assert c.get("/api/state").status_code == 401
+    with TestClient(create_app(token=TOKEN, view_token=view), base_url=BASE) as c:  # agents' endpoint stays closed to viewers
+        c.cookies.set(security.VIEW_COOKIE, view)
+        assert c.post("/mcp/", json={}).status_code == 403
