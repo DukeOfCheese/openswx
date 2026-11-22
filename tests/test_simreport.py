@@ -49,3 +49,23 @@ def test_report(tmp_path):
     S.new_part("NoStudy")
     with pytest.raises(S.CommandError):
         S.simulation_report(str(tmp_path / "none"))
+
+
+def test_convergence_study():
+    cantilever()
+    E, inertia = S.APP.doc.material["elastic_modulus"], 10 ** 4 / 12
+    tip = 100 * 100 ** 3 / (3 * E * inertia)
+    c = S.simulation_convergence(element_sizes=[5, 2.5, 5 / 3])
+    assert [r["element_size"] for r in c["runs"]] == [5, 2.5, pytest.approx(5 / 3, abs=1e-4)]
+    assert c["runs"][0]["elements"] < c["runs"][1]["elements"] < c["runs"][2]["elements"]
+    assert c["displacement_converged"] and c["displacement_change_pct"] < 5
+    assert c["runs"][-1]["max_displacement"] == pytest.approx(tip, rel=0.03)  # beam theory
+    # the built-in end of a cantilever is a singular corner: the peak stress keeps climbing
+    assert c["runs"][-1]["max_von_mises"] > c["runs"][0]["max_von_mises"]
+    assert S.simulation_probe([[5, 5, 100]])["probes"][0]["displacement_size"] == pytest.approx(tip, rel=0.03)  # the finest run is current
+    auto = S.simulation_convergence(refinements=2)
+    assert len(auto["runs"]) == 2 and auto["runs"][1]["element_size"] == pytest.approx(auto["runs"][0]["element_size"] * 2 / 3, rel=1e-3)
+    with pytest.raises(S.CommandError):
+        S.simulation_convergence(element_sizes=[2.5])
+    with pytest.raises(S.CommandError):
+        S.simulation_convergence(refinements=9)

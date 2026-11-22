@@ -20,7 +20,7 @@ Snapshot
 ## Status after the first pass (2026-11-23)
 
 The specs below are as written on 2026-11-22; this table says what has been done about each since
-(commits `df95ff6` onwards, 291 tests). "Done" means implemented with tests that pass on Windows;
+(commits `df95ff6` onwards, 299 tests). "Done" means implemented with tests that pass on Windows;
 nothing here has been run on GitHub's runners, on macOS or Linux, or in the desktop window.
 
 | Item | State | What was done / what is left |
@@ -53,7 +53,10 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | G assembly | partly | Assembly configurations (component suppression and mate values per configuration) and display states, with dialogs. **Left:** flexible subassemblies, lightweight components, belt / chain, collision and physics while dragging, physics-based motion, mate controller, layout sketches, exploded line sketch |
 | G drawings | partly | Ordinate / baseline / chain dimensions; tolerance display. **Left:** the rest of the list |
 | H1 C++ port decision | **open** | A decision for the owner; the conformance suite it depends on now exists |
-| H2-H6 solvers, CAM, rendering | **open** | None started |
+| H2 simulation | partly | Result probes, an HTML study report and a mesh-convergence study (`simulation_probe`, `simulation_report`, `simulation_convergence`). **Left:** a body-fitted tetrahedral mesher (needs gmsh or netgen as a dependency), mesh controls, remote and bearing loads, shells and beams |
+| H3 sketch solver | partly | No search when every relation already holds; grouped-column Jacobian from 12 unknowns; one SVD: 2.9 s -> 1.3 s on the benchmark. Not re-surveyed against SOLIDWORKS sketches. **Left:** decomposition into rigid clusters, minimal conflicting sets |
+| H4 CAM | partly | 3D parallel finishing with ball, bull-nose and flat tools on a drop-cutter surface (`cam_finish_3d`). **Left:** rest machining, adaptive roughing, 2D operations from picked faces, tabs, lead-in / out, setup sheets, turning |
+| H5, H6 flow, plastics, rendering | **open** | None started |
 | I1 Linux build | **open** | |
 | I2 code signing | **open** | Needs certificates |
 | I3 update check | done | Help > Check for Updates (`updates.py`): asks the GitHub releases of the repository in the `update_repository` setting, only when the user asks; nothing is downloaded. **Left:** set the repository once there is one |
@@ -69,7 +72,8 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | J7 library API | partly | `openswx.api.Part` / `Sketch`: a small chained object API over the commands, with a PNG representation for notebooks. **Left:** assemblies and drawings, full typing, an interactive viewer widget |
 | J8 plugins | done | `openswx.plugins` entry points. CAM posts, pipe standards and Toolbox tables were not moved out of the core |
 | J15 3D-print workflow | partly | `print_orientation` (overhang, support estimate, bed fit for the six ways up); STL / 3MF in and out. **Left:** lattice infill, per-body print settings |
-| J9, J10, J12, J16, J17 | **open** | Bridges to other CAD, sketch from image, sharing, standard-parts catalogue, tutorials |
+| J16 standard parts | partly | `standard_part`: ball bearings (ISO 15), parallel keys (DIN 6885), O-rings, generic T-slot extrusions, with BOM properties. **Left:** retaining rings, gears and pulleys, real extrusion profiles as weldment sections |
+| J9, J10, J12, J17 | **open** | Bridges to other CAD, sketch from image, sharing, tutorials |
 | J11 command palette | exists | The search box already covers commands; "find what references this" not added |
 | J13 hand-off pack | done | `export_handoff_pack` |
 | J14 tolerance stack-up | done | `tolerance_stack` along a chain of model dimensions (not across assembly mates) |

@@ -10,7 +10,7 @@ from pathlib import Path
 from .document import DocumentError
 from .session import APP, Vec3, _sim_doc, command
 
-__all__ = ["simulation_probe", "simulation_report"]
+__all__ = ["simulation_probe", "simulation_report", "simulation_convergence"]
 
 
 def _result():
@@ -123,3 +123,56 @@ def simulation_report(path: str, title: str | None = None, probes: list[Vec3] | 
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(page, encoding="utf-8")
     return {"saved": str(p.resolve()), "factor_of_safety": fos, "force_balance_pct": round(100 * balance / size, 4), "probes": probed}
+
+
+@command(mutates=False, category="simulation")
+def simulation_convergence(element_sizes: list[float] | None = None, refinements: int = 3, tolerance_pct: float = 5.0) -> dict:
+    """Mesh convergence of the static study: run it at several element sizes (given, or `refinements` sizes
+    each 2/3 of the one before, starting from the default) and tabulate the maximum displacement and von
+    Mises stress. Says whether each has settled - changed by less than tolerance_pct between the two finest
+    meshes - and, when the last three sizes shrink by a constant ratio, the Richardson-extrapolated
+    displacement. A peak stress that keeps rising with refinement is at a sharp corner or load edge (a
+    singularity), not a number to design to; a displacement that has settled can be trusted. The finest run
+    is left as the current result."""
+    from . import session as S
+    doc = _sim_doc()
+    if doc.body is None:
+        raise DocumentError("the part has no body")
+    if element_sizes:
+        sizes = sorted({float(s) for s in element_sizes if s and s > 0}, reverse=True)
+        if len(sizes) < 2:
+            raise DocumentError("give at least two different element sizes")
+    else:
+        if not 2 <= refinements <= 6:
+            raise DocumentError("refinements must be between 2 and 6")
+        first = S.simulation_run.__wrapped__()
+        sizes = [first["element_size"] * (2 / 3) ** k for k in range(refinements)]
+    runs = []
+    for h in sizes:
+        r = S.simulation_run.__wrapped__(element_size=h)
+        runs.append({"element_size": round(r["element_size"], 5), "elements": r["elements"], "dofs": r["dofs"],
+                     "max_displacement": r["max_displacement"], "max_von_mises": r["max_von_mises"],
+                     "factor_of_safety": r.get("factor_of_safety")})
+
+    def change(key):
+        a, b = runs[-2][key], runs[-1][key]
+        return abs(b - a) / abs(b) * 100 if b else 0.0
+    d_change, s_change = change("max_displacement"), change("max_von_mises")
+    out = {"runs": runs, "displacement_change_pct": round(d_change, 3), "stress_change_pct": round(s_change, 3),
+           "displacement_converged": d_change <= tolerance_pct, "stress_converged": s_change <= tolerance_pct,
+           "tolerance_pct": tolerance_pct}
+    if len(runs) >= 3:
+        u1, u2, u3 = (r["max_displacement"] for r in runs[-3:])
+        h1, h2, h3 = (r["element_size"] for r in runs[-3:])
+        ratio = h1 / h2
+        if abs(h2 / h3 - ratio) < 0.05 * ratio and abs(u3 - u2) > 1e-15 and (u2 - u1) / (u3 - u2) > 1.0:
+            p = math.log((u2 - u1) / (u3 - u2)) / math.log(ratio)  # observed order of convergence
+            out["richardson"] = {"order": round(p, 3), "max_displacement": u3 + (u3 - u2) / (ratio ** p - 1)}
+    stresses = [r["max_von_mises"] for r in runs]
+    if not out["stress_converged"] and all(b > a for a, b in zip(stresses, stresses[1:])):
+        out["note"] = ("the peak stress rises with every refinement: it is probably at a sharp corner or the edge of a "
+                       "load or fixture (a stress singularity). Judge the stress away from that point (simulation_probe) "
+                       "or add a fillet there.")
+    elif not out["stress_converged"]:
+        out["note"] = "the peak stress has not settled: refine further before relying on it"
+    return out
