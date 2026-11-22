@@ -273,7 +273,7 @@ class App {
         ["Hide/Show > Planes", "", () => this.vp.togglePlanes()], ["Hide/Show > 3D Annotations (PMI)", "", () => this.togglePMI()],
         ["Hide/Show > View Cube", "", () => document.querySelector(".vcube")?.classList.toggle("hidden")]],
       Insert: () => (asm() ? asmInsert : partInsert),
-      Tools: () => [["Sketch Entities > Line", "", () => this.setSketchTool("line")], ["Sketch Entities > Rectangle", "", () => this.setSketchTool("rectangle")],
+      Tools: () => [["Sketch Entities > Line", "", () => this.setSketchTool("line")], ["Sketch Entities > Rectangle", "", () => this.setSketchTool("rectangle")], ["Sketch Entities > Equation Driven Curve...", "", () => this.equationCurve()],
         ["Sketch Entities > Circle", "", () => this.setSketchTool("circle")], ["Dimensions > Smart", "", () => this.setSketchTool("smart_dim")], "-",
         ["Evaluate > Measure", "", () => this.measure()], ["Evaluate > Mass Properties", "", () => this.massProps()], ["Evaluate > Section Properties", "", () => this.sectionPropsDialog()],
         ...(asm() ? [["Evaluate > Interference Detection", "", () => this.interference()]] : [["Evaluate > Check", "", () => this.checkGeometry()],

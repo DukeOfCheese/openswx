@@ -410,3 +410,51 @@ def test_electrical_composer_library_pdm_leftovers(tmp_path, monkeypatch):
     item = parts[0]
     S.delete_library_item(item["path"] if isinstance(item, dict) else item)
     assert not S.list_design_library()["parts"]
+
+
+# ------------------------------------------------------------------ mesh import, equation-driven curves
+def test_stl_and_3mf_import_as_solids(tmp_path):
+    block("MeshSrc", 30, 20, 5)
+    h = S.create_sketch("Top")["sketch"]
+    S.sketch_circle(h, [10, 10], 4)
+    S.cut_extrude(h, end_condition="ThroughAllBoth")
+    v = vol()
+    for ext in ("stl", "3mf"):
+        S.activate_document("MeshSrc")
+        out = tmp_path / f"m.{ext}"
+        S.export_file(str(out))
+        r = S.open_part(str(out))
+        assert r["name"] == "m" or r.get("model", {}).get("name") == "m" or S.APP.active == "m"
+        assert vol() == pytest.approx(v, rel=2e-3)  # the hole is faceted: slightly more material
+        faces = S.get_topology()["faces"]
+        assert sum(1 for f in faces if f["type"] == "plane" and f["area"] > 100) >= 2  # top and bottom merged back
+        S.close_document(S.APP.active)
+    # an open mesh is refused with a reason
+    bad = tmp_path / "open.stl"
+    bad.write_text("solid o\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nvertex 1 0 0\nvertex 0 1 0\nendloop\nendfacet\nendsolid o\n")
+    with pytest.raises(S.CommandError, match="not a closed volume|cannot read"):
+        S.open_part(str(bad))
+
+
+def test_equation_driven_curve():
+    S.new_part("EqCurve")
+    S.set_global_variable("a", 20)
+    sk = S.create_sketch("Top")["sketch"]
+    # a parabola y = x^2 / a from x = -10 to 10, closed by a chord: area = (2/3) * width * height
+    r = S.sketch_equation_curve(sk, "t", 't^2/"a"', -10, 10, points=41)["result"]
+    pts = S.get_feature(sk)["params"]["sketch"]["points"]
+    first, last = pts[r["points"][0]], pts[r["points"][-1]]
+    assert first == pytest.approx([-10, 5]) and last == pytest.approx([10, 5])
+    S.sketch_line(sk, r["points"][-1], r["points"][0])
+    S.extrude(sk, 3)
+    assert vol() == pytest.approx(2 / 3 * 20 * 5 * 3, rel=1e-3)
+    # a full circle from sin / cos (degrees), closed
+    S.new_part("EqCircle")
+    sk = S.create_sketch("Top")["sketch"]
+    S.sketch_equation_curve(sk, "10*cos(t)", "10*sin(t)", 0, 360, points=60, closed=True)
+    S.extrude(sk, 1)
+    assert vol() == pytest.approx(math.pi * 100, rel=2e-3)
+    with pytest.raises(S.CommandError, match="cannot evaluate"):
+        S.sketch_equation_curve(sk, "1/(t-5)", "t", 0, 10, points=11)
+    with pytest.raises(S.CommandError):
+        S.sketch_equation_curve(sk, "t", "t", 1, 1)

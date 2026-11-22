@@ -5,9 +5,9 @@ from typing import Literal
 
 from . import tolerance as T
 from .document import DocumentError
-from .session import APP, command
+from .session import APP, Vec2, command
 
-__all__ = ["set_dimension_tolerance", "get_dimension_tolerances", "fit_calculator"]
+__all__ = ["set_dimension_tolerance", "get_dimension_tolerances", "fit_calculator", "drawing_dimension_set"]
 
 
 def _entry(doc, name: str, tol: dict | None) -> dict:
@@ -74,3 +74,54 @@ def fit_calculator(size: float, hole: str = "H7", shaft: str = "g6") -> dict:
         return T.fit_summary(float(size), hole, shaft)
     except T.ToleranceError as exc:
         raise DocumentError(str(exc)) from exc
+
+
+@command(category="drawing")
+def drawing_dimension_set(view: str, kind: Literal["baseline", "chain", "ordinate"], points: list[Vec2],
+                          direction: Literal["horizontal", "vertical"] = "horizontal", offset: float = 10.0,
+                          spacing: float = 7.0) -> dict:
+    """Several dimensions in one go from picked points (sheet mm, snapped to the view's vertices; the first
+    is the datum / zero). baseline: every point dimensioned from the first, each dimension line `spacing` mm
+    further out. chain: each point from the one before, all on one line. ordinate: the distance of each point
+    from the zero written at the end of an extension line, no dimension lines (the zero shows 0).
+    direction: measure horizontally or vertically in the view. offset: sheet mm from the geometry."""
+    from . import session as S
+    if len(points) < 2:
+        raise DocumentError("give at least two points: the datum and one to dimension")
+
+    def f(st, DS):
+        v = DS.find_view(st, view)
+        sh = DS.sheet_of(st, view)
+        g = DS.view_geometry(APP.active_doc, st, v)
+        tol = S._PICK_MM / DS.view_scale(st, v)
+        snapped = []
+        for p in points:
+            q = DS.snap_vertex(g, DS.sheet_to_view(st, APP.active_doc, v, p), tol)
+            if q is None:
+                raise DocumentError(f"no vertex of the view near {list(p)}: pick corners or edge ends")
+            snapped.append([float(q[0]), float(q[1])])
+        i = 0 if direction == "horizontal" else 1
+        used = {d["id"] for x in st["sheets"] for d in x.get("dims", [])}
+        made = []
+
+        def add(d):
+            d["id"] = next(f"Dim{n}" for n in range(1, 99999) if f"Dim{n}" not in used)
+            used.add(d["id"])
+            sh.setdefault("dims", []).append(d)
+            made.append({"id": d["id"], "kind": d["kind"], "value": round(DS.dim_value(d), 6)})
+
+        lin = "horizontal" if direction == "horizontal" else "vertical"
+        if kind == "ordinate":
+            for q in snapped:
+                add({"view": view, "kind": "ordinate", "a": snapped[0], "b": q, "axis": "x" if i == 0 else "y", "offset": offset})
+        else:
+            rest = sorted(snapped[1:], key=lambda q: abs(q[i] - snapped[0][i])) if kind == "baseline" else snapped[1:]
+            prev = snapped[0]
+            for n, q in enumerate(rest):
+                a = snapped[0] if kind == "baseline" else prev
+                if abs(q[i] - a[i]) < 1e-9:
+                    raise DocumentError("two of the points are at the same position along the measured direction")
+                add({"view": view, "kind": lin, "a": a, "b": q, "offset": offset + (spacing * n if kind == "baseline" else 0.0)})
+                prev = q
+        return made
+    return {"kind": kind, "dimensions": S._views_edit(f)}

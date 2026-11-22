@@ -670,6 +670,9 @@ def dim_text(d: dict, base: str, value: float | None = None) -> str:
 def dim_value(d: dict) -> float:
     a, b = d.get("a"), d.get("b")
     k = d["kind"]
+    if k == "ordinate":  # the distance from the set's zero, along its axis
+        i = 0 if d.get("axis", "x") == "x" else 1
+        return abs(float(b[i]) - float(a[i]))
     if k == "angle":
         res = lines_angle(d["l1"], d["l2"], d["at"])
         return res[3] if res else 0.0
@@ -762,6 +765,9 @@ def _render_dims(st, sheet, v, g, t) -> list[str]:
                 out.append(f'<text data-dim="{escape(d["id"])}" x="{tx + (1 if math.cos(ang) >= 0 else -1):.3f}" y="{ty - 0.8 + 4.0 * i:.3f}" '
                            f'font-size="3.2" text-anchor="{anchor}">{escape(line)}</text>')
             continue
+        if d["kind"] == "ordinate":
+            out += _render_ordinate(d, t)
+            continue
         if d["kind"] in ("angle", "line_distance"):
             for k in ("l1", "l2"):  # follow the model: the nearest straight edge to where the line was
                 mid = ((d[k][0][0] + d[k][1][0]) / 2, (d[k][0][1] + d[k][1][1]) / 2)
@@ -825,6 +831,25 @@ def _render_angle(st, v, d, t) -> list[str]:
     text = dim_text(d, f"{D._fmt(deg)}°", deg)
     out.append(f'<text data-dim="{escape(d["id"])}" x="{tx:.3f}" y="{ty + 1.1:.3f}" font-size="3.2" text-anchor="middle">{escape(text)}</text>')
     return out
+
+
+def _render_ordinate(d, t) -> list[str]:
+    """Ordinate dimension: an extension line from the point out to the set's common line, with the distance
+    from the zero point written at its end (no dimension line or arrows)."""
+    (ax, ay), (bx, by) = t(*d["a"]), t(*d["b"])
+    off = float(d.get("offset", 10.0))
+    text = dim_text(d, D._fmt(dim_value(d)))
+    if d.get("axis", "x") == "x":  # values along the view's x: extension lines run up / down the sheet
+        ey = ay + off
+        gap = 1.0 if ey > by else -1.0
+        return [f'<line x1="{bx:.3f}" y1="{by + gap:.3f}" x2="{bx:.3f}" y2="{ey:.3f}" stroke="#000" stroke-width="0.13"/>',
+                f'<text data-dim="{escape(d["id"])}" x="{bx:.3f}" y="{ey + (4.0 if off > 0 else -1.2):.3f}" font-size="3.2" '
+                f'text-anchor="middle">{escape(text)}</text>']
+    ex = ax - off
+    gap = -1.0 if ex < bx else 1.0
+    return [f'<line x1="{bx + gap:.3f}" y1="{by:.3f}" x2="{ex:.3f}" y2="{by:.3f}" stroke="#000" stroke-width="0.13"/>',
+            f'<text data-dim="{escape(d["id"])}" x="{ex + (-1.2 if off > 0 else 1.2):.3f}" y="{by + 1.1:.3f}" font-size="3.2" '
+            f'text-anchor="{"end" if off > 0 else "start"}">{escape(text)}</text>']
 
 
 def _render_line_gap(d, t) -> list[str]:

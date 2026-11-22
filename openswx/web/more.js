@@ -841,6 +841,15 @@ const MIXIN = {
     if (r.ok) this.toast(`${r.result.files.length} files in ${escapeHtml(r.result.folder)}${r.result.not_included.length ? ` (${r.result.not_included.length} not included: see manifest.json)` : ""}`); else this.toast(r.error, "err");
   },
 
+  // Tools > Sketch Entities > Equation Driven Curve (in an open sketch)
+  async equationCurve() {
+    if (!this.sk.active) return this.toast("Open a sketch first: the curve is drawn in it.", "err");
+    const r = await this.cmdForm("Equation Driven Curve", "sketch_equation_curve", [["x", "x(t)", "text", "t"], ["y", "y(t)", "text", "t^2/20"],
+      ["t_start", "t from", "number", -10], ["t_end", "t to", "number", 10], ["points", "Points", "number", 25], ["closed", "Closed", "check", false]],
+    { fixed: { sketch: this.sk.name }, note: "Uses t, global variables and the equation functions (sin / cos in degrees)." });
+    if (r) await this.loadSketch();
+  },
+
   async macroRun() {
     const path = await this.askPath("open", "", ["Python macro (*.py)"], "Run Macro");
     if (!path) return;

@@ -409,7 +409,7 @@ def open_part(path: str, history: bool = True) -> dict:
         APP.documents[doc.name] = doc
         APP.active = doc.name
         return doc.summary()
-    if ext in (".step", ".stp", ".brep", ".x_t", ".x_b", ".xmt_txt", ".xmt_bin", ".igs", ".iges"):
+    if ext in (".step", ".stp", ".brep", ".x_t", ".x_b", ".xmt_txt", ".xmt_bin", ".igs", ".iges", ".stl", ".3mf"):
         doc = APP.new_document(p.stem)
         _import_file(doc, str(p))
         return doc.summary()
@@ -982,6 +982,40 @@ def _read_iges(path: str):
     return Compound(solids), [f"sewed {len(shape.faces())} IGES faces into {len(solids)} solid(s)"]
 
 
+MESH_FACE_LIMIT = 200_000
+
+
+def _read_mesh(path: str):
+    """A triangle mesh (.stl, .3mf) as solid bodies: every closed, consistently oriented mesh becomes a solid
+    whose faces are its triangles, with coplanar neighbours merged into one planar face where that works."""
+    from build123d import Compound, Mesher
+    try:
+        shapes = Mesher().read(path)
+    except Exception as exc:  # noqa: BLE001 - lib3mf reports unreadable files in its own ways
+        raise DocumentError(f"cannot read the mesh: {exc}") from exc
+    solids = [s for s in shapes if s.solids()]
+    if not solids:
+        raise DocumentError("the mesh is not a closed volume (open edges or inconsistent facets): no solid to import")
+    notes = []
+    if len(solids) < len(shapes):
+        notes.append(f"{len(shapes) - len(solids)} open mesh(es) were left out (not closed volumes)")
+    n = sum(len(s.faces()) for s in solids)
+    if n > MESH_FACE_LIMIT:
+        raise DocumentError(f"the mesh has {n} facets; over {MESH_FACE_LIMIT} is too many to edit as a solid "
+                            "(decimate it first)")
+    out = []
+    for s in solids:
+        try:
+            c = s.clean()
+            out.append(c if c.is_valid and abs(c.volume - s.volume) <= 1e-6 * max(1.0, abs(s.volume)) else s)
+        except Exception:  # noqa: BLE001 - merging facets is a nicety: keep the triangles
+            out.append(s)
+    merged = sum(len(s.faces()) for s in out)
+    notes.append(f"mesh of {n} facets imported as {len(out)} solid(s)" + (f", {merged} faces after merging coplanar facets" if merged < n else "")
+                 + "; curved surfaces stay faceted")
+    return (out[0] if len(out) == 1 else Compound(out)), notes
+
+
 def _import_file(doc: PartDocument, path: str, config: int | None = None) -> dict:
     from build123d import import_brep, import_step
     p = Path(path)
@@ -994,6 +1028,8 @@ def _import_file(doc: PartDocument, path: str, config: int | None = None) -> dic
         shape, notes = read_sldprt(str(p), config)
     elif ext in (".igs", ".iges"):
         shape, notes = _read_iges(str(p))
+    elif ext in (".stl", ".3mf"):
+        shape, notes = _read_mesh(str(p))
     else:
         shape = import_step(str(p)) if ext in (".step", ".stp") else import_brep(str(p))
     if not shape.solids():
@@ -1006,8 +1042,8 @@ def _import_file(doc: PartDocument, path: str, config: int | None = None) -> dic
 
 @command(category="document")
 def import_file(path: str) -> dict:
-    """Import a STEP (.step/.stp), BREP, Parasolid (.x_t/.x_b) or SOLIDWORKS part (.sldprt, read natively)
-    into the active part as an Imported feature."""
+    """Import a STEP (.step/.stp), IGES, BREP, Parasolid (.x_t/.x_b), SOLIDWORKS part (.sldprt, read natively)
+    or a closed triangle mesh (.stl, .3mf: becomes a faceted solid) into the active part as an Imported feature."""
     feat = _import_file(APP.doc, path)
     return {"feature": feat["name"], "model": APP.doc.summary()}
 
@@ -3705,6 +3741,40 @@ def sketch_spline(sketch: str, points: list[Vec2 | str], closed: bool = False, c
     def f(sk):
         eid = sk.add_spline(points, closed, construction)
         return {"entity": eid, "points": sk.entities[eid]["pts"]}
+    return _sk(sketch, f)
+
+
+@command(category="sketch")
+def sketch_equation_curve(sketch: str, x: str, y: str, t_start: float = 0.0, t_end: float = 1.0, points: int = 25,
+                          closed: bool = False, construction: bool = False) -> dict:
+    """Equation Driven Curve (parametric): a spline through `points` samples of x(t), y(t) for t from t_start
+    to t_end. The expressions use `t`, the part's global variables, + - * / ^ and the equation functions
+    (sin, cos, tan take degrees, like every openswx equation; sqr, abs, min, max; pi). Examples: an involute
+    x='10*(cos(t)+t*pi/180*sin(t))', y='10*(sin(t)-t*pi/180*cos(t))'; a parabola x='t', y='t^2/20' (the
+    explicit form y = f(x) is x='t'). closed=True joins the end to the start."""
+    from .equations import EquationError, Evaluator
+    if points < 3 or points > 500:
+        raise DocumentError("points must be between 3 and 500")
+    if t_end == t_start:
+        raise DocumentError("t_start and t_end must differ")
+    ev = Evaluator(APP.doc.variables)
+    pts = []
+    n = points if not closed else points + 1
+    for i in range(points):
+        ev.globals["t"] = t_start + (t_end - t_start) * i / (n - 1)
+        try:
+            px, py = float(ev.eval(x)), float(ev.eval(y))
+        except (EquationError, ZeroDivisionError, ValueError, OverflowError) as exc:
+            raise DocumentError(f"cannot evaluate the curve at t = {ev.globals['t']:g}: {exc}") from exc
+        if not (math.isfinite(px) and math.isfinite(py)):
+            raise DocumentError(f"the curve is not finite at t = {ev.globals['t']:g}")
+        if pts and math.dist(pts[-1], (px, py)) < 1e-9:
+            raise DocumentError(f"the curve does not move at t = {ev.globals['t']:g} (two samples coincide)")
+        pts.append([px, py])
+
+    def f(sk):
+        eid = sk.add_spline(pts, closed, construction)
+        return {"entity": eid, "points": sk.entities[eid]["pts"], "samples": len(pts)}
     return _sk(sketch, f)
 
 

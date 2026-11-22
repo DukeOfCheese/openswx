@@ -93,7 +93,7 @@ class DesktopApi:
         return {"path": path} if path else {"cancelled": True}
 
     def open_file(self):
-        path = self._dialog("open", types=("openswx and CAD files (*.oswprt;*.oswasm;*.oswdrw;*.step;*.stp;*.igs;*.iges;*.x_t;*.x_b;*.sldprt;*.sldasm;*.slddrw)",
+        path = self._dialog("open", types=("openswx and CAD files (*.oswprt;*.oswasm;*.oswdrw;*.step;*.stp;*.igs;*.iges;*.x_t;*.x_b;*.stl;*.3mf;*.sldprt;*.sldasm;*.slddrw)",
                                            "All files (*.*)"))
         if not path:
             return {"cancelled": True}

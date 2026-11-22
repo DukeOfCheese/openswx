@@ -140,3 +140,51 @@ def test_drawing_dimension_tolerance_reaches_the_inspection_report():
     assert bore["general"] is True
     with pytest.raises(S.CommandError):
         S.drawing_edit_dimension(did, tolerance={"type": "fit", "fit": "X1"})
+
+
+def test_baseline_chain_and_ordinate_dimension_sets(tmp_path):
+    S.new_part("Stepped")
+    sk = S.create_sketch("Front")["sketch"]
+    # a staircase outline: corners at x = 0, 20, 50, 90
+    pts = [[0, 0], [90, 0], [90, 10], [50, 10], [50, 20], [20, 20], [20, 30], [0, 30]]
+    for a, b in zip(pts, pts[1:] + pts[:1]):
+        S.sketch_line(sk, a, b)
+    S.extrude(sk, 5)
+    S.drawing_new(sheet="A3", scale=1)
+    from openswx import drawing_sheets as DS
+    st = S.APP.doc.drawing
+    view = st["sheets"][0]["views"][0]  # the front view looks straight at the sketch
+    g = DS.view_geometry(S.APP.doc, st, view)
+    t = DS.placement(st, view, g)
+    x0, y0 = min(v[0] for v in g["verts"]), min(v[1] for v in g["verts"])
+    xs = sorted({round(v[0] - x0, 6) for v in g["verts"]})
+    assert xs == [0, 20, 50, 90]
+
+    def at(x):  # a vertex of the outline at that x, as a sheet point
+        v = min((v for v in g["verts"] if abs(v[0] - x0 - x) < 1e-6), key=lambda v: v[1])
+        return list(t(*v))
+    base = S.drawing_dimension_set(view["id"], "baseline", [at(0), at(20), at(50), at(90)])["dimensions"]
+    assert [d["value"] for d in base] == [20, 50, 90]
+    chain = S.drawing_dimension_set(view["id"], "chain", [at(0), at(20), at(50), at(90)], offset=40)["dimensions"]
+    assert [d["value"] for d in chain] == [20, 30, 40]
+    ordi = S.drawing_dimension_set(view["id"], "ordinate", [at(0), at(20), at(50), at(90)], offset=60)["dimensions"]
+    assert [d["value"] for d in ordi] == [0, 20, 50, 90] and all(d["kind"] == "ordinate" for d in ordi)
+    dims = st["sheets"][0]["dims"]
+    assert [d["offset"] for d in dims[:3]] == [10.0, 17.0, 24.0]  # baseline dimensions step outwards
+    svg = S.create_drawing()["svg"]
+    for d in ordi:
+        assert f'data-dim="{d["id"]}"' in svg
+    # an ordinate dimension takes a tolerance like any other, and the inspection report lists it
+    S.drawing_edit_dimension(ordi[2]["id"], tolerance={"type": "symmetric", "plus": 0.05})
+    assert "50 ±0.05" in S.create_drawing()["svg"]
+    with pytest.raises(S.CommandError):
+        S.drawing_dimension_set(view["id"], "chain", [at(0)])
+    with pytest.raises(S.CommandError, match="no vertex"):
+        S.drawing_dimension_set(view["id"], "chain", [at(0), [1, 1]])
+    assert y0 is not None
+    for fmt in ("pdf", "dxf", "svg"):  # every exporter draws the new kind
+        out = tmp_path / f"stepped.{fmt}"
+        S.export_drawing(str(out), fmt)
+        assert out.stat().st_size > 500
+    kinds = [c["type"] for c in S.inspection_characteristics()["characteristics"]]
+    assert kinds.count("linear") >= 10
