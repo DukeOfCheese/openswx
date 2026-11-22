@@ -20,6 +20,8 @@ from .document import DocumentError, PartDocument
 from .features import mass_properties
 from .geom import face_normal, face_ref, resolve_face, tessellate
 
+from . import snapshots  # noqa: E402
+
 FORMAT = "openswx-assembly"
 MATES = {"coincident", "parallel", "perpendicular", "distance", "angle", "concentric", "tangent", "lock", "width", "gear",
          "symmetric", "slot", "limit_distance", "limit_angle", "cam", "path", "rack_pinion", "screw", "hinge", "universal_joint", "linear_coupler",
@@ -102,8 +104,8 @@ class AssemblyDocument:
         self.status: dict = {}
         self.revision, self.dirty = 0, False
         self.live_docs: dict = {}
-        self._undo: list[str] = []
-        self._redo: list[str] = []
+        self._undo: list = []  # (snapshots.Snapshot: long strings shared between steps)
+        self._redo: list = []
         self.mate_counter = 0
         self.journal: list | None = []  # (see PartDocument.journal)
         self.features: list[dict] = []  # component patterns / mirror components
@@ -171,21 +173,21 @@ class AssemblyDocument:
         return str(p)
 
     def _checkpoint(self):
-        self._undo.append(json.dumps(self.to_dict()))
+        self._undo.append(snapshots.pack(self.to_dict()))
         self._undo = self._undo[-50:]
         self._redo.clear()
 
     def undo(self):
         if not self._undo:
             raise DocumentError("nothing to undo")
-        self._redo.append(json.dumps(self.to_dict()))
-        self.load_dict(json.loads(self._undo.pop()))
+        self._redo.append(snapshots.pack(self.to_dict()))
+        self.load_dict(snapshots.unpack(self._undo.pop()))
 
     def redo(self):
         if not self._redo:
             raise DocumentError("nothing to redo")
-        self._undo.append(json.dumps(self.to_dict()))
-        self.load_dict(json.loads(self._redo.pop()))
+        self._undo.append(snapshots.pack(self.to_dict()))
+        self.load_dict(snapshots.unpack(self._redo.pop()))
 
     # ------------------------------------------------------------------ editing
     def component(self, name: str) -> Component:

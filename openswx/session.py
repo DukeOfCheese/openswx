@@ -213,6 +213,11 @@ NO_JOURNAL = {"new_part", "new_assembly", "open_part", "save_part", "save_drawin
 def _journal(name: str, arguments) -> None:
     """Record a command in the active document's journal (the script that rebuilds it; see export_script).
     Undo and redo need no entry: the journal is part of the state they put back."""
+    if name == "open_part":  # a foreign file opened as a new document: its script starts with the import
+        doc = APP.documents.get(APP.active)
+        if doc is not None and getattr(doc, "journal", None) == [] and getattr(doc, "features", None):
+            doc.journal = [{"command": "import_file", "args": {"path": str(arguments.get("path"))}}]
+        return
     if name in NO_JOURNAL or name.startswith(("pdm_", "macro_")) or name == "run_macro":
         return
     doc = APP.documents.get(APP.active)

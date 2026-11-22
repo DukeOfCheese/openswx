@@ -15,6 +15,8 @@ from .features import BUILDERS, NAME_PREFIX, Ctx, FeatureError, mass_properties
 from .geom import edge_info, face_info, tessellate
 from .sketch import Sketch, SketchError
 
+from . import snapshots  # noqa: E402
+
 FORMAT = "openswx-part"
 VERSION = 1  # (migrate.CURRENT[FORMAT]; see migrate.py before changing it)
 _KNOWN_KEYS = {"format", "version", "name", "units", "material", "appearance", "properties", "drawing", "study", "features",
@@ -92,8 +94,8 @@ class PartDocument:
         self.ctx = Ctx()
         self.revision = 0
         self.dirty = False
-        self._undo: list[str] = []
-        self._redo: list[str] = []
+        self._undo: list = []  # (snapshots.Snapshot: long strings shared between steps)
+        self._redo: list = []
         self.journal: list | None = []  # (a new document: everything done to it gets recorded)
         self.rebuild()
 
@@ -166,22 +168,22 @@ class PartDocument:
 
     # ------------------------------------------------------------------ undo
     def _checkpoint(self) -> None:
-        self._undo.append(json.dumps(self.to_dict()))
+        self._undo.append(snapshots.pack(self.to_dict()))
         self._undo = self._undo[-100:]
         self._redo.clear()
 
     def undo(self) -> None:
         if not self._undo:
             raise DocumentError("nothing to undo")
-        self._redo.append(json.dumps(self.to_dict()))
-        self.load_dict(json.loads(self._undo.pop()))
+        self._redo.append(snapshots.pack(self.to_dict()))
+        self.load_dict(snapshots.unpack(self._undo.pop()))
         self.dirty = True
 
     def redo(self) -> None:
         if not self._redo:
             raise DocumentError("nothing to redo")
-        self._undo.append(json.dumps(self.to_dict()))
-        self.load_dict(json.loads(self._redo.pop()))
+        self._undo.append(snapshots.pack(self.to_dict()))
+        self.load_dict(snapshots.unpack(self._redo.pop()))
         self.dirty = True
 
     # ------------------------------------------------------------------ tree editing
