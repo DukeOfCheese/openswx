@@ -1,7 +1,8 @@
 """Read foreign geometry in a child process, with a time limit.
 
 The readers for SOLIDWORKS and Parasolid files work on data openswx does not control, and the geometry
-kernel can hang or crash on what they build (a ShapeFix that never returns, a boolean that segfaults). Done
+kernel can hang or crash on what they build (a ShapeFix that never returns, a boolean that segfaults); its
+IGES reader crashes on some damaged files (found by the fuzz test in tests/test_print_and_gauges.py). Done
 in the application's own process, a hang would freeze it for good while it holds the command lock; in a child
 it costs that one file: the child is killed and the user is told which file and why.
 
@@ -13,7 +14,7 @@ from __future__ import annotations
 import os
 
 DEFAULT_TIMEOUT = 180.0
-ISOLATED_TYPES = (".sldprt", ".x_t", ".x_b", ".xmt_txt", ".xmt_bin")
+ISOLATED_TYPES = (".sldprt", ".x_t", ".x_b", ".xmt_txt", ".xmt_bin", ".igs", ".iges")
 
 
 class IsolationError(RuntimeError):
@@ -25,9 +26,12 @@ def enabled() -> bool:
 
 
 def read_geometry_here(path: str, config: int | None = None):
-    """(shape, notes) of a SOLIDWORKS part or Parasolid file, in this process."""
+    """(shape, notes) of a SOLIDWORKS part, Parasolid or IGES file, in this process."""
     from pathlib import Path
     ext = Path(path).suffix.lower()
+    if ext in (".igs", ".iges"):  # (OpenCASCADE's IGES reader can crash outright on a damaged file)
+        from .session import _read_iges
+        return _read_iges(path)
     if ext == ".sldprt":
         from .sldprt import read_sldprt
         return read_sldprt(path, config)

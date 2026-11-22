@@ -828,7 +828,7 @@ def _read_mesh(path: str):
 
 
 def _read_foreign(path: str, config: int | None = None):
-    """(shape, notes) of a SOLIDWORKS part or Parasolid file. Read in a child process with a time limit
+    """(shape, notes) of a SOLIDWORKS part, Parasolid or IGES file. Read in a child process with a time limit
     (isolated.py), so a file the kernel hangs or crashes on costs that file and not the application; a body
     already in the disk cache is used directly."""
     import multiprocessing
@@ -851,10 +851,8 @@ def _import_file(doc: PartDocument, path: str, config: int | None = None) -> dic
     from build123d import import_brep, import_step
     p = Path(path)
     ext, notes = p.suffix.lower(), []
-    if ext in (".x_t", ".x_b", ".xmt_txt", ".xmt_bin", ".sldprt"):
+    if ext in (".x_t", ".x_b", ".xmt_txt", ".xmt_bin", ".sldprt", ".igs", ".iges"):
         shape, notes = _read_foreign(str(p), config)
-    elif ext in (".igs", ".iges"):
-        shape, notes = _read_iges(str(p))
     elif ext in (".stl", ".3mf"):
         shape, notes = _read_mesh(str(p))
     else:

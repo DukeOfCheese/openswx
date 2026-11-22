@@ -20,7 +20,7 @@ Open-source parametric part modeling with a SOLIDWORKS-style workflow — and a 
   mesh); lattice-Boltzmann flow; plastics fill; 3-axis CAM with G-code; costing; inspection reports.
 - **Familiar UI** (desktop app or browser): CommandManager, FeatureManager design tree, PropertyManager with
   live preview, SOLIDWORKS mouse navigation and shortcuts.
-- **Agents**: <!-- counts -->414 commands, 397 of them MCP tools ([full list](docs/commands.md))<!-- /counts -->, over stdio or
+- **Agents**: <!-- counts -->416 commands, 399 of them MCP tools ([full list](docs/commands.md))<!-- /counts -->, over stdio or
   streamable HTTP. Agent actions show up live in the UI's Agent activity pane.
 - **Interop**: opens SOLIDWORKS parts, assemblies and drawings (`.sldprt`, `.sldasm`, `.slddrw`; 2015 and
   later) natively, with no SOLIDWORKS installation - see *Status* for how much of the feature history comes
@@ -138,5 +138,6 @@ clean-room rule: [`CONTRIBUTING.md`](CONTRIBUTING.md). Known gaps and their spec
 - **Autosave** keeps the last copy of each unsaved document (`~/.openswx/recovery`); set `OPENSWX_AUTOSAVE`
   to a number of seconds or `off`. The log is in `~/.openswx/logs` (Help > Save Diagnostic Report).
 
-What is missing, with a spec for each item: [`docs/GAPS.md`](docs/GAPS.md). History of the build:
+Where things stand, on one screen: [`docs/STATUS.md`](docs/STATUS.md). What is missing, with a spec for each item:
+[`docs/GAPS.md`](docs/GAPS.md). History of the build:
 [`docs/PLAN.md`](docs/PLAN.md).

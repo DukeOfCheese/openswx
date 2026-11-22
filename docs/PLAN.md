@@ -1,5 +1,8 @@
 # openswx build plan (living document — update checkboxes as work lands)
 
+> This file is the build log. For the current state see [STATUS.md](STATUS.md); for what is open, [GAPS.md](GAPS.md).
+> The Architecture section below describes the first layout, not today's files.
+
 Goal: clean-room, open-source parametric CAD that replicates the SOLIDWORKS look, feel and core
 part-modeling features, with a built-in MCP server so agents can drive it, plus a differential
 test harness that compares results against a licensed SOLIDWORKS via its public COM API.

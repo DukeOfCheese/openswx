@@ -12,7 +12,7 @@ from .document import DocumentError
 from .session import APP, command
 
 __all__ = ["export_script", "compare_documents", "add_requirement", "delete_requirement", "check_requirements",
-           "review_model", "export_handoff_pack", "tolerance_stack", "design_study"]
+           "review_model", "export_handoff_pack", "tolerance_stack", "design_study", "print_orientation", "sheet_metal_gauge"]
 
 
 def _kind(doc) -> str:
@@ -558,3 +558,96 @@ def design_study(variables: dict[str, list[float]], measures: list[str] | None =
     doc.dirty = True
     return {"variables": names, "runs": runs, "count": len(runs), "feasible": sum(1 for r in runs if r.get("feasible")),
             "best": best, "kept_best": kept}
+
+
+# ====================================================================== 3D printing, sheet-metal gauges
+@command(mutates=False, category="evaluate")
+def print_orientation(overhang_angle: float = 45.0, bed: list[float] | None = None) -> dict:
+    """3D-print orientation advisor: for each of the six axis-aligned ways up, the build height, the area that
+    sits on the bed, the overhanging area (faces pointing down more steeply than `overhang_angle` degrees from
+    vertical, not counting what rests on the bed) and an estimate of the support volume (each overhanging
+    patch times its height above the bed: an upper bound, since supports that land on the part are shorter).
+    The orientations are returned best first: least support, then lowest. bed: [x, y, z] printer volume in
+    mm - orientations that do not fit are marked."""
+    import numpy as np
+
+    from .geom import tessellate
+    doc = APP.doc
+    if doc.body is None:
+        raise DocumentError("the part has no body")
+    if not 0 < overhang_angle < 90:
+        raise DocumentError("overhang_angle must be between 0 and 90 degrees")
+    mesh = tessellate(doc.body, tol=0.02)
+    tris = []
+    for f in mesh["faces"]:
+        v = np.asarray(f["v"], float).reshape(-1, 3)
+        t = np.asarray(f["t"], int).reshape(-1, 3)
+        if len(t):
+            tris.append(v[t])
+    if not tris:
+        raise DocumentError("the part has no faces to analyse")
+    T = np.concatenate(tris)  # (n, 3 corners, 3 coordinates)
+    cross = np.cross(T[:, 1] - T[:, 0], T[:, 2] - T[:, 0])
+    area = np.linalg.norm(cross, axis=1) / 2
+    keep = area > 1e-12
+    T, cross, area = T[keep], cross[keep], area[keep]
+    normal = cross / (2 * area[:, None])
+    centre = T.mean(axis=1)
+    # the mesh's facets may wind either way: point each normal away from the solid's inside using the volume sign
+    if float(np.einsum("ij,ij->i", centre, cross).sum()) < 0:
+        normal = -normal
+    limit = -math.cos(math.radians(overhang_angle))  # n . up below this: steeper than the angle allows
+    out = []
+    for label, up in (("+X", (1, 0, 0)), ("-X", (-1, 0, 0)), ("+Y", (0, 1, 0)), ("-Y", (0, -1, 0)), ("+Z", (0, 0, 1)), ("-Z", (0, 0, -1))):
+        d = np.asarray(up, float)
+        h = T @ d  # height of every corner
+        base, top = float(h.min()), float(h.max())
+        low = h.max(axis=1) - base  # how far the facet's highest corner is above the bed
+        nd = normal @ d
+        on_bed = (low < 1e-4 * max(top - base, 1.0) + 1e-6) & (nd < -0.999)
+        over = (nd < limit) & ~on_bed
+        proj = area * np.abs(nd)
+        support = float((proj[over] * (h[over].mean(axis=1) - base)).sum())
+        size = [float(np.ptp(T[:, :, i])) for i in range(3)]
+        axis = int(np.argmax(np.abs(d)))
+        footprint = sorted(size[i] for i in range(3) if i != axis)
+        row = {"up": label, "height": round(top - base, 4), "bed_contact_area": round(float(area[on_bed].sum()), 4),
+               "overhang_area": round(float(area[over].sum()), 4), "support_volume": round(support, 4),
+               "footprint": [round(footprint[0], 4), round(footprint[1], 4)]}
+        if bed:
+            b = sorted(float(x) for x in bed[:2])
+            row["fits"] = footprint[0] <= b[0] + 1e-9 and footprint[1] <= b[1] + 1e-9 and (top - base) <= float(bed[2]) + 1e-9
+        out.append(row)
+    out.sort(key=lambda r: (not r.get("fits", True), r["support_volume"], -r["bed_contact_area"], r["height"]))
+    return {"overhang_angle": overhang_angle, "orientations": out, "best": out[0]["up"],
+            "note": "support volume is an upper bound (supports are taken down to the bed)"}
+
+
+# sheet thickness by gauge number, mm: Manufacturers' Standard Gauge (steel), galvanised, stainless (US
+# Standard) and aluminium / brass (Brown & Sharpe)
+SHEET_GAUGES = {
+    "steel": {7: 4.554, 8: 4.176, 9: 3.797, 10: 3.416, 11: 3.038, 12: 2.657, 13: 2.278, 14: 1.897, 16: 1.519, 18: 1.214,
+              20: 0.912, 22: 0.759, 24: 0.607, 26: 0.455, 28: 0.378},
+    "galvanized": {10: 3.510, 11: 3.132, 12: 2.753, 14: 1.994, 16: 1.613, 18: 1.311, 20: 1.006, 22: 0.853, 24: 0.701,
+                   26: 0.551, 28: 0.475},
+    "stainless": {7: 4.763, 8: 4.366, 10: 3.571, 11: 3.175, 12: 2.778, 14: 1.984, 16: 1.588, 18: 1.270, 20: 0.953,
+                  22: 0.794, 24: 0.635, 26: 0.476, 28: 0.397},
+    "aluminum": {8: 3.264, 10: 2.588, 12: 2.052, 14: 1.628, 16: 1.291, 18: 1.024, 20: 0.812, 22: 0.644, 24: 0.511,
+                 26: 0.405, 28: 0.321},
+}
+
+
+@command(mutates=False, category="sheet_metal")
+def sheet_metal_gauge(material: Literal["steel", "galvanized", "stainless", "aluminum"] = "steel",
+                      gauge: int | None = None) -> dict:
+    """Sheet-metal gauge table: the thickness in mm of a gauge number in steel (Manufacturers' Standard
+    Gauge), galvanised steel, stainless steel (US Standard) or aluminium (Brown & Sharpe) - gauge numbers mean
+    different thicknesses in each. Without `gauge`: the whole table for the material. Use the thickness with
+    base_flange(thickness=...); a common default bend radius is the thickness itself."""
+    table = SHEET_GAUGES[material]
+    if gauge is None:
+        return {"material": material, "gauges": {str(g): t for g, t in table.items()}}
+    if gauge not in table:
+        raise DocumentError(f"no {gauge} gauge in the {material} table; it has {sorted(table)}")
+    t = table[gauge]
+    return {"material": material, "gauge": gauge, "thickness": t, "thickness_in": round(t / 25.4, 4), "suggested_bend_radius": t}
