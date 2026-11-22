@@ -217,7 +217,8 @@ NO_JOURNAL = {"new_part", "new_assembly", "open_part", "save_part", "save_drawin
               "close_document", "export_file", "export_bom", "export_drawing", "export_sketch_dxf",
               "export_flat_pattern_dxf", "export_edrawing", "pack_and_go", "motion_export", "undo", "redo",
               "recover_document", "discard_recovered", "save_custom_material", "delete_custom_material",
-              "inspection_report", "composer_export", "electrical_formboard", "export_script", "export_handoff_pack"}
+              "inspection_report", "composer_export", "electrical_formboard", "export_script", "export_handoff_pack",
+              "standard_part", "simulation_report"}
 
 
 def _journal(name: str, arguments) -> None:
@@ -1263,6 +1264,7 @@ from .commands_settings import *  # noqa: E402,F401,F403
 from .commands_asm import *  # noqa: E402,F401,F403
 from .commands_blocks import *  # noqa: E402,F401,F403
 from .commands_simreport import *  # noqa: E402,F401,F403
+from .commands_std import *  # noqa: E402,F401,F403
 
 from . import plugins as _plugins  # noqa: E402
 
