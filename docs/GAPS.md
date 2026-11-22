@@ -25,8 +25,8 @@ since 2026-11-23 the suite also runs green in CI on Linux and macOS; the desktop
 
 | Item | State | What was done / what is left |
 |---|---|---|
-| A1 licence | done | `LICENSE`, `NOTICE`, `CONTRIBUTING.md`; in the wheel and the Windows installer; About box. **Left:** the macOS package (`packaging/build.py` belongs to the uncommitted macOS work) |
-| A2 remote, branch, commits | mostly | Private GitHub repository `DukeOfCheese/openswx`, branch `main`, pushed 2026-11-23 (to be made public later; the commit author address is a noreply one and no tracked file holds a user name or path). **Left:** the macOS packaging work is still uncommitted in the working tree, with its release workflow `build.yml` |
+| A1 licence | done | `LICENSE`, `NOTICE`, `CONTRIBUTING.md`; in the wheel, the Windows installer, the Linux tarball and the macOS app bundle (not yet seen in a built macOS package); About box |
+| A2 remote, branch, commits | done | Private GitHub repository `DukeOfCheese/openswx`, branch `main` (to be made public later; the commit author address is a noreply one and no tracked file holds a user name or path). The macOS packaging work and its release workflow `build.yml` are committed. **Left:** the release workflow has not been run since |
 | A3 CI on push | done | `.github/workflows/test.yml` runs green on Linux (Python 3.11 and 3.13), Windows and macOS. The first run found one platform-dependent failure (a requirement exactly at its limit), fixed |
 | A4 docs | done | `docs/commands.md` generated and checked by a test; README rewritten around it; `docs/STATUS.md` is the one-screen current state and `PLAN.md` is marked as the log |
 | B1 server guard | done | `security.py`: token, Host / Origin / Sec-Fetch-Site checks, JSON-only POST, `--allow-remote`. The token is per user and persistent (the spec said per launch) so agent configurations survive restarts. Macros: agents cannot run them (not an MCP tool) and `macro_stop` obeys the workspace |

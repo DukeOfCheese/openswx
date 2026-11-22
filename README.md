@@ -32,10 +32,10 @@ Open-source parametric part modeling with a SOLIDWORKS-style workflow — and a 
 Geometry kernel: [OpenCASCADE](https://dev.opencascade.org/) via [build123d](https://github.com/gumyr/build123d).
 Not affiliated with or endorsed by Dassault Systèmes. SOLIDWORKS is a trademark of Dassault Systèmes.
 
-## Desktop app (Windows .exe)
+## Desktop app (Windows .exe, macOS .app)
 
 ```bash
-.venv\Scripts\pip install pywebview pyinstaller
+.venv\Scripts\pip install -e .[desktop]
 .venv\Scripts\python packaging\make_icon.py
 .venv\Scripts\pyinstaller packaging\openswx.spec --noconfirm     # -> dist\openswx\
 dist\openswx\openswx.exe                                          # native window, CAD engine + MCP in-process
@@ -45,6 +45,24 @@ dist\openswx\openswx-cli.exe mcp                                  # stdio MCP se
 `openswx.exe` opens documents passed on the command line (`openswx.exe part.oswprt`), uses native Open/Save/Export
 dialogs, and exposes MCP at `http://127.0.0.1:8765/mcp` while running. The `dist\openswx` folder (~400 MB) is
 self-contained and can be zipped and copied to another Windows PC (needs the Edge WebView2 runtime, built into Windows 11).
+
+**Release builds**: `python packaging/build.py --zip` builds the installers for the platform it runs on
+(PyInstaller doesn't cross-compile) into `dist-new/`:
+
+| | Installer | Runnable without installing |
+|---|---|---|
+| Windows | `openswx-setup-<ver>.exe` (Inno Setup) | `openswx-<ver>-win64.zip` → `openswx.exe` |
+| macOS (arm64 / x86_64) | `openswx-<ver>-macos-<arch>.pkg` → `/Applications/openswx.app`, plus `openswx-cli` in `/usr/local/bin` | `openswx.app`, zipped as `openswx-<ver>-macos-<arch>.zip` |
+
+The GitHub Actions workflow `.github/workflows/build.yml` runs this on Windows, Apple-silicon and Intel macOS
+runners: start it by hand from the Actions tab, or push a `v*` tag to also publish a release.
+On macOS, `.oswprt` / `.oswasm` / `.oswdrw` open in openswx after install, and it's listed under *Open With* for
+SOLIDWORKS, STEP, IGES and Parasolid files.
+
+macOS builds are unsigned (ad-hoc) for now. Gatekeeper blocks the first launch: right-click `openswx.app` →
+*Open*, or run `xattr -dr com.apple.quarantine /Applications/openswx.app`. To sign, set
+`OPENSWX_CODESIGN_IDENTITY` (Developer ID Application) and `OPENSWX_INSTALLER_IDENTITY` (Developer ID Installer)
+before building. To uninstall, delete `/Applications/openswx.app` and `/usr/local/bin/openswx-cli`.
 
 ## Quick start (development, browser UI)
 

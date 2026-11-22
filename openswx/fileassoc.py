@@ -41,6 +41,9 @@ def planned_keys(exe: str) -> list[tuple[str, str | None, str]]:
 
 
 def _winreg():
+    if sys.platform == "darwin":
+        raise OSError("on macOS the file types come with openswx.app (its Info.plist): macOS registers them when "
+                      "the app is in /Applications")
     if sys.platform != "win32":
         raise OSError("file associations are only registered on Windows")
     import winreg

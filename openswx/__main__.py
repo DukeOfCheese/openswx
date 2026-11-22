@@ -50,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("unregister-file-types", help="remove the file associations register-file-types added")
     from . import cli  # (headless one-shot tools: convert, render, massprops, check, drawing, script, diff)
     cli.add_parsers(sub)
-    argv = list(sys.argv[1:] if argv is None else argv)
+    argv = [x for x in (sys.argv[1:] if argv is None else argv) if not x.startswith("-psn_")]  # (macOS Finder launch)
     if not argv or (argv[0] not in ("desktop", "serve", "mcp", "token", "sldinfo", "register-file-types", "unregister-file-types", "-h", "--help", *cli.COMMANDS)):
         argv = ["desktop", *argv]  # double-clicking openswx.exe (or opening a file with it) starts the app
     a = ap.parse_args(argv)
