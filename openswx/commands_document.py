@@ -589,11 +589,18 @@ def get_equations() -> dict:
 
 
 @command(category="configurations")
-def add_configuration(name: str, copy_from: str | None = None) -> dict:
+def add_configuration(name: str, copy_from: str | None = None, derived_from: str | None = None) -> dict:
     """Add a configuration (copying suppression states/overrides from `copy_from`, default the active one)
     and make it active. Parts: per-configuration feature suppression and dimension values. Assemblies:
     per-configuration component suppression (suppress_component) and mate values (edit_mate while the
-    configuration is active)."""
+    configuration is active). derived_from (parts): instead of a copy, a derived configuration - it follows
+    that parent's suppression states and values wherever it has none of its own, and keeps following when
+    the parent changes."""
+    if derived_from is not None:
+        if getattr(APP.active_doc, "kind", "part") != "part":
+            raise DocumentError("derived configurations are for parts")
+        APP.active_doc.add_configuration(name, derived_from=derived_from)
+        return APP.active_doc.summary()
     APP.active_doc.add_configuration(name, copy_from)  # (parts and assemblies both have configurations)
     return APP.active_doc.summary()
 

@@ -21,7 +21,7 @@ FORMAT = "openswx-part"
 VERSION = 1  # (migrate.CURRENT[FORMAT]; see migrate.py before changing it)
 _KNOWN_KEYS = {"format", "version", "name", "units", "material", "appearance", "properties", "drawing", "study", "features",
                "rollback", "counters", "next_id", "variables", "configurations", "active_config", "folders",
-               "design_table", "named_views", "pmi", "render", "tolerances", "journal", "requirements", "blocks"}
+               "design_table", "named_views", "pmi", "render", "tolerances", "journal", "requirements", "blocks", "display_states", "display_state"}
 DEFAULT_TREE = ["History", "Sensors", "Annotations", "Material", "Front Plane", "Top Plane", "Right Plane", "Origin"]
 CONSUMES_SKETCH = {"extrude", "cut_extrude", "revolve", "cut_revolve", "sweep", "cut_sweep", "loft", "cut_loft",
                    "base_flange", "structural_member", "sketched_bend", "revolved_surface", "swept_surface",
@@ -112,6 +112,7 @@ class PartDocument:
             "tolerances": getattr(self, "tolerances", {}),  # {"D1@Sketch1": {"type": ...}} (tolerance.py)
             "requirements": getattr(self, "requirements", []),
             "blocks": getattr(self, "blocks", {}),  # sketch blocks (commands_blocks.py)
+            "display_states": getattr(self, "display_states", {}), "display_state": getattr(self, "display_state", None),
             # the commands that built the document, when all of them are known (export_script replays them)
             **({"journal": self.journal} if getattr(self, "journal", None) is not None else {}),
             **getattr(self, "_extra", {}),  # (keys of the file this version does not use: written back)
@@ -146,6 +147,8 @@ class PartDocument:
         self.tolerances = d.get("tolerances", {})
         self.requirements = d.get("requirements", [])
         self.blocks = d.get("blocks", {})
+        self.display_states = d.get("display_states", {})
+        self.display_state = d.get("display_state") if d.get("display_state") in self.display_states else None
         self.journal = d.get("journal")  # (None: the file does not say how it was built)
         self.rebuild()
 
@@ -449,12 +452,31 @@ class PartDocument:
             raise DocumentError(f"no configuration {name!r}")
         return self.configurations[name]
 
-    def add_configuration(self, name: str, copy_from: str | None = None) -> None:
-        if name in self.configurations:
-            raise DocumentError(f"configuration {name!r} already exists")
-        self._checkpoint()
-        src = self._config(copy_from or self.active_config)
-        self.configurations[name] = copy.deepcopy(src)
+    def _effective_config(self, name: str) -> dict:
+        """What a configuration amounts to: its own suppression states and values over its parent's, and so on
+        up the chain (a derived configuration follows its parent wherever it does not say otherwise)."""
+        chain, seen = [], set()
+        while name in self.configurations and name not in seen:
+            seen.add(name)
+            chain.append(self.configurations[name])
+            name = self.configurations[name].get("parent")
+        out = {"suppressed": {}, "values": {}}
+        for cfg in reversed(chain):
+            out["suppressed"].update(cfg.get("suppressed", {}))
+            out["values"].update(cfg.get("values", {}))
+        return out
+
+    def add_configuration(self, name: str, copy_from: str | None = None, derived_from: str | None = None) -> None:
+        if not name or name in self.configurations:
+            raise DocumentError(f"configuration {name!r} already exists" if name else "give the configuration a name")
+        if derived_from is not None:
+            self._config(derived_from)
+            self._checkpoint()
+            self.configurations[name] = {"suppressed": {}, "values": {}, "parent": derived_from}
+        else:
+            self._checkpoint()
+            src = self._config(copy_from or self.active_config)
+            self.configurations[name] = copy.deepcopy(src)
         self.active_config = name
         self.rebuild()
 
@@ -467,11 +489,48 @@ class PartDocument:
         if name == "Default":
             raise DocumentError("the Default configuration cannot be deleted")
         self._config(name)
+        children = [n for n, c in self.configurations.items() if c.get("parent") == name]
+        if children:
+            raise DocumentError(f"{name} has derived configurations ({', '.join(children)}): delete those first")
         self._checkpoint()
         del self.configurations[name]
         if self.active_config == name:
             self.active_config = "Default"
         self.rebuild()
+
+    # ------------------------------------------------------------------ display states (saved appearances)
+    def save_display_state(self, name: str, hidden: list | None = None) -> None:
+        if not name:
+            raise DocumentError("give the display state a name")
+        self._checkpoint()
+        states = dict(getattr(self, "display_states", {}))
+        states[name] = {"appearance": copy.deepcopy(self.appearance)}
+        self.display_states, self.display_state = states, name
+        self.dirty = True
+        self.revision += 1
+
+    def activate_display_state(self, name: str | None) -> None:
+        states = getattr(self, "display_states", {})
+        if name is not None and name not in states:
+            raise DocumentError(f"no display state {name!r}; this part has {list(states)}")
+        self._checkpoint()
+        if name is not None:
+            self.appearance = copy.deepcopy(states[name]["appearance"])
+        self.display_state = name
+        self.dirty = True
+        self.revision += 1
+
+    def delete_display_state(self, name: str) -> None:
+        states = dict(getattr(self, "display_states", {}))
+        if name not in states:
+            raise DocumentError(f"no display state {name!r}")
+        self._checkpoint()
+        del states[name]
+        self.display_states = states
+        if getattr(self, "display_state", None) == name:
+            self.display_state = None
+        self.dirty = True
+        self.revision += 1
 
     def _config_key(self, target: str) -> str:
         owner, key = parse_target(target)
@@ -662,7 +721,7 @@ class PartDocument:
         ctx = Ctx(flat=getattr(self, "flattened", False))
         state: dict[str, dict] = {}
         active = self.features if self.rollback is None else self.features[: self.rollback]
-        cfg = self.configurations.get(self.active_config) or {"suppressed": {}, "values": {}}
+        cfg = self._effective_config(self.active_config)
         try:
             ev = Evaluator(self.variables)
         except EquationError as exc:
@@ -752,7 +811,9 @@ class PartDocument:
             "configurations": list(self.configurations), "active_config": self.active_config,
             "flattened": getattr(self, "flattened", False), "sheet_metal": self.ctx.sheet is not None,
             "global_variables": self.variables, "tolerances": getattr(self, "tolerances", {}),
-            "requirements": getattr(self, "requirements", []), "folders": self.folders, "design_table": self.design_table is not None,
+            "requirements": getattr(self, "requirements", []), "folders": self.folders,
+            "display_states": list(getattr(self, "display_states", {})), "display_state": getattr(self, "display_state", None),
+            "derived_configurations": {n: c["parent"] for n, c in self.configurations.items() if c.get("parent")}, "design_table": self.design_table is not None,
             "named_views": getattr(self, "named_views", {}), "pmi": getattr(self, "pmi", []),
             "render": getattr(self, "render", {}),
             "bodies": mp["bodies"], "volume_mm3": round(mp["volume"], 6),

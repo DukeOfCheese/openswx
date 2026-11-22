@@ -20,7 +20,7 @@ Snapshot
 ## Status after the first pass (2026-11-23)
 
 The specs below are as written on 2026-11-22; this table says what has been done about each since
-(commits `df95ff6` onwards, 303 tests). "Done" means implemented with tests that pass on Windows;
+(commits `df95ff6` onwards, 307 tests). "Done" means implemented with tests that pass on Windows;
 nothing here has been run on GitHub's runners, on macOS or Linux, or in the desktop window.
 
 | Item | State | What was done / what is left |
@@ -39,7 +39,7 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | C5 logging | done | `applog.py`, `save_diagnostic_report` |
 | D1 untested commands | done | Every command is named in a test; a test enforces it for new ones. Found and fixed on the way: component numbers reused after a delete, PDM where-used missing linked parts, property commands not marking the document changed |
 | D2 test file split | done | Nine files by area + `core_helpers.py` |
-| D3 UI tests | written, **not run** | `tests/ui/test_ui_smoke.py` (Playwright) and a `ui` job in the test workflow; skipped locally (Playwright is not installed here), so it has never run. By hand in a browser, twice: the token link, every dialog added in this pass (settings, tolerances, review, requirements, tutorials, update check, 3D finishing, assembly configurations and display states) and a study as a job. Not opened: Document Recovery, Export Script, Hand-off Pack, the desktop window. No screenshot comparison |
+| D3 UI tests | written, **not run** | `tests/ui/test_ui_smoke.py` (Playwright) and a `ui` job in the test workflow; skipped locally (Playwright is not installed here), so it has never run. By hand in a browser: the token link, every dialog added in this pass (including Document Recovery after a simulated crash, Export Script, Hand-off Pack and the diagnostic report) and a study as a job. Not opened: the desktop window. No screenshot comparison |
 | D4 conformance | done | `tests/conformance/*.json` (7 cases), `tools/conformance.py record / run` |
 | D5 static checks, deps | partly | ruff (errors only) in CI and `pyproject.toml`; `ezdxf` declared. **Left:** a lock file, type checking, the `sklearn` stub |
 | D6 survey in the repo | partly | `tools/survey.py` (resumable run, summary, compare), bookkeeping tested with a stand-in. **Not run** against the SOLIDWORKS sample corpus; no result table checked in |
@@ -49,7 +49,7 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | F SOLIDWORKS interop | mostly **open** | Done: custom properties from `.sldprt`. Everything else in the table (history coverage, partial open, configurations, mates, `.slddrw` dimensions) needs the SOLIDWORKS development oracle and survey runs, which are only started on request |
 | F neutral formats | partly | `.stl` / `.3mf` import as faceted solids. **Left:** STEP AP242 with colours and structure, OBJ, binary Parasolid writer |
 | G sketch | partly | Equation-driven curves; sketch blocks (make / insert / list / delete); dimension tolerances and fits. **Left:** sketch picture, style / fit splines, sketch dimension chains, spline relations |
-| G part | mostly **open** | Requirements cover what sensors do; sheet-metal gauge tables. **Left:** part display states, derived configurations, Instant3D, the other sheet-metal, weldment, surface and mesh items listed |
+| G part | partly | Derived configurations (a child follows its parent), display states (saved appearances), requirements in place of sensors, sheet-metal gauge tables. **Left:** Instant3D beyond the depth handle, freeze bar, and the sheet-metal (lofted bend, unfold / fold, tab and slot, convert to sheet metal, vents), weldment, surface and mesh items listed |
 | G assembly | partly | Assembly configurations (component suppression and mate values per configuration) and display states, with dialogs. **Left:** flexible subassemblies, lightweight components, belt / chain, collision and physics while dragging, physics-based motion, mate controller, layout sketches, exploded line sketch |
 | G drawings | partly | Ordinate / baseline / chain dimensions; tolerance display. **Left:** the rest of the list |
 | H1 C++ port decision | **open** | A decision for the owner; the conformance suite it depends on now exists |
@@ -76,7 +76,7 @@ nothing here has been run on GitHub's runners, on macOS or Linux, or in the desk
 | J9 bridges | partly | FreeCAD `.FCStd`: the visible bodies come in as imported geometry (`fcstd.py`; tested with archives in FreeCAD's documented layout, not with files saved by FreeCAD). **Left:** FreeCAD history, Onshape, Fusion |
 | J12 sharing | partly | `serve --share` prints a view-only link (its own token): the page, the model, live updates and queries, nothing that changes the model or writes a file. The UI is not adapted for viewers (editing attempts show the refusal); no comments pinned to faces |
 | J17 onboarding | partly | Help > Tutorials: three step lists ticked off from the model. No highlighting of the next button, no sample parts |
-| J10 sketch from image | **open** | |
+| J10 sketch from image | partly | `sketch_from_image`: the dark shapes of a picture become closed outlines of lines at a given scale (threshold, tolerance, speck removal). **Left:** fitting arcs and circles instead of line chains, inferred relations |
 | J11 command palette | exists | The search box already covers commands; "find what references this" not added |
 | J13 hand-off pack | done | `export_handoff_pack` |
 | J14 tolerance stack-up | done | `tolerance_stack` along a chain of model dimensions (not across assembly mates) |

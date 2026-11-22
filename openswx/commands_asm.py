@@ -19,22 +19,24 @@ def suppress_component(name: str, suppressed: bool = True, configuration: str | 
 
 @command(category="assembly")
 def save_display_state(name: str, hidden: list[str] | None = None) -> dict:
-    """Display State: save which components are hidden under a name (an existing state of that name is
-    replaced) and make it the active one. Hidden components are only not drawn - unlike suppressed ones they
-    stay in the assembly, its mates and its BOM."""
-    APP.asm.save_display_state(name, list(hidden or []))
-    return APP.asm.summary()
+    """Display State: in an assembly, save which components are hidden under a name; in a part, save its
+    current appearance (part, feature and face colours) under a name. An existing state of that name is
+    replaced, and the saved one becomes the active one. Hidden components are only not drawn - unlike
+    suppressed ones they stay in the assembly, its mates and its BOM."""
+    APP.active_doc.save_display_state(name, list(hidden or []))
+    return APP.active_doc.summary()
 
 
 @command(category="assembly")
 def activate_display_state(name: str | None = None) -> dict:
-    """Show the assembly as a saved display state has it (name=None: every component shown again)."""
-    APP.asm.activate_display_state(name)
-    return APP.asm.summary()
+    """Show the document as a saved display state has it: an assembly's hidden components, a part's colours
+    (name=None: no state active; in an assembly every component is shown again)."""
+    APP.active_doc.activate_display_state(name)
+    return APP.active_doc.summary()
 
 
 @command(category="assembly")
 def delete_display_state(name: str) -> dict:
     """Delete a saved display state."""
-    APP.asm.delete_display_state(name)
-    return APP.asm.summary()
+    APP.active_doc.delete_display_state(name)
+    return APP.active_doc.summary()
