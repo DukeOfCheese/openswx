@@ -304,7 +304,7 @@ def collab_name_version(name: str, note: str = "", seq: int | None = None) -> di
 def collab_restore(seq: int | None = None, version: str | None = None) -> dict:
     """Put the active cloud document back to an earlier state, for everyone: the state after change `seq`, or a
     named version. Nothing is lost: the restore is itself a new change in the history (and can be restored
-    away). Refused while anyone holds a lock."""
+    away). Refused while someone else holds a lock (your own locks do not stand in the way)."""
     c = _client()
     if (seq is None) == (version is None):
         raise DocumentError("give seq or version (one of them)")

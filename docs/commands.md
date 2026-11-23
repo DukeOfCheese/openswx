@@ -3656,7 +3656,7 @@ Name the current state of the active cloud document (or the state after change `
 collab_restore(seq: int | None = None, version: str | None = None)
 ```
 
-Put the active cloud document back to an earlier state, for everyone: the state after change `seq`, or a named version. Nothing is lost: the restore is itself a new change in the history (and can be restored away). Refused while anyone holds a lock.
+Put the active cloud document back to an earlier state, for everyone: the state after change `seq`, or a named version. Nothing is lost: the restore is itself a new change in the history (and can be restored away). Refused while someone else holds a lock (your own locks do not stand in the way).
 
 ### `collab_presence` *(read-only)*
 
