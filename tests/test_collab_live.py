@@ -183,6 +183,13 @@ def status(peer) -> dict:
 
 
 # ---------------------------------------------------------------------- the steps, in order
+def test_server_info_before_signing_in(world):
+    info = world["a"].call("collab_server_info", server=world["server"].url + "/")
+    assert info["name"] == "openswx-collab" and info["server"] == world["server"].url
+    assert info["oauth"] == []  # (no Google / GitHub set up on this server: email and password only)
+    assert "cannot reach" in world["a"].fails("collab_server_info", server="http://127.0.0.1:9")
+
+
 def test_enable_and_open(world):
     a, b = world["a"], world["b"]
     projects = a.call("collab_projects")["orgs"][0]["projects"]

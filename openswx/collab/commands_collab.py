@@ -14,7 +14,7 @@ from ..document import DocumentError
 from ..session import APP, command, unlocked
 from . import MISSING, available
 
-__all__ = ["collab_sign_in", "collab_sign_out", "collab_status", "collab_projects", "collab_create_project",
+__all__ = ["collab_sign_in", "collab_server_info", "collab_sign_out", "collab_status", "collab_projects", "collab_create_project",
            "collab_documents", "collab_enable", "collab_open", "collab_disable", "collab_lock", "collab_unlock",
            "collab_history", "collab_name_version", "collab_restore", "collab_presence"]
 
@@ -80,6 +80,26 @@ def collab_sign_in(server: str, email: str | None = None, password: str | None =
         if isinstance(exc, (DocumentError, ValueError)):
             raise
         raise DocumentError(f"cannot reach the collaboration server at {server}: {exc}") from exc
+
+
+@command(mutates=False, category="collab")
+def collab_server_info(server: str) -> dict:
+    """What a collaboration server offers before anyone signs in, as a sign-in dialog needs it: its name and
+    version, the protocol it speaks, how accounts are made (registration: e.g. 'open' or 'invite') and the
+    browser sign-in providers it has set up (oauth: e.g. ['google', 'github']; empty: email and password only).
+    server: its address, e.g. https://collab.example.com. Returns that, with the address as used (server)."""
+    import httpx
+    auth, _ = _need()
+    try:
+        url = auth.normalise(server)
+        with auth.http(url, "") as c:
+            r = c.get("/api/server")
+    except httpx.HTTPError as exc:
+        raise DocumentError(f"cannot reach the collaboration server at {server}: {exc}") from exc
+    info = _ok(r, "asking the server what it offers")
+    if not isinstance(info, dict):
+        raise DocumentError(f"{server} did not answer like an openswx-collab server")
+    return {**info, "server": url}
 
 
 @command(mutates=False, category="collab")
