@@ -1,0 +1,19 @@
+# Dependency update pull requests. Monthly and grouped into one PR per ecosystem, to keep CI runs (which
+# include macOS) few.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      python:
+        patterns: ["*"]

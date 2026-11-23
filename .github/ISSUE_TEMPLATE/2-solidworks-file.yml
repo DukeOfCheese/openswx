@@ -1,0 +1,61 @@
+name: SOLIDWORKS file
+description: A .sldprt / .sldasm / .slddrw that does not open, opens as an imported body, or comes in wrong.
+labels: ["sw-compat", "area:files"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not attach the sample files that ship with SOLIDWORKS**: Dassault holds their copyright. Their name and the
+        `openswx sldinfo` output are enough to find them. Only attach files you made and may share, and note that a saved
+        SOLIDWORKS file contains your Windows user name.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What goes wrong
+      options:
+        - It does not open (error)
+        - It opens as an imported body (feature history not rebuilt)
+        - The feature history rebuilds but the geometry differs
+        - Features, dimensions or properties are missing
+        - Assembly mates or positions are wrong
+        - Drawing views, dimensions or annotations are wrong
+        - It is very slow or times out
+    validations:
+      required: true
+  - type: input
+    id: file
+    attributes:
+      label: File
+      description: Name, and for a sample file the folder it ships in (e.g. samples/tutorial/...).
+    validations:
+      required: true
+  - type: input
+    id: sw-version
+    attributes:
+      label: SOLIDWORKS version that saved it
+      placeholder: e.g. 2023 SP5 (if you know it)
+  - type: textarea
+    id: features
+    attributes:
+      label: Feature tree in SOLIDWORKS
+      description: The features as SOLIDWORKS lists them, top to bottom, with the type of any that openswx gets wrong (e.g. "Sweep1, with guide curves").
+  - type: textarea
+    id: message
+    attributes:
+      label: What openswx shows
+      description: The error or the rebuild report, as text (e.g. "the rebuilt history does not regenerate to the same body (Cut-Extrude1)").
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: sldinfo
+    attributes:
+      label: Output of `openswx sldinfo FILE`
+      description: Optional, but it often tells us which record is not decoded.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: openswx version and platform
+    validations:
+      required: true

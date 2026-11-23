@@ -1,6 +1,6 @@
 """Survey: how many SOLIDWORKS parts of a folder open with an exact, editable feature history.
 
-    python tools/survey.py run CORPUS_DIR -o results.jsonl [--timeout 115] [--limit N] [--smallest-first]
+    python tools/survey.py run CORPUS_DIR -o results.jsonl [--timeout 115] [--limit N] [--smallest-first] [--jobs N]
         open every .sldprt under CORPUS_DIR the way the application does (isolated rebuild, time limit) and
         append one line per part to results.jsonl. Resumable: parts already in the file are skipped, so it
         can be run in chunks (--limit) and survives being stopped.
@@ -21,7 +21,9 @@ import argparse
 import json
 import os
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -52,7 +54,7 @@ def classify(report: dict | None, error: str | None) -> dict:
             "not_rebuilt": len(report.get("skipped") or []), "volume": vol, "stored_volume": stored}
 
 
-def run(corpus: str, out: str, timeout: float, limit: int | None, smallest_first: bool, rebuild=None) -> int:
+def run(corpus: str, out: str, timeout: float, limit: int | None, smallest_first: bool, rebuild=None, jobs: int = 1) -> int:
     if rebuild is None:
         sys.path.insert(0, str(ROOT))
         os.environ.setdefault("OPENSWX_CACHE", "off")  # (measure the rebuild, not the cache)
@@ -72,17 +74,23 @@ def run(corpus: str, out: str, timeout: float, limit: int | None, smallest_first
     if limit is not None:
         todo = todo[:limit]
     print(f"{len(files)} parts, {len(done)} already surveyed, {len(todo)} to do", file=sys.stderr)
+    lock, count = threading.Lock(), [0]
     with open(out, "a", encoding="utf-8") as fh:
-        for i, p in enumerate(todo, 1):
+        def one(p):
             t = time.time()
             try:
                 report, error = rebuild(str(p))
             except Exception as exc:  # noqa: BLE001 - one part must not end the survey
                 report, error = None, f"{type(exc).__name__}: {exc}"
             row = {"part": p.name, "seconds": round(time.time() - t, 1), **classify(report, error)}
-            fh.write(json.dumps(row) + "\n")
-            fh.flush()
-            print(f"[{i}/{len(todo)}] {p.name}: {row['outcome']} ({row['seconds']} s)", file=sys.stderr)
+            with lock:
+                fh.write(json.dumps(row) + "\n")
+                fh.flush()
+                count[0] += 1
+                print(f"[{count[0]}/{len(todo)}] {p.name}: {row['outcome']} ({row['seconds']} s)", file=sys.stderr)
+        # each rebuild runs in its own child process, so threads here only wait on them
+        with ThreadPoolExecutor(max(1, jobs)) as pool:
+            list(pool.map(one, todo))
     return 0
 
 
@@ -117,6 +125,7 @@ def main(argv=None) -> int:
     r.add_argument("--timeout", type=float, default=115.0)
     r.add_argument("--limit", type=int)
     r.add_argument("--smallest-first", action="store_true")
+    r.add_argument("--jobs", type=int, default=1, help="parts rebuilt at once (each in its own process; mind the memory)")
     s = sub.add_parser("summary")
     s.add_argument("results")
     c = sub.add_parser("compare")
@@ -124,7 +133,7 @@ def main(argv=None) -> int:
     c.add_argument("after")
     a = ap.parse_args(argv)
     if a.cmd == "run":
-        return run(a.corpus, a.output, a.timeout, a.limit, a.smallest_first)
+        return run(a.corpus, a.output, a.timeout, a.limit, a.smallest_first, jobs=a.jobs)
     if a.cmd == "summary":
         print(json.dumps(summary(load(a.results)), indent=1))
         return 0

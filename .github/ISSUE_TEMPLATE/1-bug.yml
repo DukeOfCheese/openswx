@@ -1,0 +1,72 @@
+name: Bug report
+description: Something gives a wrong result, an error or a crash.
+labels: ["bug", "needs-repro"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One problem per issue. The most useful thing you can give is a reproduction as commands (see below).
+        Security problems go to SECURITY.md, not here.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened
+      description: One or two sentences. Include the error message as text.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+      description: With numbers where there are any, e.g. "volume 4800 mm³, expected 4752.4 mm³".
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction as commands
+      description: |
+        Best: a JSON list for the `batch` command, or the output of `openswx script part.oswprt`.
+        Otherwise the smallest .oswprt that shows the problem (attach it zipped), or click-by-click steps if the bug is in the UI.
+      placeholder: |
+        [{"name": "new_part", "args": {"name": "Repro"}},
+         {"name": "create_sketch", "args": {"plane": "Top"}},
+         {"name": "sketch_rectangle", "args": {"sketch": "Sketch1", "corner1": [0, 0], "corner2": [40, 20]}},
+         {"name": "extrude", "args": {"sketch": "Sketch1", "depth": 6}}]
+      render: json
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Sketch, Part features, Assembly, Drawing, Simulation / analysis, CAM / manufacturing, UI, File import / export, Install / packaging, Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: how
+    attributes:
+      label: How you run openswx
+      options: [Desktop app (installer or zip), "`openswx serve` in a browser", "`openswx mcp` (agent over stdio)", Python (`openswx.api`), Command line (convert / render / ...)]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: From Help → About openswx, or `pip show openswx`. Add the commit if you run from source.
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      placeholder: Windows 11 x64 / macOS 15 arm64 / Ubuntu 24.04, and the browser if you use one
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log or diagnostic report
+      description: Help → Save Diagnostic Report (look it over for file paths first), or the traceback.
+      render: text

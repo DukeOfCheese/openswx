@@ -1,162 +1,252 @@
 # openswx
 
-Open-source parametric part modeling with a SOLIDWORKS-style workflow — and a built-in
-**MCP server** so AI agents can design parts in it while you watch.
+**Open-source parametric CAD with a familiar layout, and a built-in MCP server so AI agents can design
+parts in it while you watch.**
 
-- **Parts**: constrained 2D and 3D sketches; extrude / revolve / sweep / loft (boss and cut, with the SOLIDWORKS
-  end conditions), fillets and chamfers of every kind, shell, draft, rib, dome, wrap, Hole Wizard, threads,
-  patterns (linear, circular, curve, sketch, table, fill), mirror, multibody tools, reference geometry.
-  Full parametric rebuild, rollback bar, suppress, reorder, folders, undo / redo.
-- **Design intent**: equations and global variables in SOLIDWORKS syntax (`"D1@Sketch1" = "width"/2`),
-  configurations, design tables, materials, custom properties.
+[![tests](https://github.com/DukeOfCheese/openswx/actions/workflows/test.yml/badge.svg)](https://github.com/DukeOfCheese/openswx/actions/workflows/test.yml)
+[![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
+![platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
+![status: alpha](https://img.shields.io/badge/status-alpha-orange)
+
+openswx is an alternate CAD program for engineers. Its screen is laid out the way many mechanical engineers
+already know from SOLIDWORKS: a command bar across the top, a design tree on the left, a property panel for
+the active command, the same mouse navigation and shortcuts. If you can model a part there, you can model one
+here without retraining. Underneath, it is a different program, built on different foundations; the section
+[How it differs from SOLIDWORKS](#how-it-differs-from-solidworks) lists what that means in practice.
+
+> **Not affiliated with Dassault Systèmes.** openswx is an independent open-source project. It is not
+> affiliated with, endorsed by, sponsored by or connected to Dassault Systèmes or SOLIDWORKS Corporation.
+> SOLIDWORKS is a registered trademark of Dassault Systèmes SolidWorks Corporation; Parasolid is a
+> trademark of Siemens Industry Software. The names are used only to describe compatibility and the familiar
+> layout. openswx is a clean-room implementation: it contains no SOLIDWORKS code, icons or artwork, and it
+> does not need SOLIDWORKS installed to run or to open SOLIDWORKS files. See [NOTICE](NOTICE).
+
+## Contents
+
+- [What it does](#what-it-does)
+- [Install](#install)
+- [Your first part](#your-first-part)
+- [Agents: how they get access](#agents-how-they-get-access)
+- [How it differs from SOLIDWORKS](#how-it-differs-from-solidworks)
+- [Status and limitations](#status-and-limitations)
+- [Contributing](#contributing)
+- [Project layout](#project-layout)
+- [Licence](#licence)
+
+## What it does
+
+- **Parts**: constrained 2D and 3D sketches; extrude / revolve / sweep / loft (boss and cut, with the
+  familiar end conditions), fillets and chamfers of every kind, shell, draft, rib, dome, wrap, Hole Wizard,
+  threads, patterns (linear, circular, curve, sketch, table, fill), mirror, multibody tools, reference
+  geometry. Full parametric rebuild, rollback bar, suppress, reorder, folders, undo / redo.
+- **Design intent**: equations and global variables (`"D1@Sketch1" = "width"/2`), configurations, design
+  tables, materials, custom properties.
 - **Sheet metal, surfaces, weldments, mold tools**: flanges, hems, jogs, forming tools and flat patterns;
   the surface toolbox (extrude to boundary, knit, trim, thicken); structural members with cut lists;
   parting lines and tooling split.
 - **Assemblies**: linked parts, standard / advanced / mechanical mates with DOF status, patterns, exploded
-  views, motion studies, interference and clearance checks, Toolbox fasteners, pipe and cable routing.
+  views, motion studies, interference and clearance checks, a fastener library, pipe and cable routing.
 - **Drawings**: sheets with model, projected, section, detail, auxiliary, broken and cropped views; smart
   dimensions, GD&T, hole tables, BOM and balloons; PDF / DXF / SVG export (DWG through the ODA converter).
-- **Analysis**: static, frequency, buckling, thermal, nonlinear, fatigue and drop studies (finite-cell voxel
-  mesh); lattice-Boltzmann flow; plastics fill; 3-axis CAM with G-code; costing; inspection reports.
-- **Familiar UI** (desktop app or browser): CommandManager, FeatureManager design tree, PropertyManager with
-  live preview, SOLIDWORKS mouse navigation and shortcuts.
-- **Agents**: <!-- counts -->426 commands, 408 of them MCP tools ([full list](docs/commands.md))<!-- /counts -->, over stdio or
-  streamable HTTP. Agent actions show up live in the UI's Agent activity pane.
-- **Interop**: opens SOLIDWORKS parts, assemblies and drawings (`.sldprt`, `.sldasm`, `.slddrw`; 2015 and
-  later) natively, with no SOLIDWORKS installation - see *Status* for how much of the feature history comes
-  across. Clean-room Parasolid reader (`.x_t`, `.x_b`) and writer (`.x_t`). STEP and IGES in and out; STL, 3MF,
-  glTF, BREP out; DXF in and out. Native `.oswprt` / `.oswasm` / `.oswdrw` (JSON, versioned).
-- **Safety**: autosave with document recovery after a crash, an application log, a token and origin check on
-  the local server, and an optional folder agents are confined to (`--workspace`).
+- **Analysis**: static, frequency, buckling, thermal, nonlinear, fatigue and drop studies; lattice-Boltzmann
+  flow; plastics fill; 3-axis CAM with G-code; costing; inspection reports. Long solves run as background jobs.
+- **Rendering**: real-time PBR, or path traced for soft shadows and reflections.
+- **Review**: design review, requirements checked like tests, tolerance stack-up, design studies, document
+  compare.
+- **Agents**: <!-- counts -->426 commands, 408 of them MCP tools ([full list](docs/commands.md))<!-- /counts -->,
+  over stdio or streamable HTTP, shown live in the UI's Agent activity pane.
+- **Files**: native `.oswprt` / `.oswasm` / `.oswdrw` (versioned JSON). Reads SOLIDWORKS `.sldprt` / `.sldasm` /
+  `.slddrw` (2015 and later) natively; clean-room Parasolid reader (`.x_t`, `.x_b`) and writer (`.x_t`); STEP and
+  IGES in and out; STL, 3MF, glTF, BREP out; DXF in and out.
+- **Safety**: autosave with crash recovery, an application log, a per-user token and origin checks on the
+  local server, and an optional folder that agents are confined to.
 
-Geometry kernel: [OpenCASCADE](https://dev.opencascade.org/) via [build123d](https://github.com/gumyr/build123d).
-Not affiliated with or endorsed by Dassault Systèmes. SOLIDWORKS is a trademark of Dassault Systèmes.
+Geometry kernel: [OpenCASCADE](https://dev.opencascade.org/) through
+[build123d](https://github.com/gumyr/build123d) and OCP.
 
-## Desktop app (Windows .exe, macOS .app)
+## Install
 
-```bash
-.venv\Scripts\pip install -e .[desktop]
-.venv\Scripts\python packaging\make_icon.py
-.venv\Scripts\pyinstaller packaging\openswx.spec --noconfirm     # -> dist\openswx\
-dist\openswx\openswx.exe                                          # native window, CAD engine + MCP in-process
-dist\openswx\openswx-cli.exe mcp                                  # stdio MCP server for agents (console build)
-```
+### Desktop app (Windows, macOS)
 
-`openswx.exe` opens documents passed on the command line (`openswx.exe part.oswprt`), uses native Open/Save/Export
-dialogs, and exposes MCP at `http://127.0.0.1:8765/mcp` while running. The `dist\openswx` folder (~400 MB) is
-self-contained and can be zipped and copied to another Windows PC (needs the Edge WebView2 runtime, built into Windows 11).
+Installers are attached to each [release](https://github.com/DukeOfCheese/openswx/releases):
 
-**Release builds**: `python packaging/build.py --zip` builds the installers for the platform it runs on
-(PyInstaller doesn't cross-compile) into `dist-new/`:
-
-| | Installer | Runnable without installing |
+| | Installer | Portable |
 |---|---|---|
-| Windows | `openswx-setup-<ver>.exe` (Inno Setup) | `openswx-<ver>-win64.zip` → `openswx.exe` |
-| macOS (arm64 / x86_64) | `openswx-<ver>-macos-<arch>.pkg` → `/Applications/openswx.app`, plus `openswx-cli` in `/usr/local/bin` | `openswx.app`, zipped as `openswx-<ver>-macos-<arch>.zip` |
+| Windows 10/11 (x64) | `openswx-setup-<ver>.exe` | `openswx-<ver>-win64.zip` → `openswx.exe` |
+| macOS (Apple silicon / Intel) | `openswx-<ver>-macos-<arch>.pkg` → `/Applications/openswx.app` and `openswx-cli` | `openswx-<ver>-macos-<arch>.zip` |
 
-The GitHub Actions workflow `.github/workflows/build.yml` runs this on Windows, Apple-silicon and Intel macOS
-runners: start it by hand from the Actions tab, or push a `v*` tag to also publish a release.
-On macOS, `.oswprt` / `.oswasm` / `.oswdrw` open in openswx after install, and it's listed under *Open With* for
-SOLIDWORKS, STEP, IGES and Parasolid files.
+The builds are not code-signed yet. Windows SmartScreen asks for confirmation on first launch (*More info →
+Run anyway*). On macOS, right-click `openswx.app` → *Open*, or run
+`xattr -dr com.apple.quarantine /Applications/openswx.app`.
 
-macOS builds are unsigned (ad-hoc) for now. Gatekeeper blocks the first launch: right-click `openswx.app` →
-*Open*, or run `xattr -dr com.apple.quarantine /Applications/openswx.app`. To sign, set
-`OPENSWX_CODESIGN_IDENTITY` (Developer ID Application) and `OPENSWX_INSTALLER_IDENTITY` (Developer ID Installer)
-before building. To uninstall, delete `/Applications/openswx.app` and `/usr/local/bin/openswx-cli`.
+### From source (any platform, browser UI)
 
-## Quick start (development, browser UI)
+Python 3.11 or newer:
 
 ```bash
+git clone https://github.com/DukeOfCheese/openswx.git
+cd openswx
 python -m venv .venv
-.venv\Scripts\pip install -e .[dev]        # Windows   (Linux/macOS: .venv/bin/pip)
-python -m openswx serve --open             # prints the UI link (http://127.0.0.1:8765/?token=...); MCP at /mcp
+.venv/bin/pip install -e .[dev]            # Windows: .venv\Scripts\pip install -e .[dev]
+.venv/bin/python -m openswx serve --open   # prints the UI link and opens it; MCP is at /mcp
 ```
 
-The server only answers this computer and asks for your token (a per-user secret kept in `~/.openswx/token`):
-open the UI through the link `serve` prints, which stores it as a cookie. `--no-token` turns the token off for
-local development; `--host` with an address other computers can reach needs `--allow-remote`. `--share` also prints a
-view-only link: whoever opens it sees the model update live but cannot change it or save files. The rules are in
-[`openswx/security.py`](openswx/security.py).
+The server answers only this computer and asks for your token, a per-user secret kept in
+`~/.openswx/token`. Open the UI through the link `serve` prints, which stores the token as a cookie.
 
-Your first part (same as SOLIDWORKS): **Extruded Boss/Base** → pick *Top Plane* → draw a rectangle (R) →
-**Exit Sketch** (top-right corner) → set *Depth* → **OK**. Click a face → mini toolbar → *Sketch* to sketch
-on it. Double-click a dimension while editing a sketch to change it.
+To build the desktop app yourself: `pip install -e .[desktop]`, then `python packaging/build.py --zip`
+(builds for the platform it runs on, into `dist-new/`).
 
-## Connect an agent (MCP)
+## Your first part
 
-**HTTP** (while `openswx serve` runs):
+**Extruded Boss/Base** → pick *Top Plane* → draw a rectangle (R) → **Exit Sketch** (top-right corner) → set
+*Depth* → **OK**. Click a face → mini toolbar → *Sketch* to sketch on it. Double-click a dimension while
+editing a sketch to change it.
+
+## Agents: how they get access
+
+Every action in openswx is a **command**: a typed Python function registered once and exposed in four ways
+from the same list. Whatever the UI can do, an agent can do, and what it does appears live in the open
+window.
+
+| Route | For | Access control |
+|---|---|---|
+| MCP over HTTP, `http://127.0.0.1:8765/mcp` | agents (Claude Code, Claude Desktop, Cursor, any MCP client) while the app or `openswx serve` runs | `Authorization: Bearer <token>`; local connections only unless started with `--allow-remote` |
+| MCP over stdio, `openswx mcp` | agents that start the program themselves | the agent's own process; the UI it starts is token-protected |
+| REST, `POST /api/command` | scripts and other programs | same token as MCP over HTTP |
+| Python, `openswx.api` | notebooks and scripts in the same process | none (your own process) |
+
+**Claude Code** (HTTP, while openswx runs; the token stays the same between runs, so this is done once):
 
 ```bash
-claude mcp add --transport http openswx http://127.0.0.1:8765/mcp --header "Authorization: Bearer $(python -m openswx token)"
+claude mcp add --transport http openswx http://127.0.0.1:8765/mcp \
+  --header "Authorization: Bearer $(python -m openswx token)"
 ```
 
-(The token stays the same between runs, so this is done once. With the desktop app: `openswx-cli token`.)
+With the desktop app, use `openswx-cli token` in place of `python -m openswx token`.
 
-**stdio** (starts its own app and the live UI on port 8765):
+**Any MCP client** (stdio; starts its own instance and the live UI on port 8765):
 
 ```json
 { "mcpServers": { "openswx": { "command": "python", "args": ["-m", "openswx", "mcp"] } } }
 ```
 
-Then ask, e.g. *"Make a 120×60×10 mm mounting plate with four Ø8 holes 12 mm from the edges and a
-Ø36 boss with a counterbored hole, fillet the corners R6, material 6061."* See
-[`tools/agent_demo.py`](tools/agent_demo.py) for a scripted agent that does exactly that.
+The UI also shows these steps for the running instance: *Help → Agent (MCP) Setup*.
 
-A connection lists the `core` tools first (under 50: part modelling essentials, plus `batch` for several
-commands in one atomic call). `list_toolsets` shows the other areas and `enable_toolset("assembly")` adds one;
-`--toolsets core,drawing` or `--toolsets all` (or `OPENSWX_TOOLSETS`) sets what is listed from the start.
-`get_topology` gives each face and edge an id and a persistent `name` that survives later edits.
-The full list with arguments is in [`docs/commands.md`](docs/commands.md).
-Start with `new_part`, `create_sketch`, `sketch_rectangle` / `sketch_circle` / `sketch_line`, `sketch_dimension`,
-`extrude` / `cut_extrude`, `fillet`, `get_topology` (face and edge ids for selection), `get_mass_properties` and
-`get_view_image`. End conditions accept names or SOLIDWORKS `swEndConditions_e` values (Blind=0, ThroughAll=1,
-MidPlane=6, ThroughAllBoth=9).
+**Python**:
 
-To keep an agent's file access to one folder, start openswx with `--workspace DIR` (or set
-`OPENSWX_WORKSPACE`): commands from agents may then only read and write files there.
+```python
+from openswx.api import Part
 
-## Other commands
-
-```bash
-python -m openswx sldinfo part.SLDPRT --extract out/   # inspect a SOLIDWORKS file, dump streams + Parasolid .x_b
-python -m pytest                                        # test suite (analytic volume checks)
-python tools/difftest/difftest.py --solidworks          # compare against SOLIDWORKS (needs a licence + pywin32)
+part = Part("Bracket")
+part.sketch("Top").rectangle([0, 0], [80, 40]).circle([20, 20], 5).extrude(10)
+part.fillet(2, part.edges(type="circle"))
+print(part.volume, part.mass)
+part.save("bracket.oswprt"); part.export("bracket.step")
 ```
 
-## Design
+What an agent sees and can do:
 
-| Layer | File |
+- **Toolsets.** A connection starts with the `core` tools (under 50: part-modelling essentials) plus `batch`,
+  `list_toolsets` and `enable_toolset`. `enable_toolset("assembly")` adds an area (sketch, features, surfaces,
+  sheet_metal, weldments, document, assembly, drawing, simulation, manufacturing, ecosystem, plugins);
+  `--toolsets core,drawing`, `--toolsets all` or `OPENSWX_TOOLSETS` sets the starting list.
+- **Atomic batches.** `batch` runs several commands in one call: if one fails, every open document goes back
+  to how it was; if all succeed, the batch is a single Undo step.
+- **Stable references.** `get_topology` gives every face and edge an id and a persistent name that survives
+  later edits, so an agent can select geometry reliably.
+- **Seeing the model.** `get_view_image` returns a picture; `get_mass_properties` and the `openswx://model`
+  and `openswx://feature/{name}` resources return numbers and the feature tree.
+- **Tool hints.** Each tool carries MCP annotations (read-only, destructive) so clients can ask before
+  saving over or deleting something.
+- **Limits you can set.** `--workspace DIR` (or `OPENSWX_WORKSPACE`) confines agents' file reads and writes to
+  one folder. `--share` prints a separate view-only link for people watching. The rules are in
+  [`openswx/security.py`](openswx/security.py).
+- **Your own tools.** A Python package can add commands through the `openswx.plugins` entry point; they become
+  MCP tools in the `plugins` toolset ([`openswx/plugins.py`](openswx/plugins.py)).
+
+Try: *"Make a 120×60×10 mm mounting plate with four Ø8 holes 12 mm from the edges and a Ø36 boss with a
+counterbored hole, fillet the corners R6, material 6061."* [`tools/agent_demo.py`](tools/agent_demo.py) is a
+scripted agent that does exactly that. Every command and its arguments: [`docs/commands.md`](docs/commands.md).
+
+## How it differs from SOLIDWORKS
+
+openswx is alternate CAD software, not a copy. It borrows the layout because engineers already know it;
+everything else is its own. If you are coming from SOLIDWORKS, these are the differences that matter.
+
+**Different by design**
+
+| | SOLIDWORKS | openswx |
+|---|---|---|
+| Licence and cost | commercial, per seat | open source (Apache-2.0), free |
+| Platforms | Windows | Windows, macOS, Linux; desktop app or any browser |
+| Geometry kernel | Parasolid | OpenCASCADE. Fillets, shells and boolean edge cases can resolve differently, and very small or tangent features may fail where Parasolid succeeds (or the other way round) |
+| Native files | binary `.sldprt` / `.sldasm` / `.slddrw` | versioned JSON `.oswprt` / `.oswasm` / `.oswdrw` that hold the commands that built the model. Diffable in Git; `openswx script` prints a part as a script and `openswx diff` compares two |
+| Automation | COM API, VBA / VSTA macros, add-ins | every command is an MCP tool, a REST call and a Python call; macros record commands; plugins are ordinary Python packages |
+| AI agents | none built in | MCP server built in, with toolsets, atomic batches and persistent face and edge names |
+| Headless use | needs the full application | `openswx convert`, `render`, `massprops`, `check`, `drawing`, `script` and `diff` run without a window, for example in CI |
+| Requirements | not part of the model | requirements live in the document and are checked like tests (`openswx check` exits non-zero on failure) |
+| Collaboration | PDM server | file-based; a local vault with check-in / check-out, and a live view-only share link |
+| Rendering | PhotoView 360 / Visualize | in the browser: real-time PBR, or path traced on the GPU |
+
+**Compatibility with SOLIDWORKS files**
+
+- `.sldprt`, `.sldasm` and `.slddrw` (2015 and later) open without SOLIDWORKS installed. openswx reads the stored
+  body and, where it can decode it, the feature history, and rebuilds that history to check it against the stored
+  body. In the survey of 2026-10-29, 525 of the 841 sample parts that ship with SOLIDWORKS 2025 rebuilt exactly
+  (363 fully parametric). Parts whose features are not decoded yet (many sweeps, lofts, sheet-metal and
+  surface features) open as an imported solid that you can still measure, mate, draw and add features to.
+- SOLIDWORKS files are **read-only**. Save as openswx files, or exchange through STEP, Parasolid `.x_t` or IGES.
+- Equations, end conditions (by name or by `swEndConditions_e` number) and dimension names (`D1@Sketch1`) use
+  the same syntax, so existing design intent carries over.
+
+**Not the same yet (see [Status](#status-and-limitations))**
+
+- Simulation uses a finite-cell voxel mesh, not a curvature-fitted tetrahedral mesh: global results (stiffness,
+  frequencies) are good, but peak stresses at curved boundaries are approximate. Flow is lattice-Boltzmann and
+  warns at high Reynolds numbers.
+- CAM is 3-axis with flat end mills.
+- DWG needs the free ODA File Converter installed; there is no eDrawings viewer (eDrawings-style export only).
+- Toolbox, the Design Library and material libraries are openswx's own, smaller sets.
+- Icons are original, and some commands sit in slightly different places.
+
+## Status and limitations
+
+openswx is **alpha**: usable for real parts, with rough edges. Save often (autosave keeps a recovery copy;
+`OPENSWX_AUTOSAVE` sets the interval in seconds, or `off`).
+
+- **SOLIDWORKS feature history**: see the numbers above; `.sldprt` is read-only.
+- **Simulation and CAM**: see the list above.
+- **Builds** are not code-signed yet.
+- CI runs the test suite on Linux, Windows and macOS, and UI smoke tests in a headless browser.
+
+Where things stand on one screen: [`docs/STATUS.md`](docs/STATUS.md). What is missing, with a spec for each
+item: [`docs/GAPS.md`](docs/GAPS.md). Release notes: [`CHANGELOG.md`](CHANGELOG.md).
+
+## Contributing
+
+Contributions from people and from coding agents are both welcome. Read
+[`CONTRIBUTING.md`](CONTRIBUTING.md) first; above all, the **clean-room rule**: no SOLIDWORKS code, artwork or
+sample files, ever. Bugs, SOLIDWORKS files that don't open correctly, and feature requests each have an issue
+form that asks for exactly what is needed to act on them. Coding agents should also read
+[`AGENTS.md`](AGENTS.md). Security problems: [`SECURITY.md`](SECURITY.md), never a public issue.
+
+## Project layout
+
+| | |
 |---|---|
-| Constraint solver, sketch entities, profiles | `openswx/sketch.py` |
-| Features (rebuild builders, mass properties) | `openswx/features.py` |
-| Part document (tree, rebuild, rollback, undo, save) | `openswx/document.py` |
-| Persistent face/edge references, tessellation | `openswx/geom.py` |
-| Command registry shared by UI, MCP and tests | `openswx/session.py` |
-| MCP server | `openswx/mcp_server.py` |
-| Web server (REST, SSE live updates, preview) | `openswx/web_server.py` |
-| UI | `openswx/web/` (three.js) |
-| SOLIDWORKS container reader | `openswx/sldprt.py` |
-| SOLIDWORKS feature history (tree, sketches, rebuild) | `openswx/sw_tree.py`, `openswx/sw_sketch.py`, `openswx/sw_rebuild.py` |
-| Parasolid XT reader (.x_t/.x_b) / writer (.x_t) | `openswx/parasolid.py`, `openswx/parasolid_write.py` |
+| `openswx/session.py` | the application object, the `@command` registry and dispatcher |
+| `openswx/commands_*.py` | the commands, by area |
+| `openswx/document.py`, `assembly.py` | part and assembly models: rebuild, undo, save / load |
+| `openswx/sketch.py`, `features.py`, `geom.py`, `naming.py` | constraint solver, feature builders, references, persistent names |
+| `openswx/drawing*.py` | drawings |
+| `openswx/fea*.py`, `cfd.py`, `plastics.py`, `cam.py` | solvers |
+| `openswx/sldprt.py`, `sw_*.py`, `parasolid*.py` | SOLIDWORKS and Parasolid readers / writer (clean-room; notes in [`docs/re/`](docs/re/README.md)) |
+| `openswx/web_server.py`, `mcp_server.py`, `security.py` | REST + live-update server, MCP server, access rules |
+| `openswx/web/` | the UI (three.js) |
+| `tools/` | command reference generator, conformance cases, benchmarks, SOLIDWORKS survey |
+| `tests/` | the test suite (`python -m pytest`) |
 
-Interoperability research notes: [`docs/re/README.md`](docs/re/README.md). Build plan and status:
-[`docs/PLAN.md`](docs/PLAN.md). openswx is a clean-room implementation: it contains no SOLIDWORKS code or
-artwork; compatibility comes from documented APIs, file-format analysis and observed behaviour.
+## Licence
 
-Licence: Apache-2.0 ([`LICENSE`](LICENSE), third-party notices in [`NOTICE`](NOTICE)). Contributing, including the
-clean-room rule: [`CONTRIBUTING.md`](CONTRIBUTING.md). Known gaps and their specs: [`docs/GAPS.md`](docs/GAPS.md).
-
-## Status / limitations
-
-- **SOLIDWORKS feature history**: of the 841 sample parts that ship with SOLIDWORKS 2025, 525 rebuild to exactly
-  the stored body and 363 of those are fully parametric (survey of 2026-10-29). Sweeps, lofts, sheet metal and
-  most surface features are not decoded yet; such parts open as an imported body. `.sldprt` is read-only:
-  export goes through Parasolid, STEP or IGES.
-- **Simulation** uses a finite-cell voxel mesh, so stresses at curved boundaries are approximate. Flow results
-  at high Reynolds numbers carry a warning. CAM is 3-axis with flat end mills.
-- **Autosave** keeps the last copy of each unsaved document (`~/.openswx/recovery`); set `OPENSWX_AUTOSAVE`
-  to a number of seconds or `off`. The log is in `~/.openswx/logs` (Help > Save Diagnostic Report).
-
-Where things stand, on one screen: [`docs/STATUS.md`](docs/STATUS.md). What is missing, with a spec for each item:
-[`docs/GAPS.md`](docs/GAPS.md). History of the build:
-[`docs/PLAN.md`](docs/PLAN.md).
+Apache License 2.0: see [`LICENSE`](LICENSE). Third-party components and their licences: [`NOTICE`](NOTICE).

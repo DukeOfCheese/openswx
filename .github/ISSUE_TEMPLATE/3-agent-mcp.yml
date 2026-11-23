@@ -1,0 +1,50 @@
+name: Agent / MCP
+description: A tool that misbehaves for an agent - wrong result, unclear error, missing tool, confusing description.
+labels: ["agent", "area:mcp"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tool calls are the reproduction here: the tool name, the arguments and what came back. Leave out anything from your
+        conversation you do not want public.
+  - type: input
+    id: client
+    attributes:
+      label: Client and transport
+      placeholder: e.g. Claude Code over HTTP, Claude Desktop over stdio, own script over REST
+    validations:
+      required: true
+  - type: textarea
+    id: calls
+    attributes:
+      label: Tool calls
+      description: Each call as name + arguments, in order, with what it returned (or the error).
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What the agent should have got
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of problem
+      options:
+        - Wrong result
+        - Error that does not say how to fix the call
+        - The tool description misled the agent
+        - A tool that should exist is missing
+        - A tool is in the wrong toolset, or missing from one
+        - Connection, token or permissions
+        - Too slow, or too many calls for a simple task
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: openswx version and platform
+    validations:
+      required: true

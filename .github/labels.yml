@@ -1,0 +1,33 @@
+# Issue and pull request labels (see CONTRIBUTING.md > Labels). Create or update them on GitHub with
+#   python tools/sync_labels.py            (needs the GitHub CLI, `gh`, signed in)
+# Type
+- {name: bug, color: d73a4a, description: "Wrong result, error or crash"}
+- {name: feature, color: a2eeef, description: "Something openswx should do"}
+- {name: sw-compat, color: c5def5, description: "A SOLIDWORKS file does not open or comes in wrong"}
+- {name: agent, color: 7057ff, description: "Agents and MCP tools"}
+- {name: docs, color: 0075ca, description: "Documentation"}
+- {name: question, color: d876e3, description: "Needs an answer, not a change"}
+# Area
+- {name: "area:sketch", color: ededed, description: "Sketches and the constraint solver"}
+- {name: "area:features", color: ededed, description: "Part features, surfaces, sheet metal, weldments"}
+- {name: "area:assembly", color: ededed, description: "Assemblies, mates, motion"}
+- {name: "area:drawing", color: ededed, description: "Drawings and annotations"}
+- {name: "area:simulation", color: ededed, description: "Simulation, flow, evaluation"}
+- {name: "area:cam", color: ededed, description: "CAM, plastics, manufacturing"}
+- {name: "area:ui", color: ededed, description: "The user interface"}
+- {name: "area:mcp", color: ededed, description: "MCP server, toolsets, REST"}
+- {name: "area:files", color: ededed, description: "Import, export, file formats"}
+- {name: "area:packaging", color: ededed, description: "Installers, builds, CI"}
+# Priority
+- {name: P0, color: b60205, description: "Data loss, crash or security"}
+- {name: P1, color: d93f0b, description: "Wrong result, or blocks common work"}
+- {name: P2, color: fbca04, description: "A workaround exists"}
+- {name: P3, color: 0e8a16, description: "Polish"}
+# Status
+- {name: needs-repro, color: fef2c0, description: "Needs a reproduction before work can start"}
+- {name: confirmed, color: bfdadc, description: "Reproduced"}
+- {name: in-progress, color: 1d76db, description: "Someone is working on it"}
+- {name: blocked, color: 000000, description: "Waiting on something else"}
+# Help
+- {name: good first issue, color: 7057ff, description: "Small and well specified"}
+- {name: help wanted, color: 008672, description: "Contributions welcome"}

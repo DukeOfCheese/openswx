@@ -36,7 +36,8 @@ def test_survey_run_is_resumable_and_compares(tmp_path):
 
     after = {**before, "c.sldprt": exact, "a.SLDPRT": (None, "the child process crashed"), "b.sldprt": exact}
     out2 = tmp_path / "after.jsonl"
-    survey.run(str(tmp_path / "corpus"), str(out2), 115, None, False, rebuild=fake(after))
+    survey.run(str(tmp_path / "corpus"), str(out2), 115, None, False, rebuild=fake(after), jobs=3)  # (in parallel)
+    assert len(out2.read_text().splitlines()) == 4
     cmp_ = survey.compare(rows, survey.load(str(out2)))
     assert cmp_["gained"] == ["c.sldprt"] and cmp_["lost"] == ["a.SLDPRT"]
     assert cmp_["parametric_gained"] == ["b.sldprt", "c.sldprt"] and cmp_["parametric_lost"] == ["a.SLDPRT"]
@@ -57,3 +58,19 @@ def test_a_rebuild_that_raises_does_not_end_the_survey(tmp_path):
     survey.run(str(tmp_path), str(out), 10, None, False, rebuild=rebuild)
     rows = survey.load(str(out))
     assert rows["x.sldprt"]["outcome"] == "error" and "boom" in rows["x.sldprt"]["reason"] and rows["y.sldprt"]["outcome"] == "exact"
+
+
+def test_issue_forms_use_only_defined_labels():
+    """tools/sync_labels.py reads .github/labels.yml, and every label an issue form applies is defined there."""
+    import re
+
+    import sync_labels
+    defined = {lab["name"] for lab in sync_labels.load()}
+    assert {"bug", "feature", "P0", "area:mcp", "good first issue"} <= defined
+    root = Path(__file__).resolve().parent.parent / ".github" / "ISSUE_TEMPLATE"
+    forms = [p for p in root.glob("*.yml") if p.name != "config.yml"]
+    assert len(forms) == 4
+    for p in forms:
+        used = re.search(r"^labels:\s*\[(.*)\]", p.read_text(encoding="utf-8"), re.M)[1]
+        names = {s.strip().strip('"') for s in used.split(",")}
+        assert names <= defined, (p.name, names - defined)

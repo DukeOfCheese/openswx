@@ -1,0 +1,51 @@
+name: Feature request
+description: Something openswx should do. Written like a small spec, so it can be built.
+labels: ["feature"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you are trying to do, and what stops you today.
+    validations:
+      required: true
+  - type: textarea
+    id: behaviour
+    attributes:
+      label: Behaviour
+      description: What the command or UI should do - inputs, outputs, edge cases.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance checks
+      description: How we know it works, ideally something a test can check.
+      placeholder: |
+        - [ ] a 10 mm cube with a 2 mm chamfer on one edge has volume 980 mm³
+        - [ ] the feature survives a rebuild after the sketch changes
+    validations:
+      required: true
+  - type: input
+    id: equivalent
+    attributes:
+      label: Equivalent in other CAD software
+      description: e.g. the SOLIDWORKS command and where it lives. Describe it; no screenshots of other programs' icons are needed.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Sketch, Part features, Assembly, Drawing, Simulation / analysis, CAM / manufacturing, UI, File import / export, Agents / MCP, Install / packaging, Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Should agents be able to use it?
+      options: [Yes - as an MCP tool, No - UI only, Not sure]
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contributing
+      options:
+        - label: I would like to implement this myself
