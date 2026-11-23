@@ -234,8 +234,9 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
   and washers). The material library has about 100 common grades with typical handbook values; add your own
   as custom materials.
 - Icons are original, and some commands sit in slightly different places.
-- Live collaboration is not in openswx yet. It is being built in a separate repository, openswx-collab (not
-  public yet): several people editing the same part at once with live cursors and feature locks, full edit
+- Live collaboration is not in openswx yet: it is being built in a separate repository,
+  [openswx-collab](https://github.com/DukeOfCheese/openswx-collab) (Apache-2.0, no release yet): several people
+  editing the same part at once with live cursors and feature locks, full edit
   history with named versions and restore, assemblies that reference parts pinned to a version, and a server
   you can host yourself (SQLite or PostgreSQL). The server never runs a geometry kernel: each person's openswx
   applies the edits locally and sends the change. The server and its protocol are built and tested; the part

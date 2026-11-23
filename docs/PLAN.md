@@ -714,6 +714,7 @@ Composer and Insert > Routing on assemblies; Manufacturing, Electrical and Compo
       single-file HTML viewer with Play / previous / next animation (`viewer_payload` / `write_viewer` now shared
       with eDrawings export).
 - Not done: Cloud (3DEXPERIENCE-style collaboration). Live collaboration is being built separately in openswx-collab
+  (https://github.com/DukeOfCheese/openswx-collab)
   (server and wire protocol; self-hostable); the openswx side will be an optional module, developed on the branch
   dev/openswx-collab. Until then PDM covers check-in / out.
 
