@@ -6,6 +6,11 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+## 0.2.0 (2026-11-23)
+
+Simulation on curvature-based tetrahedra for every study, Claude Desktop working in the open window, about 100
+library materials, and 584 of the 841 SOLIDWORKS sample parts rebuilding exactly (525 in 0.1.0).
+
 ### Added
 - Static, frequency, buckling and thermal (steady and transient) studies (bonded assemblies too) mesh with curvature-based
   quadratic tetrahedra (Netgen, optional: `pip install openswx[mesh]`): peak stresses at holes and fillets
