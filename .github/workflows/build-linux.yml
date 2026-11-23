@@ -26,12 +26,12 @@ jobs:
         run: bash packaging/build_linux.sh
       - name: The packed build opens a file and exports it
         run: |
-          mkdir check && tar -C check -xzf dist-new/openswx-*-linux-*.tar.gz
+          mkdir check && tar -C check -xzf dist/openswx-*-linux-*.tar.gz
           check/openswx/openswx-cli convert tests/data/native/v1_bracket.oswprt check/bracket.step
           test -s check/bracket.step
           check/openswx/openswx-cli massprops tests/data/native/v1_bracket.oswprt
       - uses: actions/upload-artifact@v4
         with:
           name: openswx-linux
-          path: dist-new/*.tar.gz
+          path: dist/*.tar.gz
           if-no-files-found: error

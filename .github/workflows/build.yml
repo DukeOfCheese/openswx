@@ -43,18 +43,18 @@ jobs:
       - name: Check the macOS app and installer
         if: runner.os == 'macOS'
         run: |
-          plutil -lint dist-new/openswx.app/Contents/Info.plist
-          codesign --verify --deep --strict dist-new/openswx.app
-          sudo installer -pkg dist-new/openswx-*.pkg -target /
+          plutil -lint dist/openswx.app/Contents/Info.plist
+          codesign --verify --deep --strict dist/openswx.app
+          sudo installer -pkg dist/openswx-*.pkg -target /
           test -x /Applications/openswx.app/Contents/MacOS/openswx
           /usr/local/bin/openswx-cli --help
       - uses: actions/upload-artifact@v4
         with:
           name: openswx-${{ matrix.name }}
           path: |
-            dist-new/*.exe
-            dist-new/*.pkg
-            dist-new/*.zip
+            dist/*.exe
+            dist/*.pkg
+            dist/*.zip
           if-no-files-found: error
 
   release:

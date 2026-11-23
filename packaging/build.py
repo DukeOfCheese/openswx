@@ -3,7 +3,7 @@
     .venv\\Scripts\\python packaging\\build.py [--skip-app] [--zip]      (Windows)
     .venv/bin/python packaging/build.py [--skip-app] [--zip]            (macOS)
 
-Outputs in dist-new\\:
+Outputs in dist\\:
   Windows: openswx\\ (the app folder), openswx-setup-<version>.exe (Inno Setup, when installed; installs two small
     launchers, the app folder itself goes to %LOCALAPPDATA%\\openswx\\runtime) and/or openswx-<version>-win64.zip
     (unzip anywhere and run openswx.exe; `openswx-cli register-file-types` adds the file associations the
@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DIST = ROOT / "dist-new"
+DIST = ROOT / "dist"
 WORK = ROOT / "build-new"
 ISCC = [Path(r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe"), Path(r"C:\Program Files\Inno Setup 6\ISCC.exe"),
         Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "Inno Setup 6" / "ISCC.exe"]  # (per-user install)
@@ -110,11 +110,25 @@ def build_macos(ver: str, zip_too: bool) -> None:
         print(f"portable zip: {z}")
 
 
+def _running_from(folder: Path) -> bool:
+    """Whether an openswx executable inside `folder` is running (Windows locks a running .exe)."""
+    if sys.platform != "win32" or not folder.exists():
+        return False
+    exes = {p.name.lower() for p in folder.rglob("openswx*.exe")}
+    if not exes:
+        return False
+    out = subprocess.run(["tasklist", "/FO", "CSV", "/NH"], capture_output=True, text=True).stdout.lower()
+    return any(f'"{e}"' in out for e in exes)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--skip-app", action="store_true", help="reuse the app in dist-new instead of rebuilding it")
+    ap.add_argument("--skip-app", action="store_true", help="reuse the app in dist instead of rebuilding it")
     ap.add_argument("--zip", action="store_true", help="also make the portable zip when the installer is built")
     a = ap.parse_args()
+    if not a.skip_app and _running_from(DIST):
+        print(f"openswx is running from {DIST}: close it first (Windows cannot replace a running program)", file=sys.stderr)
+        return 1
     if not a.skip_app:
         subprocess.run([sys.executable, "-m", "PyInstaller", str(ROOT / "packaging" / "openswx.spec"), "--noconfirm",
                         "--distpath", str(DIST), "--workpath", str(WORK)], check=True, cwd=ROOT)

@@ -1,6 +1,6 @@
-; Inno Setup script: a Windows installer for the PyInstaller build (dist-new\openswx or dist\openswx).
+; Inno Setup script: a Windows installer for the PyInstaller build (dist\openswx).
 ; Build:  .venv\Scripts\python packaging\build.py   (the app, the launchers, then ISCC on this script)
-; Output: dist-new\openswx-setup-<version>.exe
+; Output: dist\openswx-setup-<version>.exe
 ; Installs per user. The install folder ({userpf}\openswx by default) holds only two small launchers
 ; (packaging\launcher.cs, compiled by build.py into build-new\launcher); the PyInstaller runtime (its exe and
 ; _internal) goes to %LOCALAPPDATA%\openswx\runtime, which the launchers find through
@@ -12,7 +12,7 @@
 #ifndef AppVersion
   #define AppVersion "0.1.0"
 #endif
-#define SourceDir "..\dist-new\openswx"
+#define SourceDir "..\dist\openswx"
 #define LauncherDir "..\build-new\launcher"
 #define RuntimeDir "{localappdata}\openswx\runtime"
 
@@ -27,7 +27,7 @@ DefaultGroupName={#AppName}
 PrivilegesRequired=lowest
 UninstallFilesDir={#RuntimeDir}\uninstall
 ChangesAssociations=yes
-OutputDir=..\dist-new
+OutputDir=..\dist
 OutputBaseFilename=openswx-setup-{#AppVersion}
 SetupIconFile=openswx.ico
 UninstallDisplayIcon={app}\openswx.exe

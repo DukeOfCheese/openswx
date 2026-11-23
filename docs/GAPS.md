@@ -63,7 +63,7 @@ since 2026-11-23 the suite also runs green in CI on Linux and macOS; the desktop
 | I3 update check | done | Help > Check for Updates (`updates.py`): asks the GitHub releases of the repository in the `update_repository` setting, only when the user asks; nothing is downloaded. **Left:** set the repository once there is one |
 | I4 benchmarks | partly | `tools/bench.py`. **Left:** tracking per release, lazy imports, bundle audit |
 | I5 PyPI | partly | Classifiers and keywords. Not published; no project URLs until there is a remote |
-| I6 stray build folders | done | `build/`, `build-new/`, the two build logs and the stack dump deleted on the owner's say; `dist/` and `dist-new/` (the built apps and installers) kept by choice |
+| I6 stray build folders | done | `build/`, `build-new/`, the two build logs and the stack dump deleted on the owner's say. Builds now go to one folder, `dist/` (`packaging/build.py`, which stops with a message if openswx is running from it); the old `dist/` and `dist-new/` builds were deleted 2026-11-23 |
 | J1 review loop | done | `review_model` |
 | J2 design as text | done | `export_script` (documents record their commands); run it as a macro or with `python` |
 | J3 semantic diff | partly | `compare_documents`, `openswx diff`, and a Git textconv driver (`openswx script`, see `STATUS.md`). **Left:** coloured 3D overlay, merge |

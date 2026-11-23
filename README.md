@@ -106,7 +106,7 @@ The server answers only this computer and asks for your token, a per-user secret
 `~/.openswx/token`. Open the UI through the link `serve` prints, which stores the token as a cookie.
 
 To build the desktop app yourself: `pip install -e .[desktop]`, then `python packaging/build.py --zip`
-(builds for the platform it runs on, into `dist-new/`).
+(builds for the platform it runs on, into `dist/`).
 
 ## Your first part
 

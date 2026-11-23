@@ -10,7 +10,7 @@ adds what an agent needs that a person picks up by asking.
   `docs/re/README.md` first, then implemented from those facts.
 - **No secrets or personal data** in code, tests, logs or commit messages: no tokens, user names or absolute
   paths from your machine.
-- **Never commit generated output**: `build/`, `dist/`, `dist-new/`, `.oswprt` files outside `tests/data/`, logs.
+- **Never commit generated output**: `build/`, `dist/`, `.oswprt` files outside `tests/data/`, logs.
 
 ## Setup and checks
 

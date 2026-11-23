@@ -20,7 +20,7 @@ print(re.search(r'^version\s*=\s*"([^"]+)"', pathlib.Path("pyproject.toml").read
 EOF
 )"
 ARCH="$(uname -m)"
-OUT="dist-new"
+OUT="dist"
 
 "$PY" -m pip install -e . "pyinstaller>=6" "pywebview>=6"
 "$PY" packaging/make_icon.py || true   # (the icon is only used by the Windows and macOS builds)

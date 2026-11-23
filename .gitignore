@@ -10,7 +10,6 @@ dist/
 *.stl
 agent_bracket.png
 build-new/
-dist-new/
 *.stackdump
 *.oswasm
 *.oswdrw
