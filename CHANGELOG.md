@@ -6,6 +6,14 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Changed
+- A cleaner look for the same layout: tool buttons without outline boxes or gradients (hover lifts, the active
+  tool is pressed in), ribbon groups and panes as rounded panels, pill-shaped ribbon tabs.
+
+### Added
+- A dark theme for the interface, following the operating system's light / dark setting. The graphics area
+  stays light in both.
+
 ## 0.2.0 (2026-11-23)
 
 Simulation on curvature-based tetrahedra for every study, Claude Desktop working in the open window, about 100
