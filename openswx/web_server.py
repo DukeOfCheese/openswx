@@ -5,6 +5,8 @@ import asyncio
 import base64
 import contextlib
 import json
+import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -114,20 +116,48 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
         mod = sys.modules.get("openswx.collab.client")
         return mod.REVISION[0] if mod is not None else 0
 
+    pages: dict[str, int] = {}  # a page's id -> its open event streams
+    gone_tasks: set = set()
+
+    async def page_gone(page: str) -> None:
+        """A page's event stream ended: once it has not come back for a while (a closed or crashed tab, not a
+        reconnect), the collaboration locks it took are freed."""
+        try:
+            grace = float(os.environ.get("OPENSWX_COLLAB_PAGE_GRACE", "15"))
+        except ValueError:
+            grace = 15.0
+        await asyncio.sleep(max(0.0, grace))
+        if pages.get(page, 0) == 0:
+            pages.pop(page, None)
+            mod = sys.modules.get("openswx.collab.client")
+            if mod is not None:
+                await asyncio.to_thread(mod.release_owner, page)
+
     @app.get("/api/events")
-    async def events(request: Request):
+    async def events(request: Request, page: str | None = None):
+        page = page if page and re.fullmatch(r"[A-Za-z0-9-]{8,64}", page) else None
+
         async def stream():
             last, last_collab = -1, 0
-            while True:
-                if await request.is_disconnected():
-                    break
-                rev = collab_revision()
-                if S.APP.version != last or rev != last_collab:
-                    last, last_collab = S.APP.version, rev
-                    entry = S.APP.log[-1] if S.APP.log else None
-                    event = {"version": last, "last": entry, **({"collab": rev} if rev else {})}
-                    yield f"data: {json.dumps(event)}\n\n"
-                await asyncio.sleep(0.15)
+            if page:
+                pages[page] = pages.get(page, 0) + 1
+            try:
+                while True:
+                    if await request.is_disconnected():
+                        break
+                    rev = collab_revision()
+                    if S.APP.version != last or rev != last_collab:
+                        last, last_collab = S.APP.version, rev
+                        entry = S.APP.log[-1] if S.APP.log else None
+                        event = {"version": last, "last": entry, **({"collab": rev} if rev else {})}
+                        yield f"data: {json.dumps(event)}\n\n"
+                    await asyncio.sleep(0.15)
+            finally:
+                if page:
+                    pages[page] -= 1
+                    task = asyncio.get_running_loop().create_task(page_gone(page))
+                    gone_tasks.add(task)
+                    task.add_done_callback(gone_tasks.discard)
         return StreamingResponse(stream(), media_type="text/event-stream")
 
     @app.post("/api/upload")

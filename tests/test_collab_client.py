@@ -148,10 +148,12 @@ def test_a_rejected_change_rolls_back_and_says_who(cloud):
                  "message": "someone changed the same thing while you were editing",
                  "conflicts": {"f:f2": {"seq": 4, "client_id": "u2.x", "user_id": "u2", "name": "Ada"}}}]
     cloud.ws.answer = answer
+    S.APP.doc.dirty = False  # (as a cloud document is, with nothing of its own to save)
     with pytest.raises(S.CommandError, match="Ada changed Boss-Extrude1"):
         S.call("edit_feature", {"name": "Boss-Extrude1", "params": {"depth": 25}})
     assert S.APP.doc.find("Boss-Extrude1")["params"]["depth"] == 33  # (the server's version, not ours)
     assert volume() == pytest.approx(W * H * 33, rel=1e-6)
+    assert not S.APP.doc.dirty  # (the refused change left nothing to save)
     (conflict,) = C.status()["documents"][0]["conflicts"]
     assert conflict["code"] == "stale" and conflict["who"] == ["Ada"] and conflict["features"] == ["Boss-Extrude1"]
 
@@ -501,3 +503,19 @@ def test_backup_folders_stay_inside_the_backup_folder():
         s = backup._slug(bad)
         assert s not in (".", "..", "") and "/" not in s and "\\" not in s and not s.startswith(".")
     assert backup._slug("a1b2") == "a1b2" and backup._slug("127.0.0.1_9") == "127.0.0.1_9"
+
+
+def test_locks_a_page_took_are_freed_when_it_goes(cloud):
+    """The UI passes its page's id as owner (and the cloud document's id): when the page is closed or crashes,
+    what it still holds is released, even if another document is active by then."""
+    cloud.ws.answer = lambda m: ({"type": "lock.result", "request_id": m["request_id"], "granted": m["targets"],
+                                  "denied": {}} if m["type"] == "lock.acquire" else None)
+    got = S.call("collab_lock", {"features": ["f:f1", "f:f2"], "document": "doc1", "owner": "page-12345678"})
+    assert got["granted"] == ["f:f1", "f:f2"]
+    S.call("collab_unlock", {"features": ["f:f1"], "document": "doc1", "owner": "page-12345678"})
+    assert C.OWNED == {"page-12345678": {("doc1", "f:f2")}}
+    S.call("new_part", {"name": "Elsewhere"})  # (another document active now)
+    assert C.release_owner("page-12345678") == 1 and C.OWNED == {}
+    assert cloud.ws.of("lock.release")[-1]["targets"] == ["f:f2"]
+    with pytest.raises(S.CommandError, match="no cloud document 'nope'"):
+        S.call("collab_unlock", {"features": ["f:f2"], "document": "nope"})

@@ -1000,8 +1000,8 @@ class Hook:
         for c in list(CLIENTS.values()):
             if c.closed or not c._open_here():  # (called with APP.lock held: a preview's copy is not in place)
                 continue
-            snaps.append((c, c.doc, plain(c.doc.to_dict())))
-        for c, _, _ in snaps:
+            snaps.append((c, c.doc, plain(c.doc.to_dict()), c.doc.dirty))
+        for c, *_ in snaps:
             with c.mu:
                 c.taken = []
             c.busy = True
@@ -1012,7 +1012,7 @@ class Hook:
             return
         snaps, name, args = token
         first: DocumentError | None = None
-        for c, doc, before in snaps:
+        for c, doc, before, dirty in snaps:
             try:
                 if c.closed:
                     continue
@@ -1022,9 +1022,11 @@ class Hook:
                     continue
                 if not ok:  # (a failed command that left something changed: back to the shared state)
                     c.reload_view_locked(force=True)
+                    doc.dirty = dirty
                     continue
                 c.commit_local(ops, name, args)
             except DocumentError as exc:  # (refused: commit_local already put the server's state back)
+                doc.dirty = dirty  # (and nothing of it is left to save)
                 first = first or exc
             except Exception as exc:  # noqa: BLE001 - never leave an edit on screen that is not on its way
                 log.exception("could not send a change to %s", c.document_id)
@@ -1071,6 +1073,36 @@ def attach(doc, document_id: str, server: str, token: str, info: dict, timeout: 
     backup.start()
     changed()
     return c
+
+
+# ---------------------------------------------------------------------- locks a page of the UI holds
+OWNED: dict[str, set[tuple[str, str]]] = {}  # owner (a browser page's id) -> {(cloud document id, lock target)}
+_OWNED_MU = threading.Lock()
+
+
+def own(owner: str, document_id: str, targets) -> None:
+    with _OWNED_MU:
+        OWNED.setdefault(owner, set()).update((document_id, t) for t in targets)
+
+
+def disown(owner: str, document_id: str, targets) -> None:
+    with _OWNED_MU:
+        held = OWNED.get(owner)
+        if held is not None:
+            held.difference_update((document_id, t) for t in targets)
+            if not held:
+                del OWNED[owner]
+
+
+def release_owner(owner: str) -> int:
+    """Free every lock `owner` still holds (its page closed or crashed). Returns how many."""
+    with _OWNED_MU:
+        held = OWNED.pop(owner, set())
+    for document_id, target in held:
+        c = CLIENTS.get(document_id)
+        if c is not None and not c.closed:
+            c.unlock([target])
+    return len(held)
 
 
 def status() -> dict:

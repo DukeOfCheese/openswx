@@ -3621,18 +3621,18 @@ Stop live collaboration for the active document: it stops syncing and stays open
 ### `collab_lock` *(read-only)*
 
 ```
-collab_lock(features: list[str])
+collab_lock(features: list[str], document: str | None = None, owner: str | None = None)
 ```
 
-Lock features or sketches of the active cloud document (by name) so nobody else can change them while you work on them, as opening a sketch or a feature's panel does. 'structure' locks the feature tree's shape (deleting and reordering). Locks last while you are connected (and 60 s after a dropped connection); free them with collab_unlock. Returns {granted: [names], denied: {name: who holds it}}.
+Lock features or sketches of the active cloud document (by name) so nobody else can change them while you work on them, as opening a sketch or a feature's panel does. 'structure' locks the feature tree's shape (deleting and reordering). Locks last while you are connected (and 60 s after a dropped connection); free them with collab_unlock. document: a cloud document id instead of the active one. owner: who in this app took them (the UI passes its page's id, so the locks are freed when that page goes away). Returns {granted: [names], denied: {name: who holds it}}.
 
 ### `collab_unlock` *(read-only)*
 
 ```
-collab_unlock(features: list[str])
+collab_unlock(features: list[str], document: str | None = None, owner: str | None = None)
 ```
 
-Release locks taken with collab_lock (feature or sketch names, or 'structure').
+Release locks taken with collab_lock (feature or sketch names, or 'structure'). document: a cloud document id instead of the active one; owner: as given to collab_lock.
 
 ### `collab_history` *(read-only)*
 

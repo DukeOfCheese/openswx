@@ -50,8 +50,13 @@ def _ok(r, what: str):
     return r.json() if r.content else None
 
 
-def _client():
+def _client(document: str | None = None):
     _, client = _need()
+    if document:  # (a cloud document by id, active or not)
+        c = client.CLIENTS.get(document)
+        if c is None or c.closed:
+            raise DocumentError(f"no cloud document {document!r} is open")
+        return c
     c = client.client_for(APP.active_doc)
     if c is None:
         raise DocumentError("the active document is not a cloud document: share it with collab_enable, or open one "
@@ -255,24 +260,31 @@ def collab_disable() -> dict:
 
 # ---------------------------------------------------------------------- working together
 @command(mutates=False, category="collab")
-def collab_lock(features: list[str]) -> dict:
+def collab_lock(features: list[str], document: str | None = None, owner: str | None = None) -> dict:
     """Lock features or sketches of the active cloud document (by name) so nobody else can change them while you
     work on them, as opening a sketch or a feature's panel does. 'structure' locks the feature tree's shape
     (deleting and reordering). Locks last while you are connected (and 60 s after a dropped connection); free
-    them with collab_unlock. Returns {granted: [names], denied: {name: who holds it}}."""
-    c = _client()
+    them with collab_unlock. document: a cloud document id instead of the active one. owner: who in this app took
+    them (the UI passes its page's id, so the locks are freed when that page goes away). Returns {granted:
+    [names], denied: {name: who holds it}}."""
+    c = _client(document)
     targets = {c.feature_target(n): n for n in features}
     res = c.lock(list(targets))
+    if owner:
+        _need()[1].own(owner, c.document_id, res["granted"])
     return {"granted": [targets.get(t, t) for t in res["granted"]],
             "denied": {targets.get(t, t): (h.get("name") or "not lockable") for t, h in res["denied"].items()}}
 
 
 @command(mutates=False, category="collab")
-def collab_unlock(features: list[str]) -> dict:
-    """Release locks taken with collab_lock (feature or sketch names, or 'structure')."""
-    c = _client()
+def collab_unlock(features: list[str], document: str | None = None, owner: str | None = None) -> dict:
+    """Release locks taken with collab_lock (feature or sketch names, or 'structure'). document: a cloud document id
+    instead of the active one; owner: as given to collab_lock."""
+    c = _client(document)
     targets = [c.feature_target(n) for n in features]
     c.unlock(targets)
+    if owner:
+        _need()[1].disown(owner, c.document_id, targets)
     return {"released": features}
 
 
