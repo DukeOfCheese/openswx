@@ -9,6 +9,7 @@ openswx-collab with its virtual environment beside this repository (OPENSWX_COLL
 skipped without any of them. The tests run in order and share the servers and pages. With OPENSWX_COLLAB_SHOTS
 set to a folder, screenshots of Bob's window are saved there.
 """
+import json
 import os
 import socket
 import subprocess
@@ -85,7 +86,7 @@ def world(tmp_path_factory):
         for who in ("ada", "bob"):
             p = free_port()
             env = dict(os.environ, OPENSWX_HOME=tempfile.mkdtemp(prefix=f"openswx-ui-{who}-"), OPENSWX_TOKEN=TOKEN,
-                       OPENSWX_AUTOSAVE="off", OPENSWX_LOG="off", OPENSWX_PLUGINS="off", OPENSWX_COLLAB_RETRY_MAX="1",
+                       OPENSWX_AUTOSAVE="off", OPENSWX_LOG="off", OPENSWX_PLUGINS="off", OPENSWX_COLLAB_RETRY_MAX="1", OPENSWX_COLLAB_PAGE_GRACE="1",
                        PYTHONPATH=os.pathsep.join([str(ROOT), proto, os.environ.get("PYTHONPATH", "")]))
             procs.append(subprocess.Popen([sys.executable, "-m", "openswx", "serve", "--port", str(p)], cwd=ROOT, env=env,
                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
@@ -350,3 +351,92 @@ def test_changes_refused_after_a_reconnect_are_listed_once(world):
     assert "Ada changed Fillet1" in b.evaluate("T.text()")
     assert "Fillet1" not in b.inner_text("#toasts")
     b.evaluate("document.querySelector('#modal').classList.add('hidden')")
+
+
+def _watch_previews(page) -> None:
+    page.evaluate("""() => { window.__previews = []; const app = window.app, api = app.api.bind(app);
+        app.api = (path, body) => { if (path === '/api/preview') window.__previews.push(body); return api(path, body); }; }""")
+
+
+def _ada_draft(world, draft, presence=None) -> None:
+    """What Ada's openswx relays as her draft (and presence), as any client of the server could send it."""
+    args = {"draft": draft} if draft is not None else {"clear_draft": True}
+    r = world["a"].evaluate("(a) => T.run('collab_presence', a)", {**args, **(presence or {})})
+    assert r["ok"], r
+
+
+def test_hostile_drafts_never_reach_a_preview(world):
+    """A draft comes from someone else: only a feature command the UI's panels preview, with plain small arguments,
+    is ever previewed - never run_macro, save_part or anything else."""
+    b = world["b"]
+    _watch_previews(b)
+    for draft in ({"kind": "feature", "command": "run_macro", "args": {"path": "//evil/share/evil.py"}},
+                  {"kind": "feature", "command": "save_part", "args": {"path": "C:/Users/Public/x.oswprt"}},
+                  {"kind": "feature", "command": "batch", "args": {"commands": [{"name": "run_macro"}]}},
+                  {"kind": "feature", "command": "run_macro", "editing": "Boss-Extrude1", "args": {"path": "x.py"}},
+                  {"kind": "feature", "command": "extrude", "editing": "NoSuchFeature", "args": {"depth": 5}},
+                  {"kind": "feature", "command": "linear_pattern", "args": {"features": ["Boss-Extrude1"], "count1": 100000}},
+                  {"kind": "feature", "command": "extrude", "args": "not an object"}):
+        _ada_draft(world, draft)
+        b.wait_for_function("(c) => JSON.stringify(T.peer('Ada')?.draft) === c", arg=json.dumps(draft, separators=(",", ":")))
+        time.sleep(0.5)  # (longer than a ghost's 300 ms)
+        assert b.evaluate("window.__previews") == [], draft
+    _ada_draft(world, {"kind": "feature", "command": "extrude", "editing": "Boss-Extrude1",
+                       "args": {"sketch": "Sketch1", "depth": 35}})  # (a real one still shows)
+    b.wait_for_function("window.__previews.length > 0 && [...window.app.cl.ghosts.values()].some((g) => g.group.children.length > 0)")
+    assert b.evaluate("window.__previews[0].name") == "redefine_feature" and b.evaluate("window.__previews[0].if_idle")
+    _ada_draft(world, None)
+    b.wait_for_function("[...window.app.cl.ghosts.values()].every((g) => g.group.children.length === 0)")
+
+
+def test_a_bad_draft_or_camera_does_not_stop_drawing(world):
+    b = world["b"]
+    _ada_draft(world, {"kind": "sketch", "sketch": "Sketch1", "lines": "oops"})
+    b.wait_for_function("T.peer('Ada')?.draft?.lines === 'oops'")
+    _ada_draft(world, {"kind": "sketch", "sketch": "Sketch1", "lines": [{"p": [0, 0, "x", 1]}, {"p": None}, {"p": [0, 0, 30, 20]}]})
+    b.wait_for_function("window.app.cl.groups.drafts.children.length === 1")  # (the good line, the others skipped)
+    _ada_draft(world, None)
+    b.wait_for_function("window.app.cl.groups.drafts.children.length === 0")
+    b.click("#collabbar .cl-av[title^='Ada']")
+    _ada_draft(world, None, {"camera": {"q": ["a", 0, 0], "t": [1, 2], "h": "big"}})
+    b.wait_for_function("T.peer('Ada')?.presence?.camera?.h === 'big'")
+    time.sleep(0.3)
+    cam = b.evaluate("(() => { const v = window.app.vp; return [...v.camera.quaternion.toArray(), ...v.target.toArray(), v.viewHeight]; })()")
+    assert all(isinstance(x, (int, float)) and x == x for x in cam), cam  # (nothing NaN)
+    b.click("#collabbar .cl-av[title^='Ada']")
+    assert b.evaluate("window.app.cl.follow") is None
+
+
+def test_going_straight_to_another_sketch_keeps_that_one_locked(world):
+    a, b = world["a"], world["b"]
+    a.evaluate("async () => { await window.app.run('create_sketch', {plane: 'Front'}); }")
+    b.wait_for_function("window.app.model.features.some((f) => f.name === 'Sketch2')")
+    a.evaluate("window.app.enterSketch('Sketch1')")
+    b.wait_for_selector("#tree .cl-lock[data-target='Sketch1']")
+    a.evaluate("window.app.enterSketch('Sketch2')")  # (from Sketch1 straight into Sketch2)
+    a.wait_for_function("window.app.sk.name === 'Sketch2'")
+    b.wait_for_selector("#tree .t-row[data-feature='Sketch2'] .cl-lock[data-who='Ada']")
+    b.wait_for_function("!document.querySelector(\"#tree .cl-lock[data-target='Sketch1']\")")
+    time.sleep(0.5)
+    assert b.locator("#tree .t-row[data-feature='Sketch2'] .cl-lock").count() == 1  # (still held)
+    a.evaluate("window.app.exitSketch(true)")
+    b.wait_for_function("!document.querySelector('#tree .cl-lock')")
+
+
+def test_a_lock_is_freed_on_its_document_after_switching_away(world):
+    a, b = world["a"], world["b"]
+    a.evaluate("window.app.editFeature('Boss-Extrude1')")
+    b.wait_for_selector("#tree .t-row[data-feature='Boss-Extrude1'] .cl-lock")
+    a.evaluate("async () => { await window.app.run('new_part', {name: 'Scratch'}); window.app.closePM(); }")  # (another document is active)
+    b.wait_for_function("!document.querySelector('#tree .cl-lock')")
+    a.evaluate("async () => { await window.app.switchDocument('Bracket'); }")
+    a.wait_for_function("window.app.collabDoc()")
+
+
+def test_a_crashed_page_s_locks_are_freed(world):
+    a, b = world["a"], world["b"]
+    a.evaluate("window.app.editFeature('Boss-Extrude1')")
+    b.wait_for_selector("#tree .t-row[data-feature='Boss-Extrude1'] .cl-lock")
+    a.evaluate("window.app.cl.noPagehide = true")  # (no goodbye: as if the tab crashed)
+    a.close()
+    b.wait_for_function("!document.querySelector('#tree .cl-lock')", timeout=20000)  # (once its event stream is gone)
