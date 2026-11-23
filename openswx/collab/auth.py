@@ -195,13 +195,10 @@ ERRORS = {
 }
 
 
-def sign_in_browser(url: str, provider: str, invite: str | None = None, open_browser=None, timeout: float = 300.0,
-                    transport=None) -> dict:
-    """Sign in with Google or GitHub: opens the system browser, waits (up to `timeout` s) for it to come back."""
+def _browser_round_trip(start_for, open_browser=None, timeout: float = 300.0, done_text: str = "Signed in"):
+    """Open the system browser at `start_for(redirect_uri, code_challenge)` and wait (up to `timeout` s) for the
+    server to send it back to a one-off listener on 127.0.0.1. Returns (what came back, the code_verifier)."""
     import webbrowser
-    url = normalise(url)
-    if provider not in ("google", "github"):
-        raise AuthError("provider must be google or github")
     verifier, challenge = pkce_pair()
     got: dict = {}
     done = threading.Event()
@@ -217,7 +214,7 @@ def sign_in_browser(url: str, provider: str, invite: str | None = None, open_bro
                 got.update({k: v[0] for k, v in q.items()})
                 done.set()
             ok = "code" in got
-            body = _PAGE.format("Signed in" if ok else "Sign-in did not finish").encode("utf-8")
+            body = _PAGE.format(done_text if ok else "Sign-in did not finish").encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
@@ -232,14 +229,26 @@ def sign_in_browser(url: str, provider: str, invite: str | None = None, open_bro
     t.start()
     try:
         redirect = f"http://127.0.0.1:{srv.server_address[1]}/callback"
-        q = {"redirect_uri": redirect, "code_challenge": challenge, **({"invite": invite} if invite else {})}
-        start = f"{url}/api/auth/oauth/{provider}/start?{urllib.parse.urlencode(q)}"
-        (open_browser or webbrowser.open)(start)
+        (open_browser or webbrowser.open)(start_for(redirect, challenge))
         if not done.wait(timeout):
             raise AuthError(f"no answer from the browser within {int(timeout)} s; try again")
     finally:
         srv.shutdown()
         srv.server_close()
+    return got, verifier
+
+
+def sign_in_browser(url: str, provider: str, invite: str | None = None, open_browser=None, timeout: float = 300.0,
+                    transport=None) -> dict:
+    """Sign in with Google or GitHub: opens the system browser, waits (up to `timeout` s) for it to come back."""
+    url = normalise(url)
+    if provider not in ("google", "github"):
+        raise AuthError("provider must be google or github")
+
+    def start(redirect: str, challenge: str) -> str:
+        q = {"redirect_uri": redirect, "code_challenge": challenge, **({"invite": invite} if invite else {})}
+        return f"{url}/api/auth/oauth/{provider}/start?{urllib.parse.urlencode(q)}"
+    got, verifier = _browser_round_trip(start, open_browser, timeout)
     if "code" not in got:
         e = got.get("error", "")
         raise AuthError(f"sign-in failed: {ERRORS.get(e, e or 'unknown error')}")
@@ -248,6 +257,62 @@ def sign_in_browser(url: str, provider: str, invite: str | None = None, open_bro
     if r.status_code != 200:
         raise AuthError(f"sign-in refused: {error_text(r)}")
     return _remember(url, r.json())
+
+
+def _signed_in(transport=None):
+    url, tok = server(), token()
+    if not url or not tok:
+        raise AuthError("not signed in to a collaboration server (collab_sign_in)")
+    return http(url, tok, transport)
+
+
+def providers(transport=None) -> dict:
+    """The sign-in methods of the signed-in account: {providers: ['github', ...], has_password}."""
+    with _signed_in(transport) as c:
+        r = c.get("/api/me/providers")
+    if r.status_code != 200:
+        raise AuthError(f"could not read your sign-in methods: {error_text(r)}")
+    return r.json()
+
+
+def link_provider(provider: str, password: str | None = None, open_browser=None, timeout: float = 300.0,
+                  transport=None) -> dict:
+    """Add Google or GitHub to the signed-in account, through the system browser. The server asks for the
+    account's password (or, for an account without one, a sign-in within the last ten minutes), and the result
+    only counts when this app, signed in as this account, finishes it: a link someone else started does
+    nothing. Returns {linked, user}."""
+    if provider not in ("google", "github"):
+        raise AuthError("provider must be google or github")
+    with _signed_in(transport) as c:
+        def start(redirect: str, challenge: str) -> str:
+            r = c.post(f"/api/auth/oauth/{provider}/link",
+                       json={"redirect_uri": redirect, "code_challenge": challenge, "current_password": password})
+            if r.status_code != 200:
+                raise AuthError(f"cannot add {provider}: {error_text(r)}")
+            return r.json()["url"]
+        got, verifier = _browser_round_trip(start, open_browser, timeout, done_text=f"{provider.title()} added")
+        if "code" not in got:
+            e = got.get("error", "")
+            raise AuthError(f"adding {provider} failed: {ERRORS.get(e, e or 'unknown error')}")
+        r = c.post("/api/auth/oauth/link/finish", json={"code": got["code"], "code_verifier": verifier})
+    if r.status_code != 200:
+        raise AuthError(f"adding {provider} failed: {error_text(r)}")
+    out = r.json()
+    d = config()
+    if isinstance(out.get("user"), dict):
+        d["user"] = out["user"]
+        _save_config(d)
+    return {"linked": out.get("linked", provider), "user": out.get("user")}
+
+
+def unlink_provider(provider: str, password: str | None = None, transport=None) -> dict:
+    """Stop Google or GitHub signing in to this account (the password, or a recent sign-in, is asked for; the
+    last way into an account cannot be removed)."""
+    with _signed_in(transport) as c:
+        r = c.post(f"/api/me/providers/{provider}/unlink", json={"current_password": password})
+    if r.status_code != 204:
+        raise AuthError(f"cannot remove {provider}: {error_text(r)}")
+    return providers(transport)
 
 
 def sign_out(transport=None) -> bool:

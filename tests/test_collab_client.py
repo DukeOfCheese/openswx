@@ -535,3 +535,71 @@ def test_explicit_entries_on_the_token_file_are_removed_too(tmp_path):
     grants = [line.rsplit(":(", 1)[0].strip().lower() for line in acl.splitlines() if ":(" in line]
     grants = [g.split(" ", 1)[1].strip() if g.startswith(str(tmp_path).lower()) else g for g in grants]
     assert grants and all(g == user or g.endswith("\\" + user) for g in grants), acl
+
+
+def test_adding_a_provider_goes_through_the_signed_in_app(monkeypatch, tmp_path):
+    import hashlib
+
+    import httpx
+    monkeypatch.setenv("OPENSWX_HOME", str(tmp_path))
+    auth._remember("http://127.0.0.1:8787", {"token": "pw-session", "user": {"name": "Ada"}})
+    seen = {"linked": []}
+
+    def server(request):
+        assert request.headers["authorization"] == "Bearer pw-session"  # (always as the signed-in account)
+        path = request.url.path
+        body = json.loads(request.content) if request.content else {}
+        if path == "/api/auth/oauth/github/link":
+            if body.get("current_password") != "correct horse":
+                return httpx.Response(403, json={"detail": "the current password is wrong"})
+            seen.update(body)
+            return httpx.Response(200, json={"url": "https://github.example/authorize?state=s"})
+        if path == "/api/auth/oauth/link/finish":
+            ok = body["code"] == "linkcode" and \
+                hashlib.sha256(body["code_verifier"].encode()).hexdigest() == seen["code_challenge"]
+            if not ok:
+                return httpx.Response(400, json={"detail": "this code was not issued to this app and account"})
+            seen["linked"].append("github")
+            return httpx.Response(200, json={"linked": "github", "user": {"name": "Ada", "email_verified": True}})
+        if path == "/api/me/providers":
+            return httpx.Response(200, json={"providers": seen["linked"], "has_password": True})
+        if path == "/api/me/providers/github/unlink":
+            seen["linked"].remove("github")
+            return httpx.Response(204)
+        return httpx.Response(404)
+
+    def browser(url):  # GitHub, approving: back to the loopback address the app gave the server
+        assert url == "https://github.example/authorize?state=s"
+        urllib.request.urlopen(seen["redirect_uri"] + "?code=linkcode", timeout=10).read()
+
+    mock = httpx.MockTransport(server)
+    with pytest.raises(auth.AuthError, match="password is wrong"):
+        auth.link_provider("github", "nope", open_browser=browser, timeout=20, transport=mock)
+    got = auth.link_provider("github", "correct horse", open_browser=browser, timeout=20, transport=mock)
+    assert got["linked"] == "github" and seen["redirect_uri"].startswith("http://127.0.0.1:")
+    assert auth.config()["user"]["email_verified"] is True and auth.token() == "pw-session"
+    assert auth.providers(transport=mock) == {"providers": ["github"], "has_password": True}
+    assert auth.unlink_provider("github", "correct horse", transport=mock) == {"providers": [], "has_password": True}
+
+    def refused(url):
+        urllib.request.urlopen(seen["redirect_uri"] + "?error=identity_in_use", timeout=10).read()
+    with pytest.raises(auth.AuthError, match="already linked to another"):
+        auth.link_provider("github", "correct horse", open_browser=refused, timeout=20, transport=mock)
+    auth.sign_out(transport=mock)
+    with pytest.raises(auth.AuthError, match="not signed in"):
+        auth.link_provider("github", "correct horse", open_browser=browser, timeout=20, transport=mock)
+
+
+def test_sign_in_method_commands(monkeypatch):
+    calls = []
+    monkeypatch.setattr(auth, "providers", lambda: {"providers": ["github"], "has_password": True})
+    monkeypatch.setattr(auth, "link_provider", lambda p, pw: calls.append(("link", p, pw)) or {"linked": p, "user": {}})
+
+    def unlink(p, pw):
+        raise auth.AuthError("cannot remove github: this is the only way into the account")
+    monkeypatch.setattr(auth, "unlink_provider", unlink)
+    assert S.call("collab_sign_in_methods") == {"providers": ["github"], "has_password": True}
+    assert S.call("collab_link_provider", {"provider": "google", "password": "pw"}) == {"linked": "google", "user": {}}
+    assert calls == [("link", "google", "pw")]
+    with pytest.raises(S.CommandError, match="only way into the account"):
+        S.call("collab_unlink_provider", {"provider": "github"})

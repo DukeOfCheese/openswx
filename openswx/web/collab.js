@@ -547,7 +547,8 @@ const MIXIN = {
   // ---------------------------------------------------------------- the Collaborate menu
   collabMenu() {
     const d = this.collabDoc();
-    return [["Sign In...", "", () => this.collabSignInDialog()], ["Sign Out", "", () => this.collabSignOut()], "-",
+    return [["Sign In...", "", () => this.collabSignInDialog()], ["Sign-in Methods...", "", () => this.collabMethodsDialog()],
+      ["Sign Out", "", () => this.collabSignOut()], "-",
       ["Share This Part...", "", () => this.collabShareDialog()], ["Open Cloud Part...", "", () => this.collabOpenDialog()],
       ...(d ? [["Stop Sharing...", "", () => this.collabStopDialog()], "-", ["History and Versions...", "", () => this.collabHistoryDialog()]] : []), "-",
       [`${this.cl?.previews ? "✓ " : ""}Show Others' Drafts`, "", () => this.collabTogglePreviews()]];
@@ -596,6 +597,42 @@ const MIXIN = {
         this.toast(`Finish signing in with ${esc(names[b.dataset.p] || b.dataset.p)} in the browser window that opened`);
         const res = await this.run("collab_sign_in", { server, provider: b.dataset.p }).catch(() => null);
         if (res) this.toast(`Signed in as <b>${esc(res.result.user?.name || "you")}</b> on ${esc(res.result.server)}`);
+      };
+    }
+  },
+
+  // add or remove Google / GitHub on the signed-in account (the server asks for the password, if there is one)
+  async collabMethodsDialog() {
+    const st = await this.collabCmd("collab_status");
+    if (!st) return;
+    if (!st.signed_in) { this.toast("Sign in to a collaboration server first"); return this.collabSignInDialog(); }
+    const [mine, info] = await Promise.all([this.collabCmd("collab_sign_in_methods"),
+      this.api("/api/command", { name: "collab_server_info", args: { server: st.server } }).catch(() => null)]);
+    if (!mine) return;
+    const names = { google: "Google", github: "GitHub" };
+    const offered = info?.ok ? (info.result.oauth || []) : [];
+    const linked = new Set(mine.providers || []);
+    const rows = [...new Set([...offered, ...linked])].map((p) => `<div class="field cl-method"><label>${esc(names[p] || p)}</label>
+      <span>${linked.has(p) ? "Signs in to this account" : "Not added"}</span>
+      <button class="btn cl-method-btn" data-p="${esc(p)}" data-act="${linked.has(p) ? "remove" : "add"}">${linked.has(p) ? "Remove" : "Add"}</button></div>`).join("")
+      || `<p class="muted">This server does not offer Google or GitHub sign-in.</p>`;
+    const pw = mine.has_password
+      ? `<div class="field"><label>Your password</label><input id="cl-mpw" type="password" autocomplete="current-password"></div>
+         <p class="muted">Adding or removing a sign-in method needs your password.</p>`
+      : `<p class="muted">This account has no password: adding or removing a method needs a sign-in from the last ten minutes.</p>`;
+    this.modal("Sign-in Methods", `${rows}${pw}`, null, "open");
+    for (const b of document.querySelectorAll(".cl-method-btn")) {
+      b.onclick = async () => {
+        const p = b.dataset.p, password = $("#cl-mpw")?.value || null;
+        $("#modal").classList.add("hidden");
+        if (b.dataset.act === "add") {
+          this.toast(`Finish adding ${esc(names[p] || p)} in the browser window that opened`);
+          const r = await this.run("collab_link_provider", { provider: p, password }).catch(() => null);
+          if (r) this.toast(`${esc(names[p] || p)} now signs in to this account`);
+        } else {
+          const r = await this.run("collab_unlink_provider", { provider: p, password }).catch(() => null);
+          if (r) this.toast(`${esc(names[p] || p)} removed`);
+        }
       };
     }
   },

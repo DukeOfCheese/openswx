@@ -107,6 +107,46 @@ def collab_server_info(server: str) -> dict:
     return {**info, "server": url}
 
 
+def _auth_call(fn, *args, **kw):
+    """Run an auth call, saying network and server refusals plainly."""
+    auth, _ = _need()
+    try:
+        return fn(*args, **kw)
+    except auth.AuthError as exc:
+        raise DocumentError(str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 - network trouble
+        if isinstance(exc, (DocumentError, ValueError)):
+            raise
+        raise DocumentError(f"cannot reach the collaboration server: {exc}") from exc
+
+
+@command(mutates=False, category="collab")
+def collab_sign_in_methods() -> dict:
+    """The ways into the signed-in collaboration account: which of Google and GitHub are linked (providers) and
+    whether it has a password (has_password)."""
+    auth, _ = _need()
+    return _auth_call(auth.providers)
+
+
+@command(mutates=False, category="collab")
+def collab_link_provider(provider: Literal["google", "github"], password: str | None = None) -> dict:
+    """Add Google or GitHub sign-in to the signed-in collaboration account, through the system browser (the
+    command waits up to 5 minutes for it). password: the account's password (needed if it has one; an account
+    without one needs a sign-in from the last ten minutes instead). Afterwards that provider signs in to this
+    account. Returns {linked, user}."""
+    auth, _ = _need()
+    with unlocked():  # (the user is busy in the browser: openswx stays usable meanwhile)
+        return _auth_call(auth.link_provider, provider, password)
+
+
+@command(mutates=False, category="collab")
+def collab_unlink_provider(provider: Literal["google", "github"], password: str | None = None) -> dict:
+    """Stop Google or GitHub signing in to the collaboration account. password: the account's password if it
+    has one. The last way into an account cannot be removed. Returns the remaining sign-in methods."""
+    auth, _ = _need()
+    return _auth_call(auth.unlink_provider, provider, password)
+
+
 @command(mutates=False, category="collab")
 def collab_sign_out() -> dict:
     """Sign out of the collaboration server: every cloud document stops syncing (each stays open as a local copy)
