@@ -178,16 +178,13 @@ def simulation_clear(fixtures: bool = True, loads: bool = True) -> dict:
 
 
 
-def _mesh_kind(mesh: str, contact: bool = False) -> str:
-    """auto: tetrahedral when the mesher is installed and the study can use it (contact is voxel-only)."""
+def _mesh_kind(mesh: str) -> str:
+    """auto: tetrahedral when the mesher is installed, else voxel."""
     from . import fea_tet
     if mesh == "auto":
-        return "tetrahedral" if fea_tet.available() and not contact else "voxel"
-    if mesh == "tetrahedral":
-        if not fea_tet.available():
-            raise DocumentError("the tetrahedral mesher is not installed (pip install netgen-mesher); use mesh='voxel'")
-        if contact:
-            raise DocumentError("contact, and springs or bolts between separate bodies, need mesh='voxel'")
+        return "tetrahedral" if fea_tet.available() else "voxel"
+    if mesh == "tetrahedral" and not fea_tet.available():
+        raise DocumentError("the tetrahedral mesher is not installed (pip install netgen-mesher); use mesh='voxel'")
     return mesh
 
 
@@ -196,8 +193,8 @@ def simulation_run(element_size: float | None = None, mesh: Literal["auto", "tet
     """Run the linear static study; returns max displacement (mm), max von Mises stress (MPa), factor of
     safety (material yield / max stress), reactions (N). mesh: tetrahedral = quadratic tetrahedra graded to the
     faces' curvature, accurate peak stresses at fillets and holes (needs the optional Netgen mesher); voxel =
-    hexahedral grid, stair-stepped at curved faces (stresses there approximate); contact, and springs or bolts
-    between separate bodies, need it. Bonded assemblies work on both. auto = tetrahedral when it is installed and the study allows it.
+    hexahedral grid, stair-stepped at curved faces (stresses there approximate). Both handle bonded assemblies,
+    springs, bolts and frictionless contact. auto = tetrahedral when it is installed.
     Smaller element_size = more accurate and slower (default: ~12k elements)."""
     from .fea import solve_static
     doc = _sim_doc()
@@ -216,10 +213,7 @@ def simulation_run(element_size: float | None = None, mesh: Literal["auto", "tet
         material["yield_strength"] = min(m.get("yield_strength") or m.get("tensile_strength") or 1e18 for _, _, m in mats)
         regions = [(sol, m["elastic_modulus"] / material["elastic_modulus"]) for _, shape, m in mats for sol in shape.solids()]
     from . import fea_tet
-    # contact, and connectors between separate bodies, keep the bodies apart: voxel meshes them separately (a
-    # tetrahedral mesh glues touching bodies, which would bond the faces a bolt or spring is meant to join)
-    mesh = _mesh_kind(mesh, contact=bool(connectors) and (any(c.get("contact") for c in connectors)
-                                                         or len(doc.body.solids()) > 1))
+    mesh = _mesh_kind(mesh)  # (with connectors both meshes keep the bodies apart: they touch only through them)
     try:
         with unlocked():
             if mesh == "tetrahedral":

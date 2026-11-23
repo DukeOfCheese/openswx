@@ -10,7 +10,9 @@ formats or commands; files are migrated automatically and the change is listed h
 - Static, frequency, buckling and thermal (steady and transient) studies (bonded assemblies too) mesh with curvature-based
   quadratic tetrahedra (Netgen, optional: `pip install openswx[mesh]`): peak stresses at holes and fillets
   within a few percent of closed-form results; frequencies with a consistent mass matrix. Each study takes
-  `mesh=` tetrahedral, voxel or auto (tetrahedral when installed and the study allows it).
+  `mesh=` tetrahedral, voxel or auto (tetrahedral when installed). Frictionless contact, springs and bolts
+  between separate bodies, and the nonlinear, drop, harmonic and step-response studies, work on tetrahedra
+  too.
 - About 70 more library materials: carbon, alloy, tool and stainless steels, aluminium, copper, nickel,
   magnesium and zinc alloys, engineering plastics, rubbers, composites, woods and ceramics.
 - The Windows desktop build includes the tetrahedral mesher.

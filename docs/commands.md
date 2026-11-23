@@ -2991,7 +2991,7 @@ Remove the study's fixtures and/or loads.
 simulation_run(element_size: float | None = None, mesh: Literal['auto', 'tetrahedral', 'voxel'] = 'auto')
 ```
 
-Run the linear static study; returns max displacement (mm), max von Mises stress (MPa), factor of safety (material yield / max stress), reactions (N). mesh: tetrahedral = quadratic tetrahedra graded to the faces' curvature, accurate peak stresses at fillets and holes (needs the optional Netgen mesher); voxel = hexahedral grid, stair-stepped at curved faces (stresses there approximate); contact, and springs or bolts between separate bodies, need it. Bonded assemblies work on both. auto = tetrahedral when it is installed and the study allows it. Smaller element_size = more accurate and slower (default: ~12k elements).
+Run the linear static study; returns max displacement (mm), max von Mises stress (MPa), factor of safety (material yield / max stress), reactions (N). mesh: tetrahedral = quadratic tetrahedra graded to the faces' curvature, accurate peak stresses at fillets and holes (needs the optional Netgen mesher); voxel = hexahedral grid, stair-stepped at curved faces (stresses there approximate). Both handle bonded assemblies, springs, bolts and frictionless contact. auto = tetrahedral when it is installed. Smaller element_size = more accurate and slower (default: ~12k elements).
 
 ### `simulation_results` *(UI only, read-only)*
 
@@ -3084,34 +3084,34 @@ Temperature per display-mesh vertex for the last thermal_run (UI plot).
 ### `nonlinear_run` *(read-only)*
 
 ```
-nonlinear_run(steps: int = 10, hardening: float = 0.05, element_size: float | None = None)
+nonlinear_run(steps: int = 10, hardening: float = 0.05, element_size: float | None = None, mesh: Literal['auto', 'tetrahedral', 'voxel'] = 'auto')
 ```
 
-Nonlinear static study (elastic-plastic): bilinear material - elastic to the yield strength, then a tangent modulus of `hardening` x E - with the study's fixtures and loads applied in `steps` increments. Returns the load-displacement curve, max stress, plastic elements and plastic strain; plot with simulation_results.
+Nonlinear static study (elastic-plastic): bilinear material - elastic to the yield strength, then a tangent modulus of `hardening` x E - with the study's fixtures and loads applied in `steps` increments. Returns the load-displacement curve, max stress, plastic elements and plastic strain; plot with simulation_results. mesh: as for simulation_run.
 
 ### `harmonic_run` *(read-only)*
 
 ```
-harmonic_run(f_min: float, f_max: float, points: int = 200, damping: float = 0.02, modes: int = 10, element_size: float | None = None)
+harmonic_run(f_min: float, f_max: float, points: int = 200, damping: float = 0.02, modes: int = 10, element_size: float | None = None, mesh: Literal['auto', 'tetrahedral', 'voxel'] = 'auto')
 ```
 
-Dynamic (harmonic) study: the study's loads as F sin(2 pi f t), swept from f_min to f_max Hz; steady amplitude of the largest displacement against frequency (modal superposition, modal damping ratio).
+Dynamic (harmonic) study: the study's loads as F sin(2 pi f t), swept from f_min to f_max Hz; steady amplitude of the largest displacement against frequency (modal superposition, modal damping ratio). mesh: as for simulation_run.
 
 ### `step_response_run` *(read-only)*
 
 ```
-step_response_run(duration: float, points: int = 400, damping: float = 0.02, modes: int = 10, element_size: float | None = None)
+step_response_run(duration: float, points: int = 400, damping: float = 0.02, modes: int = 10, element_size: float | None = None, mesh: Literal['auto', 'tetrahedral', 'voxel'] = 'auto')
 ```
 
-Dynamic (transient) study: the study's loads applied suddenly and held; displacement against time over `duration` seconds, the peak and the dynamic amplification over the static value.
+Dynamic (transient) study: the study's loads applied suddenly and held; displacement against time over `duration` seconds, the peak and the dynamic amplification over the static value. mesh: as for simulation_run.
 
 ### `drop_test_run` *(read-only)*
 
 ```
-drop_test_run(height: float, impact_faces: list[str], direction: Vec3 = (0, 0, -1), element_size: float | None = None)
+drop_test_run(height: float, impact_faces: list[str], direction: Vec3 = (0, 0, -1), element_size: float | None = None, mesh: Literal['auto', 'tetrahedral', 'voxel'] = 'auto')
 ```
 
-Drop test: the part falls `height` mm along `direction` onto a rigid floor, landing on impact_faces ('FaceN'). Energy method: peak deceleration (g), stress and deflection at impact, factor of safety; plot with simulation_results.
+Drop test: the part falls `height` mm along `direction` onto a rigid floor, landing on impact_faces ('FaceN'). Energy method: peak deceleration (g), stress and deflection at impact, factor of safety; plot with simulation_results. mesh: as for simulation_run.
 
 ### `fatigue_run` *(read-only)*
 

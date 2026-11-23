@@ -1031,16 +1031,20 @@ def _public(r: dict) -> dict:
 
 
 @command(mutates=False, category="simulation")
-def nonlinear_run(steps: int = 10, hardening: float = 0.05, element_size: float | None = None) -> dict:
+def nonlinear_run(steps: int = 10, hardening: float = 0.05, element_size: float | None = None,
+                  mesh: Literal["auto", "tetrahedral", "voxel"] = "auto") -> dict:
     """Nonlinear static study (elastic-plastic): bilinear material - elastic to the yield strength, then a
     tangent modulus of `hardening` x E - with the study's fixtures and loads applied in `steps` increments.
     Returns the load-displacement curve, max stress, plastic elements and plastic strain; plot with
-    simulation_results."""
+    simulation_results. mesh: as for simulation_run."""
+    from . import fea_tet
+    from .commands_simulation import _mesh_kind
     from .fea_more import solve_nonlinear
     doc, (fixtures, loads, _con) = _part_study()
     try:
         with unlocked():
-            r = solve_nonlinear(doc.body, doc.material, fixtures, loads, steps, hardening, element_size or doc.study.get("element_size"))
+            solver = fea_tet.solve_nonlinear if _mesh_kind(mesh) == "tetrahedral" else solve_nonlinear
+            r = solver(doc.body, doc.material, fixtures, loads, steps, hardening, element_size or doc.study.get("element_size"))
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.sim_result = (doc.revision, r)
@@ -1049,42 +1053,48 @@ def nonlinear_run(steps: int = 10, hardening: float = 0.05, element_size: float 
 
 @command(mutates=False, category="simulation")
 def harmonic_run(f_min: float, f_max: float, points: int = 200, damping: float = 0.02, modes: int = 10,
-                 element_size: float | None = None) -> dict:
+                 element_size: float | None = None, mesh: Literal["auto", "tetrahedral", "voxel"] = "auto") -> dict:
     """Dynamic (harmonic) study: the study's loads as F sin(2 pi f t), swept from f_min to f_max Hz; steady
-    amplitude of the largest displacement against frequency (modal superposition, modal damping ratio)."""
+    amplitude of the largest displacement against frequency (modal superposition, modal damping ratio).
+    mesh: as for simulation_run."""
+    from .commands_simulation import _mesh_kind
     from .fea_more import solve_harmonic
     if not 0 <= f_min < f_max:
         raise DocumentError("give 0 <= f_min < f_max")
     doc, (fixtures, loads, _con) = _part_study()
     try:
         return {"study": "harmonic", **solve_harmonic(doc.body, doc.material, fixtures, loads, f_min, f_max, points, damping,
-                                                      modes, element_size or doc.study.get("element_size"))}
+                                                      modes, element_size or doc.study.get("element_size"), mesh=_mesh_kind(mesh))}
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
 
 
 @command(mutates=False, category="simulation")
 def step_response_run(duration: float, points: int = 400, damping: float = 0.02, modes: int = 10,
-                      element_size: float | None = None) -> dict:
+                      element_size: float | None = None, mesh: Literal["auto", "tetrahedral", "voxel"] = "auto") -> dict:
     """Dynamic (transient) study: the study's loads applied suddenly and held; displacement against time over
-    `duration` seconds, the peak and the dynamic amplification over the static value."""
+    `duration` seconds, the peak and the dynamic amplification over the static value. mesh: as for
+    simulation_run."""
+    from .commands_simulation import _mesh_kind
     from .fea_more import solve_step_response
     if duration <= 0:
         raise DocumentError("duration must be positive")
     doc, (fixtures, loads, _con) = _part_study()
     try:
         return {"study": "transient", **solve_step_response(doc.body, doc.material, fixtures, loads, duration, points, damping,
-                                                            modes, element_size or doc.study.get("element_size"))}
+                                                            modes, element_size or doc.study.get("element_size"), mesh=_mesh_kind(mesh))}
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
 
 
 @command(mutates=False, category="simulation")
 def drop_test_run(height: float, impact_faces: list[str], direction: Vec3 = (0, 0, -1),
-                  element_size: float | None = None) -> dict:
+                  element_size: float | None = None, mesh: Literal["auto", "tetrahedral", "voxel"] = "auto") -> dict:
     """Drop test: the part falls `height` mm along `direction` onto a rigid floor, landing on impact_faces
     ('FaceN'). Energy method: peak deceleration (g), stress and deflection at impact, factor of safety; plot
-    with simulation_results."""
+    with simulation_results. mesh: as for simulation_run."""
+    from . import fea_tet
+    from .commands_simulation import _mesh_kind
     from .fea_more import solve_drop
     from .geom import resolve_face
     doc, _study = _part_study()
@@ -1093,7 +1103,8 @@ def drop_test_run(height: float, impact_faces: list[str], direction: Vec3 = (0, 
     faces = [resolve_face(doc.body, _face(doc, f)) for f in impact_faces]
     try:
         with unlocked():
-            r = solve_drop(doc.body, doc.material, faces, height, direction, element_size or doc.study.get("element_size"))
+            solver = fea_tet.solve_drop if _mesh_kind(mesh) == "tetrahedral" else solve_drop
+            r = solver(doc.body, doc.material, faces, height, direction, element_size or doc.study.get("element_size"))
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.sim_result = (doc.revision, r)

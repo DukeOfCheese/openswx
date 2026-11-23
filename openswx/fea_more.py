@@ -33,6 +33,8 @@ def _dofs(m, faces):
 
 
 def _loads(m, loads) -> np.ndarray:
+    if m.get("kind") == "tet":  # (a tetrahedral model: fea_tet.modal_basis)
+        return m["loads"](loads)
     F = np.zeros(3 * m["nn"])
     adj = np.bincount(m["conn"].ravel(), minlength=m["nn"]).astype(float)
     for face, force in loads:
@@ -115,7 +117,10 @@ def solve_nonlinear(body, material: dict, fixtures: list, loads: list, steps: in
 
 
 # ====================================================================== linear dynamics (modal superposition)
-def _modal_basis(body, material, fixtures, modes, element_size, target_elements):
+def _modal_basis(body, material, fixtures, modes, element_size, target_elements, mesh: str = "voxel"):
+    if mesh == "tetrahedral":
+        from .fea_tet import modal_basis
+        return modal_basis(body, material, fixtures, modes, element_size, target_elements)
     from scipy.sparse.linalg import eigsh
     E, nu = _material(material)
     rho = float(material.get("density") or 0)
@@ -134,10 +139,10 @@ def _modal_basis(body, material, fixtures, modes, element_size, target_elements)
 
 def solve_harmonic(body, material: dict, fixtures: list, loads: list, f_min: float, f_max: float, points: int = 200,
                    damping: float = 0.02, modes: int = 10, element_size: float | None = None,
-                   target_elements: int = 8000) -> dict:
+                   target_elements: int = 8000, mesh: str = "voxel") -> dict:
     """Harmonic response: the loads applied as F sin(2 pi f t), steady-state amplitude of the largest node
     displacement over a frequency sweep, by superposing the first `modes` modes with a modal damping ratio."""
-    m, free, w2, phi = _modal_basis(body, material, fixtures, modes, element_size, target_elements)
+    m, free, w2, phi = _modal_basis(body, material, fixtures, modes, element_size, target_elements, mesh)
     P = phi.T @ _loads(m, loads)[free]
     w = np.sqrt(w2)
     out, best = [], (0.0, 0.0)
@@ -155,11 +160,11 @@ def solve_harmonic(body, material: dict, fixtures: list, loads: list, f_min: flo
 
 def solve_step_response(body, material: dict, fixtures: list, loads: list, duration: float, points: int = 400,
                         damping: float = 0.02, modes: int = 10, element_size: float | None = None,
-                        target_elements: int = 8000) -> dict:
+                        target_elements: int = 8000, mesh: str = "voxel") -> dict:
     """Transient response to the loads applied suddenly at t = 0 and held (modal superposition, each mode
     solved exactly): the displacement of the node that moves most, against time; the peak and its ratio to
     the static value (dynamic amplification: 2 when undamped)."""
-    m, free, w2, phi = _modal_basis(body, material, fixtures, modes, element_size, target_elements)
+    m, free, w2, phi = _modal_basis(body, material, fixtures, modes, element_size, target_elements, mesh)
     P = phi.T @ _loads(m, loads)[free]
     w = np.sqrt(np.maximum(w2, 1e-12))
     q_static = P / w ** 2
