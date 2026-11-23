@@ -115,3 +115,13 @@ def test_material_library_entries_are_plausible():
         assert 0.01 <= m["thermal_conductivity"] <= 500 and 100 <= m["specific_heat"] <= 3000, name
         assert m["color"].startswith("#") and len(m["color"]) == 7, name
     assert materials.lookup("aisi 4140 (QUENCHED AND TEMPERED)")["yield_strength"] == 655.0
+
+
+def test_release_notes_come_from_the_changelog():
+    import release_notes
+    text = release_notes.notes("v0.1.0")
+    assert text.startswith("The first public version") and "## Install" in text and "openswx-setup-0.1.0.exe" in text
+    assert "## 0.1.0" not in text and "## Unreleased" not in text  # its own section only, without the heading
+    import pytest
+    with pytest.raises(SystemExit):
+        release_notes.notes("9.9.9")

@@ -18,14 +18,14 @@ formats or commands; files are migrated automatically and the change is listed h
 
 The first public version: parts, assemblies and drawings with a familiar layout; analysis, CAM and rendering;
 SOLIDWORKS, Parasolid, STEP, IGES, STL, 3MF and DXF interchange; an MCP server for agents. See the
-[README](README.md).
+[README](https://github.com/DukeOfCheese/openswx#readme).
 
 Highlights of the last pass before the release:
 
 - Path-traced rendering in Render Tools (Quality: 64, 256 or 1024 samples), with progress and Cancel.
 - macOS app (`openswx.app`) and `.pkg` installer for Apple silicon and Intel; Windows installer and portable zip;
   a release workflow that builds them all from a version tag.
-- Python package for PyPI (`pip install openswx`), built and checked on every tag.
+- Python package for PyPI, built and checked on every tag (publishing it is not switched on yet).
 - SOLIDWORKS parts: the other configurations are imported too.
 - Help > Check for Updates looks at this project's GitHub releases by default.
 - `tools/survey.py`: `--jobs N` rebuilds several SOLIDWORKS parts at once, and parts are keyed by their path in

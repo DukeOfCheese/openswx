@@ -42,8 +42,8 @@ state), and how the program got here, pass by pass, in [`PLAN.md`](PLAN.md) (a l
   of 2026-11-23 (`docs/survey/2026-11-23-samples-841.json`; 2026-10-29: 525 / 363). The rest open as an
   imported body. `.sldprt` is read-only.
 - Simulation: static, frequency, buckling and steady thermal studies (bonded assemblies too) use
-  curvature-based quadratic tetrahedra when the optional Netgen mesher is installed (`openswx[mesh]`; not in
-  the desktop builds yet). Contact, connectors between separate bodies, transient thermal, nonlinear and drop
+  curvature-based quadratic tetrahedra when the optional Netgen mesher is installed (`openswx[mesh]`; bundled in
+  the Windows build, not yet in the macOS one). Contact, connectors between separate bodies, transient thermal, nonlinear and drop
   studies use the voxel mesh, whose stresses at curved boundaries are approximate.
 - The desktop window has not been exercised with the changes of the last pass (the browser UI has, in CI).
 - CI (`.github/workflows/test.yml`) runs the suite on Linux, Windows and macOS and the UI smoke tests in a headless browser.

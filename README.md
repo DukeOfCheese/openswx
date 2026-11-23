@@ -212,8 +212,8 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
 **Not the same yet (see [Status](#status-and-limitations))**
 
 - Simulation: static, frequency, buckling and steady thermal studies, including bonded assemblies, mesh with
-  curvature-based quadratic tetrahedra when the optional mesher is installed (`pip install openswx[mesh]`; not
-  yet in the desktop installers): peak stresses at holes and fillets within a few percent of closed-form
+  curvature-based quadratic tetrahedra when the optional mesher is installed (`pip install openswx[mesh]`; included
+  in the Windows installer, not yet in the macOS one): peak stresses at holes and fillets within a few percent of closed-form
   results. Contact, springs and bolts between separate bodies, transient thermal, nonlinear and drop studies
   use the finite-cell voxel mesh, whose stresses at curved boundaries are approximate. Flow is
   lattice-Boltzmann with a large-eddy turbulence model, without wall functions.

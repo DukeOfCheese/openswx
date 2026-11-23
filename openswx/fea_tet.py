@@ -41,6 +41,22 @@ def available() -> bool:
 # ------------------------------------------------------------------------------------------------ meshing
 def _mesh_worker(step_path: str, maxh: float, out_path: str, conn, curvature: float = 4.0) -> None:
     try:
+        import sys
+        if getattr(sys, "frozen", False):  # desktop build: Netgen's OpenCASCADE sits in its own folder
+            occt = os.path.join(getattr(sys, "_MEIPASS", ""), "netgen_occt")
+            if os.path.isdir(occt):
+                os.add_dll_directory(occt)
+                os.environ["PATH"] = occt + os.pathsep + os.environ.get("PATH", "")
+                # netgen loads its OpenCASCADE from the paths in netgen-occt's metadata, which point outside the
+                # bundle; without that metadata it relies on the library path set above
+                import importlib.metadata as md
+                real = md.metadata
+
+                def metadata(name):
+                    if name == "netgen-occt":
+                        raise md.PackageNotFoundError(name)
+                    return real(name)
+                md.metadata = metadata
         from netgen.occ import Glue, OCCGeometry
         geo = OCCGeometry(step_path)
         solids = list(geo.shape.solids)
