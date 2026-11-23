@@ -39,14 +39,34 @@ def available() -> bool:
 
 
 # ------------------------------------------------------------------------------------------------ meshing
+# netgen-occt's libraries in dependency order (as netgen's own loader takes them)
+_OCCT_ORDER = ["TKernel", "TKMath", "TKDE", "TKG2d", "TKG3d", "TKGeomBase", "TKBRep", "TKGeomAlgo", "TKTopAlgo",
+               "TKShHealing", "TKService", "TKMesh", "TKHLR", "TKV3d", "TKCDF", "TKLCAF", "TKPrim", "TKBO", "TKCAF",
+               "TKVCAF", "TKXCAF", "TKDESTL", "TKXSBase", "TKDESTEP", "TKBool", "TKDEIGES", "TKFillet", "TKOffset"]
+
+
+def _preload_occt(folder: str) -> None:
+    """macOS desktop build: load Netgen's OpenCASCADE libraries from `folder` before netgen itself, so the
+    dynamic loader finds them (by install name) when netgen's extension asks for them."""
+    import ctypes
+    import glob
+    for name in _OCCT_ORDER:
+        hits = sorted(glob.glob(os.path.join(folder, f"lib{name}*.dylib")), key=len)
+        if hits:
+            ctypes.CDLL(hits[0], mode=ctypes.RTLD_GLOBAL)
+
+
 def _mesh_worker(step_path: str, maxh: float, out_path: str, conn, curvature: float = 4.0) -> None:
     try:
         import sys
         if getattr(sys, "frozen", False):  # desktop build: Netgen's OpenCASCADE sits in its own folder
             occt = os.path.join(getattr(sys, "_MEIPASS", ""), "netgen_occt")
-            if os.path.isdir(occt):
+            if os.path.isdir(occt) and sys.platform == "darwin":
+                _preload_occt(occt)
+            if os.path.isdir(occt) and os.name == "nt":
                 os.add_dll_directory(occt)
                 os.environ["PATH"] = occt + os.pathsep + os.environ.get("PATH", "")
+            if os.path.isdir(occt):
                 # netgen loads its OpenCASCADE from the paths in netgen-occt's metadata, which point outside the
                 # bundle; without that metadata it relies on the library path set above
                 import importlib.metadata as md

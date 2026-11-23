@@ -48,6 +48,10 @@ jobs:
           sudo installer -pkg dist/openswx-*.pkg -target /
           test -x /Applications/openswx.app/Contents/MacOS/openswx
           /usr/local/bin/openswx-cli --help
+      - name: Smoke test (a tetrahedral study in the built app)
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then python packaging/smoke_study.py /Applications/openswx.app/Contents/MacOS/openswx-cli
+          else python packaging/smoke_study.py dist/openswx/openswx-cli.exe; fi
       - uses: actions/upload-artifact@v4
         with:
           name: openswx-${{ matrix.name }}
