@@ -62,7 +62,7 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
         """Lock-free status: which command (if any) is running and for how long."""
         import time as _t
         busy = getattr(S.APP, "busy", None)
-        return {"version": S.APP.version, "busy": busy[0] if busy else None,
+        return {"app": "openswx", "version": S.APP.version, "busy": busy[0] if busy else None,
                 "busy_seconds": round(_t.time() - busy[1], 2) if busy else 0.0}
 
     @app.get("/api/commands")

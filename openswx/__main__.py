@@ -40,6 +40,8 @@ def main(argv: list[str] | None = None) -> int:
     m.add_argument("--host", default="127.0.0.1")
     m.add_argument("--port", type=int, default=8765)
     m.add_argument("--no-ui", action="store_true", help="do not start the web UI alongside")
+    m.add_argument("--standalone", action="store_true",
+                   help="always serve MCP from this process (by default it relays to an openswx already running on --port)")
     m.add_argument("--workspace", help="folder agents (MCP) may read and write files in; elsewhere is refused")
     m.add_argument("--toolsets", help="MCP tools listed at first: core (default), all, or e.g. core,assembly,drawing")
     i = sub.add_parser("sldinfo", help="inspect a SOLIDWORKS file container")
@@ -103,6 +105,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if a.cmd == "mcp":
+        from . import mcp_bridge
+        running = None if a.standalone or a.workspace or a.toolsets else mcp_bridge.find_running(a.port)
+        if running:  # an openswx window is open: the agent works in it (its edits show there, live)
+            from . import security
+            print(f"openswx: relaying MCP to the running openswx at {running}", file=sys.stderr)
+            mcp_bridge.run(running + "/mcp", security.user_token())
+            return 0
         from .mcp_server import build_mcp
         if not a.no_ui:
             from . import security

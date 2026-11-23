@@ -8,7 +8,7 @@ from . import recovery
 from .document import DocumentError, PartDocument
 from .session import APP, command
 
-__all__ = ["list_recovered", "recover_document", "discard_recovered", "save_diagnostic_report", "batch", "start_job", "job_status", "cancel_job", "import_sw_configurations"]
+__all__ = ["list_recovered", "recover_document", "discard_recovered", "save_diagnostic_report", "batch", "start_job", "job_status", "cancel_job", "import_sw_configurations", "agent_connection_info"]
 
 
 @command(mutates=False, category="document")
@@ -208,3 +208,28 @@ def import_sw_configurations(path: str, limit: int = 12) -> dict:
     doc.dirty = True
     return {"configurations": list(doc.configurations), "active": doc.active_config, "imported": imported, "failed": failed,
             "skipped_over_limit": [c["name"] for c in others[limit:]]}
+
+
+@command(mutates=False, category="document", mcp=False)
+def agent_connection_info(port: int = 8765) -> dict:
+    """Help > Agent (MCP) Setup: how agents connect to this installation. `stdio` is the command a chat app such
+    as Claude Desktop starts (with openswx open it relays to the open window, so the edits show live there);
+    `http` is the endpoint for clients that can reach this computer (Claude Code); `claude_desktop_config` is
+    where Claude Desktop keeps its MCP servers on this system."""
+    import os
+    import sys
+    if getattr(sys, "frozen", False):  # desktop build: the console executable sits next to the app
+        exe = Path(sys.executable).with_name("openswx-cli.exe" if os.name == "nt" else "openswx-cli")
+        command, args = str(exe), ["mcp"]
+    else:
+        command, args = sys.executable, ["-m", "openswx", "mcp"]
+    if port != 8765:
+        args += ["--port", str(port)]
+    if sys.platform == "darwin":
+        cfg = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+    elif os.name == "nt":
+        cfg = Path(os.environ.get("APPDATA", Path.home())) / "Claude" / "claude_desktop_config.json"
+    else:
+        cfg = Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
+    return {"stdio": {"command": command, "args": args}, "http": f"http://127.0.0.1:{port}/mcp",
+            "claude_desktop_config": str(cfg)}

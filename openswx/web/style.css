@@ -22,14 +22,11 @@ button { font: inherit; color: inherit; }
 
 /* ---------------- title bar */
 #titlebar { display: flex; align-items: center; gap: 6px; padding: 0 6px; background: linear-gradient(#fbfbfc, #eceef1); border-bottom: 1px solid var(--border); position: relative; z-index: 20; }
-#brand { display: flex; align-items: center; gap: 6px; padding: 0 8px 0 2px; height: 100%; cursor: pointer; }
-#brand:hover { background: var(--hover); }
+#brand { display: flex; align-items: center; gap: 6px; padding: 0 8px 0 2px; height: 100%; }
 .brand-cube { width: 18px; height: 18px; background: linear-gradient(135deg, #e3324b, #8d0b1f); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
 .brand-name { font-size: 14px; letter-spacing: .3px; color: #333; }
 .brand-name b { color: var(--brand); }
-.caret { color: var(--muted); font-size: 10px; }
-#menubar { display: none; gap: 0; }
-#menubar.open, #titlebar:hover #menubar.pinned { display: flex; }
+#menubar { display: flex; gap: 0; } /* always shown (File, Edit, View ...) */
 .menu-root { position: relative; padding: 6px 10px; cursor: default; }
 .menu-root:hover, .menu-root.open { background: var(--hover); }
 .menu-drop { position: absolute; top: 100%; left: 0; min-width: 220px; background: #fff; border: 1px solid var(--border); box-shadow: 0 6px 18px rgba(0,0,0,.15); padding: 4px 0; display: none; z-index: 50; }

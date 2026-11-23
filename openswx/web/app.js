@@ -326,7 +326,6 @@ class App {
       root.onmouseenter = () => { if (bar.querySelector(".menu-root.open") && !root.classList.contains("open")) { this.closeMenus(); fill(); root.classList.add("open"); bar.classList.add("open"); } };
       bar.append(root);
     }
-    $("#brand").onclick = (e) => { e.stopPropagation(); bar.classList.toggle("open"); };
     document.addEventListener("click", () => { this.closeMenus(); $("#ctxmenu").classList.add("hidden"); document.querySelectorAll(".hu-drop.open").forEach((d) => d.classList.remove("open")); });
   }
   closeMenus() { document.querySelectorAll(".menu-root.open").forEach((r) => r.classList.remove("open")); if (!document.querySelector(".menu-root.open")) $("#menubar").classList.remove("open"); }
@@ -2609,13 +2608,20 @@ class App {
     }, "options");
   }
 
-  mcpDialog() {
-    const cfg = { mcpServers: { openswx: { type: "http", url: `${location.origin}/mcp` } } };
-    const stdio = { mcpServers: { openswx: { command: "python", args: ["-m", "openswx", "mcp"] } } };
-    this.modal("Connect an agent (MCP)", `<p>Streamable HTTP (this running app):</p><pre class="code">${escapeHtml(JSON.stringify(cfg, null, 1))}</pre>
-      <p>Claude Code:</p><pre class="code">claude mcp add --transport http openswx ${location.origin}/mcp --header "Authorization: Bearer &lt;token&gt;"</pre>
+  async mcpDialog() {
+    const port = parseInt(location.port || "80", 10);
+    const r = await this.api("/api/command", { name: "agent_connection_info", args: { port } });
+    const info = r.ok ? r.result : { stdio: { command: "openswx-cli", args: ["mcp"] }, http: `${location.origin}/mcp`, claude_desktop_config: "claude_desktop_config.json" };
+    const desktop = { mcpServers: { openswx: info.stdio } };
+    this.modal("Connect an agent (MCP)", `<p><b>Claude Desktop</b> (and other chat apps that start local MCP servers): add this to
+      <code>${escapeHtml(info.claude_desktop_config)}</code> (Claude Desktop: Settings &gt; Developer &gt; Edit Config), then restart it.
+      While openswx is open, the agent works in this window and you watch its edits live.</p>
+      <pre class="code">${escapeHtml(JSON.stringify(desktop, null, 1))}</pre>
+      <p><b>Claude Code</b> (and clients that reach this computer over HTTP):</p>
+      <pre class="code">claude mcp add --transport http openswx ${escapeHtml(location.origin)}/mcp --header "Authorization: Bearer &lt;token&gt;"</pre>
       <p>The token is your openswx secret: print it with <code>openswx token</code> (desktop app: <code>openswx-cli token</code>). Requests without it are refused.</p>
-      <p>Stdio (starts its own app + UI):</p><pre class="code">${escapeHtml(JSON.stringify(stdio, null, 1))}</pre>`, null, "agent");
+      <p><b>Claude on the web (claude.ai)</b> connects to MCP servers from Anthropic's servers, which cannot reach an app on
+      this computer: use Claude Desktop or Claude Code.</p>`, null, "agent");
   }
 
   async checkUpdates() {
@@ -2632,7 +2638,7 @@ class App {
     if (r.ok) this.toast(`Saved ${escapeHtml(r.result.saved)} (log, versions, recent commands; no documents).`); else this.toast(r.error, "err");
   }
 
-  about() { this.modal("About openswx", `<p><b>openswx</b> 0.1 — open-source parametric CAD with a SOLIDWORKS-style workflow and a built-in MCP server for agents.</p><p>Geometry: OpenCASCADE (via build123d/OCP). Not affiliated with Dassault Systèmes.</p><p>Licensed under the Apache License 2.0; third-party notices are in the NOTICE file that comes with openswx.</p>`, null, "help"); }
+  about() { this.modal("About openswx", `<p><b>openswx</b> 0.1 — open-source parametric CAD with a familiar layout and a built-in MCP server for agents.</p><p>Geometry: OpenCASCADE (via build123d/OCP). Not affiliated with Dassault Systèmes.</p><p>Licensed under the Apache License 2.0; third-party notices are in the NOTICE file that comes with openswx.</p>`, null, "help"); }
 
   modal(title, body, onOK, ic = "help") {
     const box = $("#modal-box");
