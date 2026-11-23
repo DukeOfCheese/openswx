@@ -162,7 +162,7 @@ def test_share_a_part_into_a_new_project(world):
     a.fill("#cl-pname", "Rover")
     a.evaluate("T.ok()")
     a.wait_for_function("!T.open() && window.app.collabDoc() && window.app.collabDoc().state === 'online'", timeout=30000)
-    assert a.is_visible("#collabbar") and "Online" in a.inner_text("#collabbar")
+    a.wait_for_function("document.querySelector('#collabbar:not(.hidden)')?.innerText.includes('Online')")
     assert a.evaluate("window.app.collabDoc().role") == "owner"
 
 
@@ -306,6 +306,22 @@ def test_undo_follows_the_collaboration_state(world):
     b.wait_for_function("!window.app.collabDoc().can_undo && window.app.collabDoc().can_redo")
 
 
+def test_a_feature_broken_by_someone_else_s_change_says_whose(world):
+    a, b = world["a"], world["b"]
+    a.evaluate("""async () => {
+        const t = (await T.run('get_topology')).result;
+        const e = t.edges.reduce((m, x) => (x.length > m.length ? x : m));
+        await window.app.run('fillet', {radius: 3, edges: [e.name || e.id]}); }""")
+    b.wait_for_function("window.app.model.features.some((f) => f.type === 'fillet')")
+    b.evaluate("async () => { await window.app.run('edit_feature', {name: 'Boss-Extrude1', params: {depth: 1.5}}); }")  # (a 3 mm fillet no longer fits)
+    a.wait_for_selector("#tree .t-row .cl-broken", timeout=20000)
+    assert a.inner_text("#tree .t-row .cl-broken") == "broken by Bob"
+    assert "broken by Bob's edit_feature" in a.get_attribute("#tree .t-row .cl-broken", "title")
+    shot(a, "broken-by")
+    b.click(".qa[data-k=undo]")
+    a.wait_for_function("!document.querySelector('#tree .cl-broken')", timeout=20000)
+
+
 def test_history_dialog_names_a_version(world):
     a = world["a"]
     a.evaluate("window.app.collabHistoryDialog()")
@@ -315,3 +331,22 @@ def test_history_dialog_names_a_version(world):
     a.wait_for_function("T.open() && T.text().includes('Rev A')")
     assert a.locator("#modal-box .cl-restore").count() >= 2
     a.evaluate("document.querySelector('#modal').classList.add('hidden')")
+
+
+def test_changes_refused_after_a_reconnect_are_listed_once(world):
+    """Offline, changes queue up; what the server refuses when they go in is listed in one dialog, not toasted.
+    (Driven with states as GET /api/collab gives them: the servers stay up.)"""
+    b = world["b"]
+    refused = {"change_id": "c1", "command": "edit_feature", "who": ["Ada"], "features": ["Fillet1"], "code": "stale",
+               "text": "Ada changed Fillet1 while you were editing it: your edit_feature was not applied"}
+    b.evaluate("""(c) => { const app = window.app, d = {document_id: 'elsewhere', state: 'online', pending: 0, conflicts: []};
+        app.collabConflicts(d);
+        app.collabConflicts({...d, state: 'offline', pending: 1});
+        app.collabConflicts({...d, state: 'online', pending: 1, conflicts: [c]});
+        if (T.open()) throw new Error('listed before the queued changes were all answered');
+        app.collabConflicts({...d, state: 'online', pending: 0, conflicts: [c]});
+        app.collabConflicts({...d, state: 'online', pending: 0, conflicts: [c]}); }""", refused)
+    assert b.evaluate("T.open()") and "Changes not applied" in b.evaluate("T.text()")
+    assert "Ada changed Fillet1" in b.evaluate("T.text()")
+    assert "Fillet1" not in b.inner_text("#toasts")
+    b.evaluate("document.querySelector('#modal').classList.add('hidden')")
