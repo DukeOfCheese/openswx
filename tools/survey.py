@@ -1,6 +1,6 @@
 """Survey: how many SOLIDWORKS parts of a folder open with an exact, editable feature history.
 
-    python tools/survey.py run CORPUS_DIR -o results.jsonl [--timeout 115] [--limit N] [--smallest-first] [--jobs N]
+    python tools/survey.py run CORPUS_DIR -o results.jsonl [--timeout 115] [--limit N] [--smallest-first] [--jobs N] [--parts LIST]
         open every .sldprt under CORPUS_DIR the way the application does (isolated rebuild, time limit) and
         append one line per part to results.jsonl. Resumable: parts already in the file are skipped, so it
         can be run in chunks (--limit) and survives being stopped.
@@ -54,7 +54,8 @@ def classify(report: dict | None, error: str | None) -> dict:
             "not_rebuilt": len(report.get("skipped") or []), "volume": vol, "stored_volume": stored}
 
 
-def run(corpus: str, out: str, timeout: float, limit: int | None, smallest_first: bool, rebuild=None, jobs: int = 1) -> int:
+def run(corpus: str, out: str, timeout: float, limit: int | None, smallest_first: bool, rebuild=None, jobs: int = 1,
+        parts: list[str] | None = None) -> int:
     if rebuild is None:
         sys.path.insert(0, str(ROOT))
         os.environ.setdefault("OPENSWX_CACHE", "off")  # (measure the rebuild, not the cache)
@@ -74,7 +75,7 @@ def run(corpus: str, out: str, timeout: float, limit: int | None, smallest_first
 
     def key(p: Path) -> str:  # the path inside the corpus: sample folders reuse file names
         return p.relative_to(corpus).as_posix()
-    todo = [p for p in files if key(p) not in done]
+    todo = [p for p in files if key(p) not in done and (parts is None or key(p) in parts)]
     if limit is not None:
         todo = todo[:limit]
     print(f"{len(files)} parts, {len(done)} already surveyed, {len(todo)} to do", file=sys.stderr)
@@ -130,6 +131,7 @@ def main(argv=None) -> int:
     r.add_argument("--limit", type=int)
     r.add_argument("--smallest-first", action="store_true")
     r.add_argument("--jobs", type=int, default=1, help="parts rebuilt at once (each in its own process; mind the memory)")
+    r.add_argument("--parts", help="a file listing the parts to run (paths inside the corpus, one per line)")
     s = sub.add_parser("summary")
     s.add_argument("results")
     c = sub.add_parser("compare")
@@ -137,7 +139,8 @@ def main(argv=None) -> int:
     c.add_argument("after")
     a = ap.parse_args(argv)
     if a.cmd == "run":
-        return run(a.corpus, a.output, a.timeout, a.limit, a.smallest_first, jobs=a.jobs)
+        only = [ln.strip() for ln in Path(a.parts).read_text(encoding='utf-8').splitlines() if ln.strip()] if a.parts else None
+        return run(a.corpus, a.output, a.timeout, a.limit, a.smallest_first, jobs=a.jobs, parts=only)
     if a.cmd == "summary":
         print(json.dumps(summary(load(a.results)), indent=1))
         return 0

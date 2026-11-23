@@ -57,9 +57,12 @@ def _log(msg: str) -> None:
         print("[sw_rebuild]", msg, flush=True)
 
 
+_BASE_TRIALS = [False]  # the base feature is being tried: its trials are not cut short (see rebuild_part)
+
+
 def _check_time() -> None:
     import time
-    if time.monotonic() > _DEADLINE[0]:
+    if time.monotonic() > _DEADLINE[0] and not _BASE_TRIALS[0]:
         raise RebuildError("the history needs more trials than the time budget allows")
 
 
@@ -1544,6 +1547,7 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
     # past 60 % of the budget the remaining features come in as their stored contribution, past 85 % all of
     # the material still missing comes in at once (the part still opens with its rebuilt features editable)
     _DEADLINE[0] = time.monotonic() + 0.6 * budget
+    _BASE_TRIALS[0] = False
     _LUMP[0] = time.monotonic() + 0.85 * budget
     lumped = went_late = False
     _TRUST[0] = trust_built
@@ -1614,7 +1618,10 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
             continue
         if _PROGRESS[0]:  # (which feature is being tried: the parent learns it if the kernel crashes)
             _PROGRESS[0].send(("feature", name))
-        late = time.monotonic() > _DEADLINE[0]
+        # out of time for trials - except for the base feature: imported, it fails the whole part, so it is
+        # always tried (the overall time limit still stops a rebuild that runs too long)
+        late = time.monotonic() > _DEADLINE[0] and (first_solid is not None or cls in FIXED_BASE)
+        _BASE_TRIALS[0] = first_solid is None and cls not in FIXED_BASE
         if (name in _AVOID[0] or late) and cls != "moProfileFeature_c" and f.get("id") is not None:
             # trying this feature crashed the geometry kernel before, or the time for trials is up: its
             # contribution read off the stored body

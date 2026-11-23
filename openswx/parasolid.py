@@ -406,6 +406,18 @@ def read_xt_file(path: str) -> Model:
 SCALE = 1000.0  # XT lengths are metres; openswx works in millimetres
 
 
+def _within_its_edges(face) -> bool:
+    """A rebuilt face is the intended one only if it stays inside its boundary edges' box: the wrong turn of a
+    periodic surface covers the rest of the revolution (seen on a sliver face, where it added material)."""
+    from build123d import Compound, Face
+    f = Face(face)
+    fb = f.bounding_box(optimal=True)
+    eb = Compound(f.edges()).bounding_box(optimal=True)
+    tol = 1e-3 * max(eb.diagonal, 1e-6)
+    return (fb.min.X >= eb.min.X - tol and fb.min.Y >= eb.min.Y - tol and fb.min.Z >= eb.min.Z - tol
+            and fb.max.X <= eb.max.X + tol and fb.max.Y <= eb.max.Y + tol and fb.max.Z <= eb.max.Z + tol)
+
+
 def _fix_negative_faces(shape):
     """Faces whose loops came out with a negative area on a periodic surface (a half cylinder whose boundary
     runs along the seam gets its pcurves on the wrong turn): rebuild them on the same surface with the seam
@@ -423,7 +435,9 @@ def _fix_negative_faces(shape):
     re, changed = BRepTools_ReShape(), False
     for f in Shape.cast(shape).faces():
         try:
-            if f.area >= 0:
+            # (an area of exactly zero is the same fault: the loop's two pcurves on the seam cancel out)
+            bb = f.bounding_box()
+            if f.area > 1e-9 * max(bb.diagonal, 1.0) ** 2:
                 continue
         except Exception:
             continue
@@ -443,7 +457,7 @@ def _fix_negative_faces(shape):
             nf.Reverse()
         fx = ShapeFix_Face(nf)
         fx.Perform()
-        if Face(fx.Face()).area > 0:
+        if Face(fx.Face()).area > 0 and _within_its_edges(fx.Face()):
             re.Replace(f.wrapped, fx.Face())
             changed = True
     if not changed:
