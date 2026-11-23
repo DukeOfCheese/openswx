@@ -544,9 +544,14 @@ class DocClient:
             self.view_due.wait(0.5)
             if self.stop.is_set():
                 return
-            if time.time() - checked > 2.0:
+            if time.time() - checked > 2.0 and S.APP.lock.acquire(timeout=0.5):
+                # (under the lock: a preview swaps a throw-away copy in for the document while it runs)
                 checked = time.time()
-                if not self._open_here():  # the document was closed (or replaced): stop syncing it
+                try:
+                    gone = not self._open_here()
+                finally:
+                    S.APP.lock.release()
+                if gone:  # the document was closed (or replaced): stop syncing it
                     threading.Thread(target=self.close, daemon=True).start()
                     return
             with self.mu:

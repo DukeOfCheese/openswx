@@ -304,6 +304,25 @@ def test_browser_sign_in_uses_a_loopback_address_and_pkce(monkeypatch, tmp_path)
         auth.sign_in_browser("http://127.0.0.1:8787", "google", open_browser=refused, timeout=20)
 
 
+def test_a_preview_does_not_look_like_the_document_was_closed(cloud):
+    """A preview (a feature panel's ghost) puts a throw-away copy in the document's place while it runs: syncing
+    must not take that for the document having been closed."""
+    import threading
+    import time
+    t = threading.Thread(target=cloud._viewer, daemon=True)
+    cloud._threads.append(t)
+    t.start()
+    key, real = S.APP.active, S.APP.doc
+    with S.APP.lock:  # (as S.preview holds it, with the copy in place, for as long as the rebuild takes)
+        S.APP.documents[key] = type(real)(real.name)
+        try:
+            time.sleep(2.8)
+        finally:
+            S.APP.documents[key] = real
+    time.sleep(0.3)
+    assert not cloud.closed and C.client_for(real) is cloud
+
+
 def test_the_ui_reads_collaboration_state_over_rest(cloud):
     from fastapi.testclient import TestClient
 
