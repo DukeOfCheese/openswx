@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openswx"
-version = "0.1.0"
+version = "0.2.0"
 description = "Open-source parametric CAD with a familiar layout and a built-in MCP server for AI agents"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -31,6 +31,9 @@ dependencies = [
   "uvicorn[standard]",
   "mcp>=2.3",
   "ezdxf",  # DXF import / export (imported directly; build123d depends on it too)
+  # (cryptography, through mcp -> pyjwt: from 49 on it has macOS wheels for Apple silicon only; built from source
+  # on an Intel Mac it links Homebrew's OpenSSL, which clashes with Python's in the desktop app)
+  "cryptography<49; sys_platform == 'darwin' and platform_machine == 'x86_64'",
 ]
 
 [project.optional-dependencies]
