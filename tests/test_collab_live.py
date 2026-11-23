@@ -343,8 +343,10 @@ def test_history_versions_restore_presence(world):
     v_rev = agree(world, 20)[0]["volume"]
     a.call("edit_feature", name=st["ext"], params={"depth": 50})
     assert agree(world, 21)[0]["volume"] != v_rev
-    out = a.call("collab_restore", version="Rev A")
+    assert a.call("collab_lock", features=[st["ext"]])["granted"] == [st["ext"]]
+    out = a.call("collab_restore", version="Rev A")  # (her own lock does not stand in the way)
     assert out["seq"] == 22
+    a.call("collab_unlock", features=[st["ext"]])
     assert agree(world, 22)[0]["volume"] == pytest.approx(v_rev, rel=1e-6)
     hist = b.call("collab_history", limit=100)
     assert [h["seq"] for h in hist["history"]] == list(range(22, 0, -1))
@@ -358,12 +360,24 @@ def test_history_versions_restore_presence(world):
     assert ada["presence"] == {"selection": ["Boss-Extrude1:cap+"], "tool": "fillet"}
 
 
+def test_features_created_after_the_restart_still_get_ids_nobody_else_holds(world):
+    a, b = world["a"], world["b"]
+    a.send(call="create_sketch", args={"plane": "Front"})
+    b.send(call="create_sketch", args={"plane": "Front"})
+    ra, rb = a.read(), b.read()
+    assert "error" not in ra and "error" not in rb, (ra.get("error"), rb.get("error"))
+    da, _ = agree(world, 24)
+    ids = [i for i, _ in da["features"]]
+    names = [n for _, n in da["features"]]
+    assert len(ids) == len(set(ids)) and len(names) == len(set(names))
+
+
 def test_disable_and_sign_out(world):
     a, b = world["a"], world["b"]
     out = b.call("collab_disable")
     assert out["pending_dropped"] == 0 and b.call("collab_status")["documents"] == []
     b.call("edit_feature", name=world["state"]["ext"], params={"depth": 7})  # (a local copy now: nothing is sent)
-    assert agree_alone(a)["seq"] == 22
+    assert agree_alone(a)["seq"] == 24
     assert a.call("collab_sign_out")["signed_out"] is True
     st = a.call("collab_status")
     assert st["documents"] == [] and st["signed_in"] is False

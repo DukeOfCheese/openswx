@@ -40,7 +40,9 @@ log = logging.getLogger("openswx.collab")
 CLIENTS: dict[str, "DocClient"] = {}  # cloud document id -> its connection
 REVISION = [0]  # goes up whenever anything a screen shows about collaboration changes (peers, locks, ...)
 PING_EVERY = 15.0
-FATAL_CLOSE = {4400: "bad_hello", 4401: "signed_out", 4404: "gone", 4409: "replaced", 4426: "protocol"}
+# (4409, "the same client connected again", is not among them: client ids are per run, so it is our own
+# earlier connection being replaced, and reconnecting is right)
+FATAL_CLOSE = {4400: "bad_hello", 4401: "signed_out", 4404: "gone", 4426: "protocol"}
 POOL_IDS = 8  # feature ids kept in reserve
 COMMON = ("Sketch", "Boss-Extrude", "Cut-Extrude", "Fillet", "Chamfer", "Plane")  # names reserved ahead
 NEED_CONNECTION = ("creating features in a cloud document needs a connection to the collaboration server (their ids "
@@ -73,6 +75,24 @@ def changed() -> None:
 def client_for(doc) -> "DocClient | None":
     c = getattr(doc, "_collab", None)
     return c if isinstance(c, DocClient) and not c.closed else None
+
+
+class _Resync(ConnectionError):
+    """A message could not be applied: drop the connection and fetch the whole document again."""
+
+
+class _UploadRefused(DocumentError):
+    """The server refused a blob upload (not a network failure: sending again will not help)."""
+
+
+def _upload_ok(r) -> None:
+    """A refusal (too large, no access) is final; a server error or a busy server is worth trying again."""
+    if r.status_code < 300:
+        return
+    text = f"could not upload to the collaboration server: {auth.error_text(r)}"
+    if r.status_code >= 500 or r.status_code in (401, 408, 429):
+        raise ConnectionError(text)
+    raise _UploadRefused(text)
 
 
 class _Fatal(Exception):
@@ -237,7 +257,12 @@ class DocClient:
                     raise _Fatal(state, msg)
                 raise ConnectionError(msg)
             self.ws = ws
-            self._welcome(first)
+            try:
+                self._welcome(first)
+            except _Fatal:
+                raise
+            except Exception as exc:  # noqa: BLE001 - the catch-up could not be applied: the whole document, then
+                self._resync(exc)
             last_ping = time.time()
             while not self.stop.is_set():
                 if time.time() - last_ping >= PING_EVERY:
@@ -254,14 +279,26 @@ class DocClient:
                     self._handle(json.loads(raw))
                 except _Fatal:
                     raise
-                except Exception:  # noqa: BLE001 - one bad message must not end the session
-                    log.exception("could not handle a message on %s", self.document_id)
+                except Exception as exc:  # noqa: BLE001 - nothing was half-applied (see _handle): start again clean
+                    self._resync(exc)
+                if self._unsent():  # (a change whose upload failed for want of a network: try again)
+                    self._flush()
         finally:
             self.ws = None
             try:
                 ws.close()
             except Exception:  # noqa: BLE001
                 pass
+
+    def _resync(self, exc: Exception) -> None:
+        """A message from the server could not be applied (a blob that would not download, operations that do not
+        fit): `confirmed` is as it was before that message, but it is now behind the server with a gap. Drop the
+        connection and ask for the whole document (last_seq None) when reconnecting."""
+        log.warning("resynchronising %s with the server: %s", self.document_id, exc, exc_info=True)
+        with self.cond:
+            self.seq = None
+            self.error = f"resynchronising: {type(exc).__name__}: {exc}"
+        raise _Resync(str(exc)) from exc
 
     def _closed_by_server(self, exc) -> None:
         rcvd = getattr(exc, "rcvd", None)
@@ -286,6 +323,8 @@ class DocClient:
 
     # ------------------------------------------------------------------ messages
     def _welcome(self, w: dict) -> None:
+        if w.get("project_id"):  # (blobs in the content are fetched through it)
+            self.project_id = w["project_id"]
         content = self._internalize(w["content"]) if w.get("content") is not None else None
         changes = [dict(ev, ops=self._internalize(ev["ops"])) for ev in (w.get("changes") or [])]
         with self.cond:
@@ -297,44 +336,71 @@ class DocClient:
             self.locks = dict(w.get("locks") or {})
             self.broken = dict(w.get("broken") or {})
             if content is not None:
+                O.absorb_ids(content)
                 self.confirmed = content
-                O.absorb_ids(self.confirmed)
                 # (own changes already in it are answered "accepted" with a seq this state includes)
             else:
+                new = copy.deepcopy(self.confirmed)  # (all of the catch-up, or none of it)
                 for ev in changes:
-                    self._apply_event(ev)
+                    self._apply_event(ev, new)
+                self.confirmed = new
             self.seq = w["seq"]
             self.gen += 1
             first = self.welcomes == 0
             self.welcomes += 1
+            check = self._trim_pools(w.get("reserved"))
+            for p in self.pending.values():  # (a new connection: everything unanswered goes again)
+                p["sent"] = False
             self.state, self.error = "online", None
-            resend = [(cid, p) for cid, p in self.pending.items()]
             self.cond.notify_all()
-        for cid, p in resend:  # (in order, with their original ids and bases: the server answers each once)
-            self._try_send({"type": "change", "change_id": cid, "base_seq": p["base_seq"], "ops": p["wire"],
-                            "command": p["command"], "args": p.get("args")})
+        self._flush_after = 0.0
+        # Unanswered changes go again, in order, with their original ids and bases (the server answers each one
+        # once), before anything new: _flush sends every change in queue order, whoever calls it first.
+        self._flush()
         if not self.read_only:
-            if first or not self.pool_ids:
-                self._reserve_async(POOL_IDS, list(COMMON) if first else [], tag="pool")
-            else:  # did the server keep what it reserved for us (it forgets on a restart)?
+            with self.mu:
+                short = POOL_IDS - len(self.pool_ids)
+                names = [p for p in COMMON if not self.pool_names.get(p)] if first else []
+            if check:  # (an older server, which does not say what we hold: did it keep our reservations?)
                 self._reserve_async(1, [], tag="check")
+            elif short > POOL_IDS // 2 or names:
+                self._reserve_async(short if short > POOL_IDS // 2 else 0, names, tag="pool")
         self.view_due.set()
         changed()
 
-    def _apply_event(self, m: dict) -> None:
-        """A change from the history (call with the lock held, ops already internalized)."""
+    def _trim_pools(self, reserved) -> bool:
+        """Keep only the ids and names the server says this client still holds (it forgets them after a long
+        disconnect or a restart). Call with the lock held. True: the server did not say (check another way)."""
+        self.topping.clear()
+        if not isinstance(reserved, dict):
+            return bool(self.pool_ids)
+        ids, names = set(reserved.get("ids") or []), set(reserved.get("names") or [])
+        self.pool_ids = [i for i in self.pool_ids if i in ids]
+        self.pool_names = {k: [n for n in v if n in names] for k, v in self.pool_names.items()}
+        return False
+
+    def _apply_event(self, m: dict, target: dict) -> None:
+        """A change from the history, applied to `target` (a copy of confirmed; call with the lock held, ops
+        already internalized)."""
+        O.apply(target, m["ops"])
+        O.absorb_ids(target)
         own = m.get("client_id") == self.you.get("client_id") and m.get("change_id") in self.pending
         if own:  # (ours, accepted while we were away: the catch-up after a reconnect)
             self.pending.pop(m["change_id"])
             self.answers[m["change_id"]] = {"ok": True, "seq": m["seq"]}
             self.mine.append(m["seq"])
-        O.apply(self.confirmed, m["ops"])
-        O.absorb_ids(self.confirmed)
-        self.seq = m["seq"]
-        if not own:
+        else:
             self.recent.append({"seq": m["seq"], "author": m.get("author"), "author_name": m.get("author_name", ""),
                                 "command": m.get("command", ""), "time": m.get("time"), "reverts": m.get("reverts")})
             self.recent = self.recent[-50:]
+
+    def _applied(self, ops: list) -> dict:
+        """confirmed with `ops` applied, as a new dict: confirmed itself is only ever replaced whole, so a change
+        that does not apply leaves it as it was."""
+        new = copy.deepcopy(self.confirmed)
+        O.apply(new, ops)
+        O.absorb_ids(new)
+        return new
 
     def _handle(self, m: dict) -> None:
         t = m.get("type")
@@ -344,18 +410,20 @@ class DocClient:
             m = dict(m, ops=self._internalize(m["ops"]))
         with self.cond:
             if t == "change":
-                self._apply_event(m)
+                new = copy.deepcopy(self.confirmed)
+                self._apply_event(m, new)
+                self.confirmed, self.seq = new, m["seq"]
                 self.gen += 1
                 self.view_due.set()
             elif t == "change.accepted":
                 cid = m["change_id"]
-                p = self.pending.pop(cid, None)
+                p = self.pending.get(cid)
                 if p is not None:
                     fresh = self.view_gen == self.gen
                     if self.seq is None or m["seq"] > self.seq:
-                        O.apply(self.confirmed, p["ops"])
-                        O.absorb_ids(self.confirmed)
+                        self.confirmed = self._applied(p["ops"])  # (first: if it does not apply, nothing moved)
                         self.seq = m["seq"]
+                    self.pending.pop(cid, None)
                     self.gen += 1
                     if fresh:
                         self.view_gen, self.view_seq = self.gen, self.seq
@@ -366,21 +434,10 @@ class DocClient:
             elif t == "change.rejected":
                 cid = m["change_id"]
                 p = self.pending.pop(cid, None)
-                text = self._explain(m, p["command"] if p else "")
-                self.answers[cid] = {"ok": False, "code": m.get("code"), "message": m.get("message", ""),
-                                     "text": text}
-                self.conflicts.append({"time": time.time(), "change_id": cid, "command": p["command"] if p else "",
-                                       "code": m.get("code"), "message": m.get("message", ""), "text": text,
-                                       "conflicts": m.get("conflicts") or {}, "who": self._who(m.get("conflicts")),
-                                       "features": self._features_of(m.get("conflicts"))})
-                self.conflicts = self.conflicts[-50:]
-                if p is not None:
-                    self.gen += 1
-                    self.view_due.set()
+                self._refused(cid, p, m)
             elif t == "change.revert.result":
                 if m.get("ok") and m.get("ops") is not None:
-                    O.apply(self.confirmed, m["ops"])
-                    O.absorb_ids(self.confirmed)
+                    self.confirmed = self._applied(m["ops"])
                     self.seq = m["seq"]
                     self.gen += 1
                     self.view_due.set()
@@ -429,13 +486,34 @@ class DocClient:
                 self.versions.append({k: m.get(k) for k in ("id", "seq", "name", "author")})
             elif t == "error":
                 self.error = f"{m.get('code')}: {m.get('message', '')}"
-                if m.get("code") == "bad_reserve":  # (the server's error carries no request id: fail them all)
-                    for rid, v in self.requests.items():
-                        if v is None and rid.startswith("now:"):
-                            self.requests[rid] = {"type": "error", **m}
+                rid = m.get("request_id") or ""
+                if rid in self.requests:  # (a refused request says which: only that one fails)
+                    self.requests[rid] = {**m, "type": "error"}
+                elif rid.startswith("pool:"):
+                    self.topping.clear()
+                elif not rid and m.get("code") in ("bad_reserve", "read_only"):  # (an older server: no request id)
+                    for k, v in self.requests.items():
+                        if v is None and k.startswith("now:"):
+                            self.requests[k] = {**m, "type": "error"}
                     self.topping.clear()
             self.cond.notify_all()
         changed()
+
+    def _refused(self, cid: str, p: dict | None, m: dict) -> None:
+        """A change that will not go in (call with the lock held): answer whoever waits for it, keep it among the
+        conflicts (with its operations, so it can be made again as a copy), and show the server's state."""
+        text = self._explain(m, p["command"] if p else "")
+        self.answers[cid] = {"ok": False, "code": m.get("code"), "message": m.get("message", ""), "text": text}
+        self.conflicts.append({"time": time.time(), "change_id": cid, "command": p["command"] if p else "",
+                               "code": m.get("code"), "message": m.get("message", ""), "text": text,
+                               "conflicts": m.get("conflicts") or {}, "who": self._who(m.get("conflicts")),
+                               "features": self._features_of(m.get("conflicts")),
+                               "base_seq": p["base_seq"] if p else None, "ops": p["ops"] if p else None})
+        self.conflicts = self.conflicts[-50:]
+        if p is not None:
+            self.gen += 1
+            self.view_due.set()
+        self.cond.notify_all()
 
     # ------------------------------------------------------------------ explaining refusals
     def _feature_name(self, fid: str) -> str:
@@ -471,6 +549,8 @@ class DocClient:
                     f"shows {who}'s version")
         if code == "locked":
             return f"{what} is being edited by {who} (locked): your {cmd} was not applied"
+        if code == "upload_refused":
+            return f"your {cmd} could not be sent: {m.get('message', '')}; it was undone"
         if code == "read_only":
             return f"this cloud document is read-only for you ({m.get('message', '')}): your {cmd} was not applied"
         return f"the collaboration server refused your {cmd}: {m.get('message') or code} ({code})"
@@ -498,12 +578,9 @@ class DocClient:
         if sink:
             with self._http() as c:
                 r = c.post(f"/api/projects/{self.project_id}/blobs/missing", json=sorted(sink))
-                if r.status_code != 200:
-                    raise DocumentError(f"could not upload to the collaboration server: {auth.error_text(r)}")
+                _upload_ok(r)
                 for sha in r.json():
-                    u = c.put(f"/api/projects/{self.project_id}/blobs/{sha}", content=sink[sha])
-                    if u.status_code >= 300:
-                        raise DocumentError(f"could not upload to the collaboration server: {auth.error_text(u)}")
+                    _upload_ok(c.put(f"/api/projects/{self.project_id}/blobs/{sha}", content=sink[sha]))
             self.blobs.update(sink)
         return wire
 
@@ -596,8 +673,8 @@ class DocClient:
 
     # ------------------------------------------------------------------ local changes (command thread, APP.lock held)
     def submit(self, ops: list, command: str, args: dict | None) -> str:
-        """Queue a change and send it; the open document already shows it."""
-        wire = self._externalize(ops)
+        """Queue a change and send it (with the changes queued before it, in order); the open document already
+        shows it. Its long strings are uploaded when it is sent: offline it simply waits in the queue."""
         try:
             small = plain(args or {})
             small = small if len(json.dumps(small)) <= 4096 else None
@@ -607,17 +684,54 @@ class DocClient:
             self.n += 1
             cid = f"{uuid.uuid4().hex[:16]}-{self.n}"  # (unique for good: the server remembers every id it saw)
             fresh = self.view_gen == self.gen
-            self.pending[cid] = {"ops": ops, "wire": wire, "base_seq": self.view_seq, "command": command,
-                                 "args": small}
+            self.pending[cid] = {"ops": ops, "wire": None, "sent": False, "base_seq": self.view_seq,
+                                 "command": command, "args": small}
             self.gen += 1
             if fresh:
                 self.view_gen = self.gen
             self.redo_stack.clear()
         if self.connected:
-            self._try_send({"type": "change", "change_id": cid, "base_seq": self.pending[cid]["base_seq"],
-                            "ops": wire, "command": command, "args": small})
+            self._flush()
         changed()
         return cid
+
+    def _unsent(self) -> bool:
+        return any(not p.get("sent") for p in list(self.pending.values()))
+
+    def _flush(self) -> None:
+        """Send every queued change not yet sent on this connection, in queue order, uploading its blobs first.
+        One whose upload fails for want of a network stops the queue (nothing overtakes it) until the next try;
+        one the server refuses to take is dropped as refused."""
+        if time.time() < getattr(self, "_flush_after", 0.0) and threading.current_thread() in self._threads:
+            return  # (the network thread retries a failed upload every few seconds, not every message)
+        refused = []
+        with self.send_mu:  # (never take self.mu inside: _handle sends while holding it)
+            ws = self.ws
+            if ws is None:
+                return
+            for cid, p in list(self.pending.items()):
+                if p.get("sent"):
+                    continue
+                if p.get("wire") is None:
+                    try:
+                        p["wire"] = self._externalize(p["ops"])
+                    except _UploadRefused as exc:
+                        refused.append((cid, str(exc)))
+                        continue
+                    except Exception as exc:  # noqa: BLE001 - the network: later, and in order
+                        log.info("could not upload for %s yet: %s", self.document_id, exc)
+                        self._flush_after = time.time() + 3.0
+                        break
+                try:
+                    ws.send(json.dumps({"type": "change", "change_id": cid, "base_seq": p["base_seq"],
+                                        "ops": p["wire"], "command": p["command"], "args": p.get("args")}))
+                except Exception:  # noqa: BLE001 - the connection went: the network thread reconnects
+                    break
+                p["sent"] = True
+        for cid, text in refused:
+            with self.cond:
+                self._refused(cid, self.pending.pop(cid, None), {"code": "upload_refused", "message": text})
+            changed()
 
     def wait_answer(self, cid: str, timeout: float) -> dict | None:
         end = time.time() + timeout
@@ -639,8 +753,9 @@ class DocClient:
             raise DocumentError(f"this cloud document is read-only for you ({self.read_only_reason or 'viewer'}); the "
                                 f"change was undone")
         cid = self.submit(ops, command, args)
-        if not self.connected:
-            return  # (sent when the connection is back)
+        p = self.pending.get(cid)
+        if p is not None and (not self.connected or not p.get("sent")):
+            return  # (queued: sent when the connection, or the upload, works again)
         ans = self.wait_answer(cid, wait_seconds())
         if ans is not None and not ans["ok"]:
             self.reload_view_locked(force=True)
@@ -873,39 +988,56 @@ class DocClient:
 
 # ---------------------------------------------------------------------- the command hook
 class Hook:
-    """Turns each outermost mutating command on a cloud document into one change (see session.COMMAND_HOOKS)."""
+    """Turns each outermost mutating command into one change per cloud document it changed (see
+    session.COMMAND_HOOKS). Every open cloud document is written out before the command, not only the active one:
+    a command (a batch, a macro) may switch documents or change another one."""
     SKIP = {"undo", "redo"}
 
     def before(self, name: str, arguments):
         if name in self.SKIP or name.startswith("collab_"):
             return None
-        doc = S.APP.documents.get(S.APP.active)
-        c = client_for(doc)
-        if c is None:
-            return None
-        before = plain(doc.to_dict())
-        with c.mu:
-            c.taken = []
-        c.busy = True
-        return c, doc, before, name, dict(arguments)
+        snaps = []
+        for c in list(CLIENTS.values()):
+            if c.closed or not c._open_here():  # (called with APP.lock held: a preview's copy is not in place)
+                continue
+            snaps.append((c, c.doc, plain(c.doc.to_dict())))
+        for c, _, _ in snaps:
+            with c.mu:
+                c.taken = []
+            c.busy = True
+        return (snaps, name, dict(arguments)) if snaps else None
 
     def after(self, token, ok: bool) -> None:
         if token is None:
             return
-        c, doc, before, name, args = token
-        try:
-            if c.closed:
-                return
-            c.give_back_unused(doc)
-            ops = O.diff(before, plain(doc.to_dict()))
-            if not ok:
-                if ops:  # (a failed command that left something changed: back to the shared state)
+        snaps, name, args = token
+        first: DocumentError | None = None
+        for c, doc, before in snaps:
+            try:
+                if c.closed:
+                    continue
+                c.give_back_unused(doc)
+                ops = O.diff(before, plain(doc.to_dict()))
+                if not ops:
+                    continue
+                if not ok:  # (a failed command that left something changed: back to the shared state)
                     c.reload_view_locked(force=True)
-                return
-            if ops:
+                    continue
                 c.commit_local(ops, name, args)
-        finally:
-            c.busy = False
+            except DocumentError as exc:  # (refused: commit_local already put the server's state back)
+                first = first or exc
+            except Exception as exc:  # noqa: BLE001 - never leave an edit on screen that is not on its way
+                log.exception("could not send a change to %s", c.document_id)
+                try:
+                    c.reload_view_locked(force=True)
+                except Exception:  # noqa: BLE001
+                    log.exception("could not restore %s", c.document_id)
+                first = first or DocumentError(f"the change to {doc.name} could not be sent to the collaboration "
+                                               f"server ({type(exc).__name__}: {exc}) and was undone")
+            finally:
+                c.busy = False
+        if first is not None and ok:
+            raise first
 
     def redirect(self, name: str, doc):
         c = client_for(doc)

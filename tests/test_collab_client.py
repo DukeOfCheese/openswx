@@ -205,7 +205,7 @@ def test_reconnect_catch_up_recognises_our_own_changes(cloud):
     cloud._welcome({"type": "welcome", "seq": 5, "you": cloud.you, "role": "editor", "peers": [], "locks": {},
                     "broken": {}, "changes": [
                         {"type": "change", "seq": 4, "author": "u1", "client_id": "u1.me", "change_id": cid,
-                         "ops": p["wire"]},
+                         "ops": p["ops"]},
                         {"type": "change", "seq": 5, "author": "u2", "author_name": "Ada", "client_id": "u2.x",
                          "change_id": "a9", "ops": other}]})
     assert not cloud.pending and cloud.mine == [4] and cloud.seq == 5 and not cloud.ws.of("change")
@@ -336,3 +336,168 @@ def test_the_ui_reads_collaboration_state_over_rest(cloud):
     assert got["revision"] == C.REVISION[0] and d["document_id"] == "doc1" and d["seq"] == 3
     assert d["peers"][0]["presence"] == {"tool": "fillet"}
     assert d["locks"]["f:f2"]["target"] == "Boss-Extrude1" and d["locks"]["f:f2"]["mine"] is False
+
+
+# ---------------------------------------------------------------------- regressions (review of the first version)
+def block_cloud(name: str, did: str):
+    """Another cloud document (a 40 x 20 x 10 block) open beside the fixture's; closed by the caller."""
+    S.call("new_part", {"name": name})
+    sk = S.call("create_sketch", {"plane": "Top"})["sketch"]
+    S.call("sketch_rectangle", {"sketch": sk, "corner1": [0, 0], "corner2": [W, H]})
+    S.call("extrude", {"sketch": sk, "depth": 10})
+    doc = S.APP.doc
+    c = C.DocClient(doc, did, "http://127.0.0.1:9", "tok", {"project_id": "p1", "name": name})
+    c.confirmed = {k: v for k, v in C.plain(doc.to_dict()).items() if k not in O.LOCAL_ONLY}
+    c.seq, c.gen, c.view_gen, c.view_seq = 3, 1, 1, 3
+    c.you, c.role, c.state = {"client_id": "u1.me", "name": "Me"}, "editor", "online"
+    c.ws = FakeSocket(c, accept(c))
+    doc._collab = doc.allocator = c
+    C.CLIENTS[did] = c
+    return c
+
+
+def depth(c):
+    return c.doc.find("Boss-Extrude1")["params"]["depth"], c.confirmed["features"][1]["params"]["depth"]
+
+
+def test_a_batch_that_switches_to_a_cloud_document_sends_its_edit(cloud):
+    name = S.APP.active
+    S.call("new_part", {"name": "Local"})  # (the batch starts on an ordinary part)
+    S.call("batch", {"commands": [{"name": "activate_document", "args": {"name": name}},
+                                  {"name": "edit_feature", "args": {"name": "Boss-Extrude1", "params": {"depth": 33}}}]})
+    (m,) = cloud.ws.of("change")
+    assert m["command"] == "batch" and depth(cloud) == (33, 33)
+    other = block_cloud("Other", "doc2")  # a batch that starts on one cloud document and edits another
+    try:
+        S.call("activate_document", {"name": name})
+        S.call("batch", {"commands": [{"name": "activate_document", "args": {"name": "Other"}},
+                                      {"name": "edit_feature", "args": {"name": "Boss-Extrude1", "params": {"depth": 21}}}]})
+        assert len(cloud.ws.of("change")) == 1 and len(other.ws.of("change")) == 1 and depth(other) == (21, 21)
+    finally:
+        other.close()
+
+
+def test_a_failed_upload_keeps_the_edit_queued_or_undoes_it(cloud):
+    def offline(obj):
+        raise ConnectionError("the blob store is unreachable")
+    real = cloud._externalize
+    cloud._externalize = offline
+    S.call("edit_feature", {"name": "Boss-Extrude1", "params": {"depth": 44}})  # (queued, not lost)
+    assert len(cloud.pending) == 1 and not cloud.ws.of("change") and depth(cloud) == (44, 10)
+    cloud._handle({"type": "change", "seq": 4, "author": "u2", "client_id": "u2.x", "change_id": "r1",
+                   "ops": [{"op": "doc.patch", "set": [[["units"], "in"]], "unset": []}]})
+    with S.APP.lock:
+        cloud.reload_view_locked()
+    assert depth(cloud) == (44, 10)  # (someone else's change does not wipe it: it is still queued)
+    cloud._externalize = real
+    cloud._flush_after = 0.0
+    cloud._flush()
+    assert len(cloud.ws.of("change")) == 1 and not cloud.pending and depth(cloud) == (44, 44)
+
+    def refused(obj):
+        raise C._UploadRefused("could not upload to the collaboration server: too large (HTTP 413)")
+    cloud._externalize = refused
+    with pytest.raises(S.CommandError, match="could not be sent.*too large"):
+        S.call("edit_feature", {"name": "Boss-Extrude1", "params": {"depth": 55}})
+    assert depth(cloud) == (44, 44) and not cloud.pending
+    conflict = cloud.conflicts[-1]
+    assert conflict["code"] == "upload_refused" and conflict["ops"][0]["set"] == [[["params", "depth"], 55]]
+
+
+def test_any_other_failure_while_sending_undoes_the_edit(cloud):
+    def broken(ops, command, args):
+        raise RuntimeError("a defect")
+    cloud.submit = broken
+    with pytest.raises(S.CommandError, match="could not be sent.*undone"):
+        S.call("edit_feature", {"name": "Boss-Extrude1", "params": {"depth": 66}})
+    assert depth(cloud) == (10, 10)
+
+
+def test_a_message_that_does_not_apply_changes_nothing_and_resynchronises(cloud):
+    before = json.dumps(cloud.confirmed, sort_keys=True)
+    bad = {"type": "change", "seq": 4, "author": "u2", "client_id": "u2.x", "change_id": "r1",
+           "ops": [{"op": "feature.update", "id": "f2", "set": [[["params", "depth"], 7]], "unset": []},
+                   {"op": "feature.remove", "id": "f99"}]}  # (the second does not apply: the first must not stay)
+    with pytest.raises(O.OpError):
+        cloud._handle(bad)
+    assert json.dumps(cloud.confirmed, sort_keys=True) == before and cloud.seq == 3
+    with pytest.raises(C._Resync):  # (what the network thread then does: drop the connection, ask for everything)
+        cloud._resync(O.OpError("does not apply"))
+    assert cloud.seq is None
+    S.call("edit_feature", {"name": "Boss-Extrude1", "params": {"depth": 30}})  # (still made on the shown state)
+    assert cloud.ws.of("change")[-1]["base_seq"] == 3
+
+
+def test_welcome_trims_the_pools_to_what_the_server_still_reserves(cloud):
+    cloud.state = "offline"
+    cloud.ws.sent.clear()
+    cloud._welcome({"type": "welcome", "seq": 3, "you": cloud.you, "role": "editor", "peers": [], "locks": {},
+                    "broken": {}, "changes": [], "project_id": "p1", "reserved": {"ids": ["f51"], "names": []}})
+    assert cloud.pool_ids[0] == "f51" and "f50" not in cloud.pool_ids
+    assert "Sketch8" not in cloud.pool_names.get("Sketch", [])
+    (r,) = cloud.ws.of("ids.reserve")  # (and refilled)
+    assert r["features"] == C.POOL_IDS - 1 and "Sketch" in r["names"]
+
+
+def test_resent_changes_go_out_before_anything_new(cloud):
+    import threading
+    import time
+    cloud.state = "offline"
+    S.call("edit_feature", {"name": "Boss-Extrude1", "params": {"depth": 11}})
+    S.call("edit_feature", {"name": "Boss-Extrude1", "params": {"depth": 12}})
+    old = list(cloud.pending)
+    racer = []
+
+    def answer(m):  # a command comes in just as the first queued change goes out again
+        if m["type"] == "change" and not racer:
+            t = threading.Thread(target=S.call, args=("edit_feature", {"name": "Boss-Extrude1",
+                                                                       "params": {"depth": 13}}))
+            racer.append(t)
+            t.start()
+            time.sleep(0.3)
+        return accept(cloud)(m)
+    cloud.ws.answer = answer
+    cloud._welcome({"type": "welcome", "seq": 3, "you": cloud.you, "role": "editor", "peers": [], "locks": {},
+                    "broken": {}, "changes": [], "reserved": {"ids": ["f50", "f51"], "names": ["Sketch8"]}})
+    racer[0].join(30)
+    sent = cloud.ws.of("change")
+    assert [m["change_id"] for m in sent[:2]] == old and len(sent) == 3
+    assert [m["ops"][0]["set"][0][1] for m in sent] == [11, 12, 13] and depth(cloud) == (13, 13)
+
+
+def test_refused_reservations_fail_only_their_own_request(cloud):
+    cloud.requests.update({"now:a": None, "now:b": None})
+    cloud._handle({"type": "error", "code": "bad_reserve", "message": "too many", "request_id": "now:a"})
+    assert cloud.requests["now:a"]["code"] == "bad_reserve" and cloud.requests["now:b"] is None
+
+
+def test_client_ids_are_per_run_and_a_replaced_connection_is_not_fatal(monkeypatch, tmp_path):
+    import subprocess
+    import sys
+    monkeypatch.setenv("OPENSWX_HOME", str(tmp_path))
+    assert auth.client_id() == auth.client_id() and "client_id" not in auth.config()
+    code = "from openswx.collab import auth; print(auth.client_id())"
+    ids = {subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=dict(os.environ)).stdout
+           for _ in range(2)}
+    assert len(ids) == 2 and "" not in ids  # (the desktop app and an MCP process are two clients)
+    assert 4409 not in C.FATAL_CLOSE
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows access lists")
+def test_the_token_file_is_for_this_user_alone_on_windows(monkeypatch, tmp_path):
+    import subprocess
+    monkeypatch.setenv("OPENSWX_HOME", str(tmp_path))
+    auth._save_token("secret-token")
+    acl = subprocess.run(["icacls", str(tmp_path / "collab" / "token")], capture_output=True, text=True).stdout
+    user = os.environ["USERNAME"].lower()
+    grants = [line.rsplit(":(", 1)[0].strip().lower() for line in acl.splitlines() if ":(" in line]
+    grants = [g.split(" ", 1)[1].strip() if g.startswith(str(tmp_path).lower()) else g for g in grants]
+    assert grants and all(g == user or g.endswith("\\" + user) for g in grants), acl
+    assert auth.token() == "secret-token"
+
+
+def test_backup_folders_stay_inside_the_backup_folder():
+    for bad in ("..", ".", "../..", "", "/", "\\"):
+        s = backup._slug(bad)
+        assert s not in (".", "..", "") and "/" not in s and "\\" not in s and not s.startswith(".")
+    assert backup._slug("a1b2") == "a1b2" and backup._slug("127.0.0.1_9") == "127.0.0.1_9"
