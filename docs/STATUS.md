@@ -43,7 +43,7 @@ state), and how the program got here, pass by pass, in [`PLAN.md`](PLAN.md) (a l
   imported body. `.sldprt` is read-only.
 - Simulation: every structural and thermal study (bonded assemblies, contact, springs and bolts included)
   uses curvature-based quadratic tetrahedra when the optional Netgen mesher is installed (`openswx[mesh]`;
-  bundled in the Windows build, not yet in the macOS one); without it, the voxel mesh, whose stresses at
+  bundled in the Windows and macOS builds); without it, the voxel mesh, whose stresses at
   curved boundaries are approximate.
 - The desktop window has not been exercised with the changes of the last pass (the browser UI has, in CI).
 - CI (`.github/workflows/test.yml`) runs the suite on Linux, Windows and macOS and the UI smoke tests in a headless browser.

@@ -223,7 +223,7 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
 - Simulation: every structural and thermal study (static, frequency, buckling, thermal, nonlinear, drop,
   harmonic and step response; bonded assemblies, contact, springs and bolts) meshes with curvature-based
   quadratic tetrahedra when the optional mesher is installed (`pip install openswx[mesh]`; included in the
-  Windows installer, not yet in the macOS one): peak stresses at holes and fillets within a few percent of
+  Windows and macOS installers): peak stresses at holes and fillets within a few percent of
   closed-form results. Without it the finite-cell voxel mesh is used, whose stresses at curved boundaries are
   approximate. Flow is lattice-Boltzmann with a large-eddy turbulence model, without wall functions.
 - CAM is 3-axis: roughing, flat floors and drilling, and 3D finishing with ball, bull-nose or flat mills; no

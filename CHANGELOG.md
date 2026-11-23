@@ -20,7 +20,8 @@ library materials, and 584 of the 841 SOLIDWORKS sample parts rebuilding exactly
   too.
 - About 70 more library materials: carbon, alloy, tool and stainless steels, aluminium, copper, nickel,
   magnesium and zinc alloys, engineering plastics, rubbers, composites, woods and ceramics.
-- The Windows desktop build includes the tetrahedral mesher.
+- The Windows and macOS desktop builds include the tetrahedral mesher; the release workflow checks it with a
+  study in each built app (`packaging/smoke_study.py`).
 - Release descriptions come from this changelog (`tools/release_notes.py`).
 - `tools/survey.py run --parts LIST` surveys only the listed parts.
 - Claude Desktop (and other chat apps that start local MCP servers) can drive openswx: `openswx mcp` relays to an
@@ -31,6 +32,8 @@ library materials, and 584 of the 841 SOLIDWORKS sample parts rebuilding exactly
 - The menus (File, Edit, View, ...) are always shown in the title bar; the logo no longer toggles them.
 
 ### Fixed
+- Intel macOS desktop build: its server could not start (cryptography, built from source there, clashed with
+  the app's OpenSSL); cryptography now stays at a version with Intel wheels.
 - SOLIDWORKS and Parasolid files: faces on a cylinder, torus or other periodic surface that a split line cuts
   along the seam were read with zero area, so the stored body's volume was wrong (part3: 512,932 mm³ instead of
   SOLIDWORKS' 448,221 mm³) and correct rebuilds were rejected.
