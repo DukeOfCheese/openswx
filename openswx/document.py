@@ -201,8 +201,21 @@ class PartDocument:
     def index(self, name: str) -> int:
         return self.features.index(self.find(name))
 
+    # Who hands out feature ids and names when it is not this document: a cloud document's (live collaboration)
+    # come from the server, through an object with take_id(doc) and take_name(doc, prefix).
+    allocator = None
+
+    def _new_id(self) -> str:
+        if self.allocator is not None:
+            return self.allocator.take_id(self)
+        fid = f"f{self.next_id}"
+        self.next_id += 1
+        return fid
+
     def _new_name(self, ftype: str) -> str:
         prefix = NAME_PREFIX[ftype]
+        if self.allocator is not None:
+            return self.allocator.take_name(self, prefix)
         n = self.counters.get(prefix, 0) + 1
         names = {f["name"] for f in self.features}
         while f"{prefix}{n}" in names:
@@ -214,9 +227,8 @@ class PartDocument:
         if ftype not in BUILDERS:
             raise DocumentError(f"unknown feature type {ftype!r}")
         self._checkpoint()
-        feat = {"id": f"f{self.next_id}", "name": name or self._new_name(ftype), "type": ftype,
+        feat = {"id": self._new_id(), "name": name or self._new_name(ftype), "type": ftype,
                 "params": copy.deepcopy(params), "suppressed": False}
-        self.next_id += 1
         at = len(self.features) if self.rollback is None else self.rollback
         self.features.insert(at, feat)
         if self.rollback is not None:

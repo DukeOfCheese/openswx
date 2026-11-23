@@ -106,6 +106,47 @@ class CommandError(RuntimeError):
     pass
 
 
+# Command hooks: optional add-ons (live collaboration) that watch the outermost mutating commands. A hook is an
+# object with
+#     before(name, arguments) -> token    (called with the command lock held, before the command runs; may
+#                                          raise to refuse the command)
+#     after(token, ok)                    (after it: ok=False when it failed, and then it must not raise)
+# and optionally redirect(name, document) -> result or None, which commands such as undo ask first (a hook
+# may do them differently for some documents). With no hooks registered nothing here runs.
+COMMAND_HOOKS: list = []
+
+
+def add_command_hook(hook) -> None:
+    if hook not in COMMAND_HOOKS:
+        COMMAND_HOOKS.append(hook)
+
+
+def remove_command_hook(hook) -> None:
+    if hook in COMMAND_HOOKS:
+        COMMAND_HOOKS.remove(hook)
+
+
+def redirected(name: str, doc) -> Any:
+    """What a hook does instead of command `name` on `doc`, or None: run the command as usual."""
+    for h in list(COMMAND_HOOKS):
+        fn = getattr(h, "redirect", None)
+        out = fn(name, doc) if fn is not None else None
+        if out is not None:
+            return out
+    return None
+
+
+def _hooks_after(tokens: list, ok: bool) -> None:
+    for h, tok in reversed(tokens):
+        if ok:
+            h.after(tok, True)
+        else:
+            try:
+                h.after(tok, False)
+            except Exception:  # noqa: BLE001 - the command's own error is the one to report
+                _LOG.exception("command hook failed after a failed command")
+
+
 def command(mutates: bool = True, category: str = "general", mcp: bool = True):
     def deco(fn):
         @functools.wraps(fn)
@@ -128,8 +169,16 @@ def command(mutates: bool = True, category: str = "general", mcp: bool = True):
                     watch._clean = _fingerprint(watch)
             t0 = time.perf_counter()
             _TL.depth = depth + 1
+            hooked = None  # [(hook, token)] while the hooks wait for this command's outcome
             try:
+                if COMMAND_HOOKS and mutates and outer is None and not getattr(_TL, "preview", False):
+                    hooked = []
+                    for h in list(COMMAND_HOOKS):
+                        hooked.append((h, h.before(fn.__name__, bound.arguments)))
                 result = fn(*bound.args, **bound.kwargs)  # (as bound: the workspace check may have resolved paths)
+                if hooked is not None:
+                    done, hooked = hooked, None
+                    _hooks_after(done, True)
                 if watch is not None:
                     _mark_dirty(watch)
                 if outer is None and not getattr(_TL, "preview", False) and (mutates or time.perf_counter() - t0 > 1.0):
@@ -150,6 +199,8 @@ def command(mutates: bool = True, category: str = "general", mcp: bool = True):
                 _LOG.exception("%s (%s) crashed after %.3f s", fn.__name__, origin, time.perf_counter() - t0)
                 raise
             finally:
+                if hooked:  # (the command failed: hooks hear so, and nothing of it goes anywhere)
+                    _hooks_after(hooked, False)
                 _TL.depth = depth
                 if outer is None:
                     APP.running.pop(threading.get_ident(), None)

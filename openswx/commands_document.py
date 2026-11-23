@@ -433,12 +433,18 @@ def measure_items(items: list[str | Vec3]) -> dict:
 @command(category="edit")
 def undo() -> dict:
     """Undo the last change to the active document."""
+    alt = _S.redirected("undo", APP.active_doc) if _S.COMMAND_HOOKS else None
+    if alt is not None:
+        return alt
     APP.active_doc.undo(); return APP.active_doc.summary()
 
 
 @command(category="edit")
 def redo() -> dict:
     """Redo the last undone change."""
+    alt = _S.redirected("redo", APP.active_doc) if _S.COMMAND_HOOKS else None
+    if alt is not None:
+        return alt
     APP.active_doc.redo(); return APP.active_doc.summary()
 
 
