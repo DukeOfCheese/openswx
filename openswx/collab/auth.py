@@ -1,11 +1,14 @@
 """Signing in to a collaboration server, and remembering it.
 
 Kept in `<home>/collab/` (home: OPENSWX_HOME, else ~/.openswx):
-    config.json   {"server": "https://...", "user": {...}, "client_id": "..."}
-    token         the session token, readable by this user only where the system allows it
+    config.json   {"server": "https://...", "user": {...}}
+    token         the session token, readable by this user only (POSIX: mode 0600; Windows: an access list
+                  that names this user alone, set with icacls)
 
-`client_id` is one random string per installation: the server uses it (with the user id) to recognise this app
-across reconnects, so locks and reserved ids survive a dropped connection.
+`client_id` is one random string per run of openswx (made when it is first needed, kept across reconnects of
+that run): the server uses it (with the user id) to recognise this app across a dropped connection, so locks
+and reserved ids survive it. Per run, not per installation: the desktop app and an MCP process on the same
+machine are two clients, and two apps with one id would keep disconnecting each other.
 
 Browser sign-in (Google, GitHub): a one-off HTTP listener on 127.0.0.1 receives the code the server sends the
 browser back with; the code is worth nothing without the `code_verifier` that only this process knows (PKCE:
@@ -55,15 +58,14 @@ def _save_config(d: dict) -> None:
     os.replace(tmp, p)
 
 
+_RUN_ID: list[str] = []
+
+
 def client_id() -> str:
-    """This installation's id (made once, kept)."""
-    d = config()
-    cid = d.get("client_id")
-    if not isinstance(cid, str) or not 8 <= len(cid) <= 64:
-        cid = secrets.token_hex(16)
-        d["client_id"] = cid
-        _save_config(d)
-    return cid
+    """This run's id (made once per process)."""
+    if not _RUN_ID:
+        _RUN_ID.append(secrets.token_hex(16))
+    return _RUN_ID[0]
 
 
 def server() -> str | None:
@@ -90,7 +92,28 @@ def _save_token(tok: str) -> None:
     p.unlink(missing_ok=True)  # (os.open's mode applies to new files only)
     fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="ascii") as fh:
+        if os.name == "nt":
+            _owner_only(p)  # (before the token is in it)
         fh.write(tok)
+
+
+def _owner_only(p: Path) -> None:
+    """Windows ignores the mode bits: give the file an access list of its own that lets this user alone in (the
+    profile folder already keeps others out, but OPENSWX_HOME may be on a shared drive). Best effort: icacls
+    is part of Windows; if it fails the file keeps the folder's permissions and a warning is logged."""
+    import getpass
+    import logging
+    import subprocess
+    try:
+        user = os.environ.get("USERNAME") or getpass.getuser()
+        domain = os.environ.get("USERDOMAIN")
+        who = domain + "\\" + user if domain else user
+        r = subprocess.run(["icacls", str(p), "/inheritance:r", "/grant:r", f"{who}:F"], capture_output=True,
+                           text=True, timeout=20, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        if r.returncode != 0:
+            raise OSError(r.stdout.strip() or r.stderr.strip())
+    except (OSError, KeyError, subprocess.SubprocessError) as exc:
+        logging.getLogger("openswx.collab").warning("could not restrict access to %s: %s", p, exc)
 
 
 def normalise(url: str) -> str:
@@ -112,7 +135,6 @@ def _remember(url: str, got: dict) -> dict:
     d = config()
     d.update(server=url, user=got.get("user") or {})
     _save_config(d)
-    client_id()
     return {"server": url, "user": got.get("user") or {}}
 
 
