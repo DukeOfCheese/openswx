@@ -1,0 +1,317 @@
+"""Live collaboration in the browser: a real openswx-collab server, two openswx servers (Ada's and Bob's) and a page
+on each. Ada signs in and shares a part through the Collaborate dialogs, Bob opens it; then what each sees of the
+other: avatars and tools, the pointer and selection on the model, sketch lines being drawn, a feature panel's
+ghost, follow-their-view, lock badges in the FeatureManager, a refused change's toast, undo that follows the
+collaboration state, and the history dialog.
+
+Needs Playwright with Chromium, the collab extra (openswx-collab-protocol, websockets) and a checkout of
+openswx-collab with its virtual environment beside this repository (OPENSWX_COLLAB_SERVER_REPO points elsewhere);
+skipped without any of them. The tests run in order and share the servers and pages. With OPENSWX_COLLAB_SHOTS
+set to a folder, screenshots of Bob's window are saved there.
+"""
+import os
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.request
+from pathlib import Path
+
+import pytest
+
+sync_api = pytest.importorskip("playwright.sync_api", reason="Playwright is not installed")
+pytest.importorskip("openswx_collab_protocol")
+pytest.importorskip("websockets")
+httpx = pytest.importorskip("httpx")
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+SERVER_REPO = Path(os.environ.get("OPENSWX_COLLAB_SERVER_REPO") or ROOT.parent / "openswx-collab")
+SERVER_PY = SERVER_REPO / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+OPEN_CORE = ("import sys; import openswx_collab_server.hooks as h; h.load_hooks = h.Hooks; "
+             "from openswx_collab_server.__main__ import main; main(sys.argv[1:])")
+TOKEN = "ui-collab-token-0123456789abcdefghijklmnopqrstuv"
+PASSWORD = "correct horse"
+SHOTS = os.environ.get("OPENSWX_COLLAB_SHOTS")
+
+pytestmark = pytest.mark.skipif(not SERVER_PY.exists(), reason=f"no openswx-collab server at {SERVER_REPO}")
+
+HELPERS = """
+window.T = {
+  run: (n, a) => window.app.api('/api/command', {name: n, args: a || {}}),
+  open: () => !document.querySelector('#modal').classList.contains('hidden'),
+  text: () => document.querySelector('#modal-box').innerText,
+  ok: () => document.querySelector('#modal-box .mb-foot .primary').click(),
+  peer: (name) => (window.app.collabDoc()?.peers || []).find((p) => p.name === name),
+};
+"""
+
+
+def free_port() -> int:
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def wait_http(url: str, proc, what: str) -> None:
+    for _ in range(480):
+        if proc.poll() is not None:
+            raise RuntimeError(f"{what} stopped")
+        try:
+            urllib.request.urlopen(url, timeout=1).read()
+            return
+        except OSError:
+            time.sleep(0.25)
+    raise RuntimeError(f"{what} did not start")
+
+
+@pytest.fixture(scope="module")
+def world(tmp_path_factory):
+    import openswx_collab_protocol
+    procs = []
+    try:
+        work = tmp_path_factory.mktemp("collab-server")
+        port = free_port()
+        url = f"http://127.0.0.1:{port}"
+        env = dict(os.environ, OSWX_COLLAB_DATABASE_URL=f"sqlite+aiosqlite:///{(work / 'collab.db').as_posix()}",
+                   OSWX_COLLAB_STORAGE_URL=str(work / "storage"), OSWX_COLLAB_PUBLIC_URL=url)
+        env.pop("PYTHONPATH", None)  # (the server runs on its own environment)
+        log = open(work / "server.log", "a")
+        procs.append(subprocess.Popen([str(SERVER_PY), "-c", OPEN_CORE, "serve", "--port", str(port)], env=env, cwd=str(work),
+                                      stdout=log, stderr=log))
+        wait_http(url + "/api/health", procs[-1], "the collaboration server")
+        proto = str(Path(openswx_collab_protocol.__file__).resolve().parent.parent)
+        apps = {}
+        for who in ("ada", "bob"):
+            p = free_port()
+            env = dict(os.environ, OPENSWX_HOME=tempfile.mkdtemp(prefix=f"openswx-ui-{who}-"), OPENSWX_TOKEN=TOKEN,
+                       OPENSWX_AUTOSAVE="off", OPENSWX_LOG="off", OPENSWX_PLUGINS="off", OPENSWX_COLLAB_RETRY_MAX="1",
+                       PYTHONPATH=os.pathsep.join([str(ROOT), proto, os.environ.get("PYTHONPATH", "")]))
+            procs.append(subprocess.Popen([sys.executable, "-m", "openswx", "serve", "--port", str(p)], cwd=ROOT, env=env,
+                                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
+            apps[who] = (f"http://127.0.0.1:{p}", procs[-1])
+        for who, (base, proc) in apps.items():
+            wait_http(base + "/api/health", proc, f"{who}'s openswx")
+        http = httpx.Client(base_url=url, timeout=30)
+        ada = http.post("/api/auth/register", json={"email": "ada@example.com", "password": PASSWORD, "name": "Ada"}).json()["token"]
+        h = {"Authorization": f"Bearer {ada}"}
+        org = http.post("/api/orgs", json={"name": "Robotics"}, headers=h).json()["id"]
+        with sync_api.sync_playwright() as pw:
+            try:
+                browser = pw.chromium.launch()
+            except Exception as exc:  # noqa: BLE001 - no browser binary on this machine
+                pytest.skip(f"no browser to drive: {exc}")
+            pages = {}
+            for who, (base, _) in apps.items():
+                page = browser.new_context(viewport={"width": 1280, "height": 800}).new_page()
+                page.errors = []
+                page.on("pageerror", lambda e, errs=page.errors: errs.append(str(e)))
+                page.goto(f"{base}/?token={TOKEN}")
+                page.wait_for_function("window.app && window.app.version >= 0 && window.app.cl")
+                page.evaluate(HELPERS)
+                pages[who] = page
+            yield {"url": url, "http": http, "ada_h": h, "org": org, "a": pages["ada"], "b": pages["bob"], "state": {}}
+            for page in pages.values():
+                assert page.errors == [], page.errors
+            browser.close()
+    finally:
+        for p in procs:
+            p.kill()
+            p.wait(20)
+
+
+def shot(page, name: str) -> None:
+    if SHOTS:
+        Path(SHOTS).mkdir(parents=True, exist_ok=True)
+        page.screenshot(path=str(Path(SHOTS) / f"{name}.png"))
+
+
+def canvas_centre(page) -> tuple[float, float]:
+    box = page.locator("#view").bounding_box()
+    return box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+
+
+# ---------------------------------------------------------------------- the steps, in order
+def test_sign_in_through_the_dialog(world):
+    a = world["a"]
+    a.evaluate("window.app.collabSignInDialog()")
+    a.wait_for_function("T.open() && document.querySelector('#cl-srv')")
+    a.fill("#cl-srv", world["url"])
+    a.wait_for_function("document.querySelector('#cl-oauth').innerText.includes('openswx-collab')")  # (asked the server)
+    a.fill("#cl-email", "ada@example.com")
+    a.fill("#cl-pw", PASSWORD)
+    a.evaluate("T.ok()")
+    a.wait_for_function("!T.open()")
+    assert "Signed in as" in a.inner_text("#toasts")
+    st = a.evaluate("async () => (await T.run('collab_status')).result")
+    assert st["signed_in"] and st["user"]["name"] == "Ada"
+
+
+def test_share_a_part_into_a_new_project(world):
+    a = world["a"]
+    a.evaluate("""async () => {
+        await T.run('new_part', {name: 'Bracket'});
+        await T.run('create_sketch', {plane: 'Top'});
+        await T.run('sketch_rectangle', {sketch: 'Sketch1', corner1: [-50, -30], corner2: [50, 30]});
+        await T.run('extrude', {sketch: 'Sketch1', depth: 20});
+        await window.app.refresh(); window.app.vp.zoomFit(false);
+    }""")
+    a.evaluate("window.app.collabShareDialog()")
+    a.wait_for_function("T.open() && document.querySelector('#cl-proj')")
+    a.select_option("#cl-proj", "__new")
+    a.fill("#cl-pname", "Rover")
+    a.evaluate("T.ok()")
+    a.wait_for_function("!T.open() && window.app.collabDoc() && window.app.collabDoc().state === 'online'", timeout=30000)
+    assert a.is_visible("#collabbar") and "Online" in a.inner_text("#collabbar")
+    assert a.evaluate("window.app.collabDoc().role") == "owner"
+
+
+def test_bob_opens_it_from_the_open_dialog(world):
+    a, b, http = world["a"], world["b"], world["http"]
+    project = a.evaluate("async () => (await T.run('collab_projects')).result.orgs[0].projects[0].id")
+    inv = http.post(f"/api/orgs/{world['org']}/invites", headers=world["ada_h"], json={
+        "email": "bob@example.com", "projects": [{"project_id": project, "role": "editor"}]}).json()["token"]
+    http.post("/api/auth/register", json={"email": "bob@example.com", "password": PASSWORD, "name": "Bob",
+                                          "invite": inv}).raise_for_status()
+    r = b.evaluate(f"async () => T.run('collab_sign_in', {{server: '{world['url']}', email: 'bob@example.com', password: '{PASSWORD}'}})")
+    assert r["ok"], r
+    b.evaluate("window.app.collabOpenDialog()")
+    b.wait_for_selector("#modal-box .cl-doc")
+    b.click("#modal-box .cl-doc")
+    b.evaluate("T.ok()")
+    b.wait_for_function("!T.open() && window.app.collabDoc() && window.app.model.name === 'Bracket'", timeout=30000)
+    assert b.evaluate("window.app.model.features.map((f) => f.name)") == ["Sketch1", "Boss-Extrude1"]
+
+
+def test_each_sees_the_other_as_an_avatar(world):
+    a, b = world["a"], world["b"]
+    b.wait_for_selector("#collabbar .cl-av[title^='Ada']")
+    a.wait_for_selector("#collabbar .cl-av[title^='Bob']")
+    assert b.inner_text("#collabbar .cl-av") == "A"
+    colour = b.evaluate("T.peer('Ada').colour")
+    assert colour.lower() in b.get_attribute("#collabbar .cl-av", "style").lower()
+    world["state"]["ada_colour"] = int(colour[1:], 16)
+
+
+def test_ada_s_pointer_and_selection_show_on_bob_s_model(world):
+    a, b = world["a"], world["b"]
+    x, y = canvas_centre(a)
+    a.mouse.move(x - 20, y - 10)
+    a.mouse.move(x, y)
+    b.wait_for_function("(T.peer('Ada')?.presence?.pointer?.face || '').length > 0")
+    b.wait_for_function("[...document.querySelectorAll('.cl-ptr')].some((m) => m.style.display !== 'none' && m.innerText.startsWith('Ada'))")
+    face = b.evaluate("T.peer('Ada').presence.pointer.face")
+    assert not face.startswith("Face"), f"the pointer names a face by its persistent name, not {face}"
+    a.mouse.click(x, y)
+    a.wait_for_function("window.app.selection.some((s) => s.kind === 'face')")
+    b.wait_for_function("window.app.cl.groups.sel.children.length >= 2")  # (the face, tinted, and its outline)
+    assert b.evaluate("window.app.cl.groups.sel.children.every((o) => o.material.color.getHex() === "
+                      f"{world['state']['ada_colour']})")
+    shot(b, "pointer-and-selection")
+    a.evaluate("window.app.setSelection([])")
+    b.wait_for_function("window.app.cl.groups.sel.children.length === 0")
+
+
+def test_ada_s_tool_shows_next_to_her_name_and_her_panel_as_a_ghost(world):
+    a, b = world["a"], world["b"]
+    a.evaluate("window.app.editFeature('Boss-Extrude1')")
+    a.wait_for_function("window.app.pm.active && window.app.cl.held.pm")
+    a.evaluate("""() => { const app = window.app; app.pm.values.depth = 45; app.schedulePreview(app.pm.args()); }""")
+    b.wait_for_function("[...document.querySelectorAll('#collabbar .cl-tool')].some((t) => t.innerText === 'Editing Boss-Extrude1')")
+    assert "Editing Boss-Extrude1" in b.inner_text(".cl-ptr")
+    b.wait_for_function("T.peer('Ada')?.draft?.kind === 'feature'")
+    b.wait_for_function("[...window.app.cl.ghosts.values()].some((g) => g.group.children.length > 0)", timeout=20000)
+    world["state"]["panel_open"] = True
+
+
+def test_a_feature_open_on_one_side_is_locked_on_the_other(world):
+    b = world["b"]
+    b.wait_for_selector("#tree .t-row[data-feature='Boss-Extrude1'] .cl-lock[data-who='Ada']")
+    assert "Ada is editing Boss-Extrude1" in b.get_attribute("#tree .t-row[data-feature='Boss-Extrude1'] .cl-lock", "title")
+    b.evaluate("window.app.editFeature('Boss-Extrude1')")  # (Bob tries to open it too: it does not open)
+    b.wait_for_function("document.querySelector('#toasts').innerText.includes('being edited by Ada')")
+    assert not b.evaluate("!!window.app.pm.active")
+    shot(b, "lock-badge-and-ghost")
+
+
+def test_a_change_refused_by_a_lock_says_who_in_a_toast(world):
+    b = world["b"]
+    r = b.evaluate("async () => { try { await window.app.run('edit_feature', {name: 'Boss-Extrude1', params: {depth: 33}}); return 'applied'; }"
+                   " catch (e) { return String(e.message || e); } }")
+    assert "Ada" in r and "locked" in r
+    b.wait_for_selector("#toasts .cl-conflict")
+    text = b.inner_text("#toasts .cl-conflict")
+    assert "Ada is editing Boss-Extrude1" in text
+    assert b.evaluate("[...document.querySelectorAll('#toasts .toast.err:not(.cl-conflict)')]"
+                      ".every((t) => !t.innerText.includes('locked'))")  # (one toast for it, not two)
+    shot(b, "conflict-toast")
+
+
+def test_closing_the_panel_frees_the_lock(world):
+    a, b = world["a"], world["b"]
+    a.evaluate("window.app.closePM()")
+    b.wait_for_function("!document.querySelector(\"#tree .t-row[data-feature='Boss-Extrude1'] .cl-lock\")")
+    b.wait_for_function("[...window.app.cl.ghosts.values()].every((g) => g.group.children.length === 0)")
+    b.wait_for_function("!document.querySelector('#collabbar .cl-tool')")
+
+
+def test_sketch_lines_being_drawn_show_dashed_in_the_drawer_s_colour(world):
+    a, b = world["a"], world["b"]
+    a.evaluate("window.app.enterSketch('Sketch1')")
+    a.wait_for_function("window.app.sk.active && window.app.cl.held.sketch")
+    # (Sketch1 is folded under Boss-Extrude1: the folded row shows its lock)
+    b.wait_for_selector("#tree .t-row[data-feature='Boss-Extrude1'] .cl-lock[data-who='Ada'][data-target='Sketch1']")
+    a.evaluate("window.app.setSketchTool('line')")
+    time.sleep(0.5)  # (Normal To turns the view)
+    x, y = canvas_centre(a)
+    a.mouse.move(x - 150, y - 80)
+    a.mouse.click(x - 150, y - 80)
+    a.mouse.move(x + 60, y + 40, steps=5)
+    b.wait_for_function("T.peer('Ada')?.draft?.kind === 'sketch'")
+    b.wait_for_function("window.app.cl.groups.drafts.children.length > 0")
+    line = b.evaluate("(() => { const l = window.app.cl.groups.drafts.children[0]; return {dashed: !!l.material.isLineDashedMaterial,"
+                      " colour: l.material.color.getHex(), sketch: l.userData.sketch}; })()")
+    assert line == {"dashed": True, "colour": world["state"]["ada_colour"], "sketch": "Sketch1"}
+    assert "Line in Sketch1" in b.inner_text("#collabbar")
+    shot(b, "sketch-draft")
+    a.keyboard.press("Escape")
+    a.evaluate("window.app.exitSketch(true)")
+    b.wait_for_function("window.app.cl.groups.drafts.children.length === 0")
+    b.wait_for_function("!document.querySelector('#tree .cl-lock')")
+
+
+def test_following_ada_s_view(world):
+    a, b = world["a"], world["b"]
+    b.click("#collabbar .cl-av[title^='Ada']")
+    assert b.evaluate("window.app.cl.follow") == b.evaluate("T.peer('Ada').client_id")
+    a.evaluate("window.app.vp.setView('top')")
+    angle = ("(() => { const q = T.peer('Ada')?.presence?.camera?.q; if (!q) return 9;"
+             " const c = window.app.vp.camera.quaternion; return 2 * Math.acos(Math.min(1, Math.abs(c.x*q[0] + c.y*q[1] + c.z*q[2] + c.w*q[3]))); })()")
+    b.wait_for_function(f"{angle} < 0.01 && Math.abs(T.peer('Ada').presence.camera.q[0] + 0.7071) < 0.01", timeout=15000)
+    assert "Following Ada" in b.inner_text("#collabbar")
+    x, y = canvas_centre(b)
+    b.mouse.move(x, y)
+    b.mouse.wheel(0, -200)  # (any camera input of his own stops following)
+    b.wait_for_function("window.app.cl.follow === null")
+    assert "Following" not in b.inner_text("#collabbar")
+
+
+def test_undo_follows_the_collaboration_state(world):
+    a, b = world["a"], world["b"]
+    b.evaluate("async () => { await window.app.run('edit_feature', {name: 'Boss-Extrude1', params: {depth: 25}}); }")
+    b.wait_for_function("window.app.collabDoc().can_undo && !document.querySelector('.qa[data-k=undo]').disabled")
+    a.wait_for_function("window.app.model.features.length === 2 && window.app.collabDoc().seq >= 1")
+    assert a.evaluate("document.querySelector('.qa[data-k=undo]').disabled")  # (nothing of Ada's to take back)
+    b.click(".qa[data-k=undo]")
+    b.wait_for_function("!window.app.collabDoc().can_undo && window.app.collabDoc().can_redo")
+
+
+def test_history_dialog_names_a_version(world):
+    a = world["a"]
+    a.evaluate("window.app.collabHistoryDialog()")
+    a.wait_for_function("T.open() && T.text().includes('edit_feature') && T.text().includes('Bob')")
+    a.fill("#cl-vname", "Rev A")
+    a.click("#cl-vbtn")
+    a.wait_for_function("T.open() && T.text().includes('Rev A')")
+    assert a.locator("#modal-box .cl-restore").count() >= 2
+    a.evaluate("document.querySelector('#modal').classList.add('hidden')")
