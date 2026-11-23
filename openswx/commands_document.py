@@ -478,12 +478,13 @@ def redefine_feature(name: str, command_name: str, args: dict) -> dict:
         scratch.rebuild()
     key = APP.active
     APP.documents[key] = scratch
+    was_preview = getattr(_TL, "preview", False)  # (itself previewed, by the Edit Feature panel: it stays one)
     _TL.preview = True
     try:
         COMMANDS[command_name]["fn"](**args)
         new_params = scratch.features[-1 if scratch.rollback is None else scratch.rollback - 1]["params"]
     finally:
-        _TL.preview = False
+        _TL.preview = was_preview
         APP.documents[key] = doc
     if target["type"] == "sketch":
         raise DocumentError("use the sketch tools to edit a sketch")

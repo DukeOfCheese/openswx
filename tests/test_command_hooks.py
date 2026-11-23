@@ -55,6 +55,18 @@ def test_hooks_see_each_outermost_mutating_command_once(hook):
     assert hook.calls == []
 
 
+def test_a_preview_of_redefining_a_feature_changes_nothing(hook):
+    """The Edit Feature panel previews redefine_feature, which itself runs the creation command as a preview: the
+    outer preview must stay one (no log entry, no new version, no hook, the document unchanged)."""
+    sk, ext = _block()
+    hook.calls.clear()
+    version, last, depth = S.APP.version, S.APP.log[-1], S.APP.doc.find(ext)["params"]["depth"]
+    mesh = S.preview("redefine_feature", {"name": ext, "command_name": "extrude", "args": {"sketch": sk, "depth": 30}})
+    assert mesh["ok"] and hook.calls == []
+    assert S.APP.version == version and S.APP.log[-1] is last
+    assert S.APP.doc.find(ext)["params"]["depth"] == depth
+
+
 def test_hooks_hear_when_a_command_fails(hook):
     _block()
     hook.calls.clear()
