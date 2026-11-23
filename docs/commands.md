@@ -2980,10 +2980,10 @@ Remove the study's fixtures and/or loads.
 ### `simulation_run` *(read-only)*
 
 ```
-simulation_run(element_size: float | None = None)
+simulation_run(element_size: float | None = None, mesh: Literal['auto', 'tetrahedral', 'voxel'] = 'auto')
 ```
 
-Run the linear static study: voxel hex mesh (incompatible-mode elements), returns max displacement (mm), max von Mises stress (MPa), factor of safety (material yield / max stress), reactions (N). Smaller element_size = more accurate and slower (default: ~12k elements).
+Run the linear static study; returns max displacement (mm), max von Mises stress (MPa), factor of safety (material yield / max stress), reactions (N). mesh: tetrahedral = quadratic tetrahedra graded to the faces' curvature, accurate peak stresses at fillets and holes (needs the optional Netgen mesher); voxel = hexahedral grid, stair-stepped at curved faces (stresses there approximate), also handles bonded assemblies, springs, bolts and contact; auto = tetrahedral when it is installed and the study allows it. Smaller element_size = more accurate and slower (default: ~12k elements).
 
 ### `simulation_results` *(UI only, read-only)*
 

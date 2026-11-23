@@ -34,7 +34,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "httpx"]
+dev = ["pytest", "httpx", "netgen-mesher>=6.2"]
+mesh = ["netgen-mesher>=6.2"]  # curvature-based tetrahedral meshes for simulation (LGPL-2.1; fea_tet.py)
 desktop = ["pywebview>=6", "pyinstaller>=6"]  # the native window and the release build (packaging/build.py)
 difftest = ["pywin32; platform_system == 'Windows'"]  # tools/difftest only (development oracle); openswx itself never uses SOLIDWORKS
 

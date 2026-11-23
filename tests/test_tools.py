@@ -97,3 +97,21 @@ def test_release_metadata_agrees():
     assert meta["version"] == openswx.__version__
     assert re.search(rf'#define AppVersion "{re.escape(meta["version"])}"', (root / "packaging" / "openswx.iss").read_text(encoding="utf-8"))
     assert meta["urls"]["Homepage"].startswith("https://github.com/") and meta["readme"] == "README.md"
+
+
+def test_material_library_entries_are_plausible():
+    """Every library material has the fields the studies need, in sane ranges and units (kg/m^3, MPa, W/(m K),
+    J/(kg K)): a slip of units (GPa for MPa, g/cm^3 for kg/m^3) shows up as an out-of-range value here."""
+    from openswx import materials
+    lib = {n: m for n, m in materials.library().items() if m.get("category") != materials.CUSTOM_CATEGORY}
+    assert len(lib) >= 90
+    for name, m in lib.items():
+        assert 100 <= m["density"] <= 20000, name
+        assert 1 <= m["elastic_modulus"] <= 700e3, name
+        assert 0.0 < m["poisson"] < 0.5, name
+        assert m["tensile_strength"] > 0, name
+        if m["category"] != "Plastics":  # (a plastic can yield above its strength at break)
+            assert m["yield_strength"] <= m["tensile_strength"] * 1.01, name
+        assert 0.01 <= m["thermal_conductivity"] <= 500 and 100 <= m["specific_heat"] <= 3000, name
+        assert m["color"].startswith("#") and len(m["color"]) == 7, name
+    assert materials.lookup("aisi 4140 (QUENCHED AND TEMPERED)")["yield_strength"] == 655.0

@@ -21,7 +21,7 @@ for pkg in ("build123d", "OCP", "webview", "uvicorn", "mcp", "ezdxf", "ocpsvg", 
     datas += d
     binaries += b
     hidden += h
-hidden += ["openswx.desktop", "openswx.web_server", "openswx.mcp_server", "openswx.assembly", "openswx.drawing",
+hidden += ["openswx.fea_tet", "openswx.desktop", "openswx.web_server", "openswx.mcp_server", "openswx.assembly", "openswx.drawing",
            "openswx.sldprt", "openswx.render", "openswx.equations", "openswx.sw_tree", "openswx.sw_sketch",
            "openswx.sw_rebuild", "openswx.drawing_sheets", "openswx.fileassoc", "openswx.sw_drawing",
            "openswx.advanced", "openswx.commands_more", "openswx.drawing_more", "openswx.fea_more",

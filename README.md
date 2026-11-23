@@ -56,8 +56,9 @@ here without retraining. Underneath, it is a different program, built on differe
   views, motion studies, interference and clearance checks, a fastener library, pipe and cable routing.
 - **Drawings**: sheets with model, projected, section, detail, auxiliary, broken and cropped views; smart
   dimensions, GD&T, hole tables, BOM and balloons; PDF / DXF / SVG export (DWG through the ODA converter).
-- **Analysis**: static, frequency, buckling, thermal, nonlinear, fatigue and drop studies; lattice-Boltzmann
-  flow; plastics fill; 3-axis CAM with G-code; costing; inspection reports. Long solves run as background jobs.
+- **Analysis**: static (on curvature-based tetrahedra), frequency, buckling, thermal, nonlinear, fatigue and
+  drop studies; lattice-Boltzmann flow; plastics fill; 3-axis CAM with G-code; costing; inspection reports.
+  Long solves run as background jobs.
 - **Rendering**: real-time PBR, or path traced for soft shadows and reflections.
 - **Review**: design review, requirements checked like tests, tolerance stack-up, design studies, document
   compare.
@@ -210,12 +211,18 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
 
 **Not the same yet (see [Status](#status-and-limitations))**
 
-- Simulation uses a finite-cell voxel mesh, not a curvature-fitted tetrahedral mesh: global results (stiffness,
-  frequencies) are good, but peak stresses at curved boundaries are approximate. Flow is lattice-Boltzmann and
-  warns at high Reynolds numbers.
-- CAM is 3-axis with flat end mills.
-- DWG needs the free ODA File Converter installed; there is no eDrawings viewer (eDrawings-style export only).
-- Toolbox, the Design Library and material libraries are openswx's own, smaller sets.
+- Simulation: linear static studies of single parts mesh with curvature-based quadratic tetrahedra when the
+  optional mesher is installed (`pip install openswx[mesh]`), with peak stresses at holes and fillets within a
+  few percent of closed-form results. Frequency, buckling, thermal, nonlinear and drop studies, bonded
+  assemblies, bolts and contact still use the finite-cell voxel mesh, whose stresses at curved boundaries are
+  approximate. Flow is lattice-Boltzmann with a large-eddy turbulence model, without wall functions.
+- CAM is 3-axis: roughing, flat floors and drilling, and 3D finishing with ball, bull-nose or flat mills; no
+  4- or 5-axis.
+- DWG needs the free ODA File Converter installed. Models are shared as a self-contained HTML viewer
+  (eDrawings-style, opens in any browser) rather than in a separate viewer application.
+- Toolbox and the Design Library are openswx's own, smaller sets (ISO metric and ANSI inch fasteners, pins
+  and washers). The material library has about 100 common grades with typical handbook values; add your own
+  as custom materials.
 - Icons are original, and some commands sit in slightly different places.
 
 ## Status and limitations

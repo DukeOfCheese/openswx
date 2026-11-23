@@ -3,6 +3,8 @@
 Moved out of session.py; helpers come from it by name, and other commands through `_S` at call time."""
 from __future__ import annotations
 
+from typing import Literal
+
 from . import session as _S
 from .session import (  # noqa: F401
     APP, DocumentError, Vec3, _direction, _eval_body, _face, _plane_spec, _resolve_study, _sim_doc, _sim_face,
@@ -175,10 +177,13 @@ def simulation_clear(fixtures: bool = True, loads: bool = True) -> dict:
 
 
 @command(mutates=False, category="simulation")
-def simulation_run(element_size: float | None = None) -> dict:
-    """Run the linear static study: voxel hex mesh (incompatible-mode elements), returns max displacement
-    (mm), max von Mises stress (MPa), factor of safety (material yield / max stress), reactions (N). Smaller
-    element_size = more accurate and slower (default: ~12k elements)."""
+def simulation_run(element_size: float | None = None, mesh: Literal["auto", "tetrahedral", "voxel"] = "auto") -> dict:
+    """Run the linear static study; returns max displacement (mm), max von Mises stress (MPa), factor of
+    safety (material yield / max stress), reactions (N). mesh: tetrahedral = quadratic tetrahedra graded to the
+    faces' curvature, accurate peak stresses at fillets and holes (needs the optional Netgen mesher); voxel =
+    hexahedral grid, stair-stepped at curved faces (stresses there approximate), also handles bonded
+    assemblies, springs, bolts and contact; auto = tetrahedral when it is installed and the study allows it.
+    Smaller element_size = more accurate and slower (default: ~12k elements)."""
     from .fea import solve_static
     doc = _sim_doc()
     if doc.body is None:
@@ -195,10 +200,22 @@ def simulation_run(element_size: float | None = None) -> dict:
         material = dict(mats[0][2])
         material["yield_strength"] = min(m.get("yield_strength") or m.get("tensile_strength") or 1e18 for _, _, m in mats)
         regions = [(sol, m["elastic_modulus"] / material["elastic_modulus"]) for _, shape, m in mats for sol in shape.solids()]
+    from . import fea_tet
+    if mesh == "auto":
+        mesh = "tetrahedral" if fea_tet.available() and not regions and not connectors else "voxel"
+    elif mesh == "tetrahedral":
+        if not fea_tet.available():
+            raise DocumentError("the tetrahedral mesher is not installed (pip install netgen-mesher); use mesh='voxel'")
+        if regions or connectors:
+            raise DocumentError("bonded assemblies, springs, bolts and contact need mesh='voxel'")
     try:
         with unlocked():
-            r = solve_static(doc.body, material, fixtures, loads, element_size or doc.study.get("element_size"),
-                             regions=regions, connectors=connectors)
+            if mesh == "tetrahedral":
+                r = fea_tet.solve_static(doc.body, material, fixtures, loads, element_size or doc.study.get("element_size"))
+            else:
+                r = solve_static(doc.body, material, fixtures, loads, element_size or doc.study.get("element_size"),
+                                 regions=regions, connectors=connectors)
+                r["mesh"] = "voxel (hexahedral, finite-cell)"
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.sim_result = (doc.revision, r)

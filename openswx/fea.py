@@ -515,6 +515,9 @@ def map_to_mesh(result: dict, mesh: dict) -> dict:
     of the stair-stepped mesh use the nearest active neighbour). Separately meshed bodies (contact) map each
     vertex to the body grid it lies in."""
     g = result["_grid"]
+    if g.get("kind") == "tet":  # curvature-based tetrahedral mesh (fea_tet)
+        from .fea_tet import map_to_mesh as tet_map
+        return tet_map(g, mesh)
     if not g.get("parts"):
         st, du, _ = _map_grid(g, mesh)
         return {"stress": st, "displacement": du}

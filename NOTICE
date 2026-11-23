@@ -32,6 +32,7 @@ Uvicorn              BSD-3-Clause
 MCP Python SDK       MIT
 ezdxf                MIT
 pywebview            BSD-3-Clause (desktop builds)
+Netgen (netgen-mesher)   LGPL-2.1 (optional: tetrahedral simulation meshes; carries its own OpenCASCADE)
 PyInstaller bootloader   GPL-2.0 with the bootloader exception (desktop builds)
 
 The desktop builds carry each bundled package's own licence file in its .dist-info folder.

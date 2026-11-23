@@ -2217,7 +2217,7 @@ class App {
     this.toast("Meshing and solving...");
     const r = await this.evalCall("simulation_run"); if (!r) return;
     this.simLast = r;
-    this.modal("Static Study - Results", `<div class="kv"><div>Mesh</div><div>${r.elements} hex elements, ${r.nodes} nodes (size ${r.element_size.toFixed(3)} mm)</div>
+    this.modal("Static Study - Results", `<div class="kv"><div>Mesh</div><div>${r.elements} ${(r.mesh || "").startsWith("tetra") ? "quadratic tetrahedra, curvature-based" : "hex elements (voxel)"}, ${r.nodes} nodes (size ${r.element_size.toFixed(3)} mm)</div>
       <div>Max displacement</div><div><b>${r.max_displacement.toExponential(4)} mm</b></div>
       <div>Max von Mises stress</div><div><b>${r.max_von_mises.toFixed(3)} MPa</b></div>
       <div>Yield strength</div><div>${r.yield_strength || "—"} MPa</div>
