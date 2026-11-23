@@ -5,7 +5,8 @@
 //   * the bar over the view while a cloud document is active: connection state, the others as coloured avatars
 //     with their tool (click one to follow their view);
 //   * presence out (pointer, selection as persistent names, tool, camera, drafts), at most ~10 a second and only
-//     when something changed; presence in: the others' pointers, selections, sketch drafts and feature ghosts;
+//     when something changed; presence in: the others' pointers, selections, sketch drafts and feature ghosts
+//     (drafts can be switched off in the menu);
 //   * locks taken while a sketch or a feature's panel is open, lock and "broken by" badges in the FeatureManager,
 //     conflict toasts, and the list of changes refused after a reconnect.
 // The state comes from GET /api/collab, fetched when the "collab" revision on the event stream moves.
@@ -21,7 +22,8 @@ const STATE_LABEL = { online: "Online", connecting: "Connecting…", offline: "O
   bad_hello: "Refused by the server", replaced: "Opened elsewhere with this account" };
 const LOCK_SVG = '<svg viewBox="0 0 12 12"><rect x="2.5" y="5.5" width="7" height="5" rx="1" fill="#fff"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" stroke="#fff" stroke-width="1.4" fill="none"/></svg>';
 const esc = (s) => escapeHtml(String(s ?? ""));
-const hex = (c) => (typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c) ? parseInt(c.slice(1), 16) : 0x7a8594);
+const colour = (c) => (typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c) ? c : "#7a8594"); // (a person's colour, from the server)
+const hex = (c) => parseInt(colour(c).slice(1), 16);
 const r3 = (v) => v.map((x) => Math.round(x * 1000) / 1000);
 const initials = (name) => (String(name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
 const words = (s) => String(s || "").replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
@@ -76,9 +78,9 @@ const MIXIN = {
         cl.again = false;
         const st = await this.api("/api/collab");
         cl.rev = st.revision; cl.all = st.documents || [];
+        this.collabApply(); // (each time: what is shown never lags behind cl.all)
       } while (cl.again);
     } catch { /* (the event stream says when to try again) */ } finally { cl.fetching = false; }
-    this.collabApply();
   },
 
   // everything on screen that comes from the collaboration state
@@ -127,12 +129,12 @@ const MIXIN = {
       + (d.read_only ? `<span class="cl-ro" title="You can watch, not change">Read-only${d.read_only_reason ? `: ${esc(d.read_only_reason)}` : ""}</span>` : "")
       + `<span class="cl-peers">${peers.map((p) => {
         const tool = p.presence?.tool || "";
-        return `<button class="cl-av${p.client_id === cl.follow ? " following" : ""}" data-client="${esc(p.client_id)}" style="--c:${esc(p.colour)}"
+        return `<button class="cl-av${p.client_id === cl.follow ? " following" : ""}" data-client="${esc(p.client_id)}" style="--c:${colour(p.colour)}"
           title="${esc(p.name)}${tool ? ` — ${esc(tool)}` : ""}${p.read_only ? " (viewing)" : ""}&#10;Click to ${p.client_id === cl.follow ? "stop following" : "follow their view"}">${esc(initials(p.name))}</button>`
           + (tool ? `<span class="cl-tool" data-client="${esc(p.client_id)}">${esc(tool)}</span>` : "");
       }).join("")}</span>`
       + (peers.length ? "" : `<span class="cl-alone">Nobody else here</span>`)
-      + (followed ? `<span class="cl-following" style="--c:${esc(followed.colour)}">Following ${esc(followed.name)} <button class="cl-stop">Stop</button></span>` : "");
+      + (followed ? `<span class="cl-following" style="--c:${colour(followed.colour)}">Following ${esc(followed.name)} <button class="cl-stop">Stop</button></span>` : "");
     if (html !== cl.barHtml) { bar.innerHTML = html; cl.barHtml = html; }
     bar.classList.remove("hidden");
   },
@@ -292,7 +294,7 @@ const MIXIN = {
       if (!lk || lk.mine) continue;
       const peer = (d.peers || []).find((p) => p.client_id === lk.client_id);
       const b = el("span", "cl-lock", LOCK_SVG);
-      b.style.setProperty("--c", peer?.colour || "#7a8594");
+      b.style.setProperty("--c", colour(peer?.colour));
       b.dataset.who = lk.name || ""; b.dataset.target = g.name;
       b.title = `${lk.name || "Someone"} is editing ${g.name}${lk.detached ? " (their connection dropped: the lock lapses within a minute)" : ""}`;
       row.append(b); row.classList.add("cl-locked");
@@ -317,7 +319,7 @@ const MIXIN = {
       live.add(p.client_id);
       let m = cl.markers.get(p.client_id);
       if (!m) { m = el("div", "cl-ptr", "<i></i><span></span>"); cl.layer.append(m); cl.markers.set(p.client_id, m); }
-      m.style.setProperty("--c", p.colour || "#7a8594");
+      m.style.setProperty("--c", colour(p.colour));
       const tool = p.presence?.tool;
       m.querySelector("span").textContent = tool ? `${p.name} · ${tool}` : p.name;
       m.dataset.client = p.client_id;
@@ -374,7 +376,7 @@ const MIXIN = {
   // what they are drawing in a sketch: dashed, in their colour, on that sketch's plane
   collabDrawSketchDrafts(peers) {
     const cl = this.cl;
-    const drafts = peers.map((p) => [p, p.draft?.kind === "sketch" ? p.draft : null]);
+    const drafts = peers.map((p) => [p, cl.previews && p.draft?.kind === "sketch" ? p.draft : null]);
     const sig = JSON.stringify([this.mesh?.revision, this.version, drafts.map(([p, d]) => [p.colour, d])]);
     if (sig === cl.draftSig) return;
     cl.draftSig = sig;
@@ -397,7 +399,7 @@ const MIXIN = {
   },
 
   // their open feature panel: the feature as it would come out, translucent in their colour, through the same
-  // preview as your own panel (no more than every 300 ms each; View it or not from the Collaborate menu)
+  // preview as your own panel (no more than every 300 ms each)
   collabGhosts(peers) {
     const cl = this.cl, live = new Set();
     for (const p of peers) {
@@ -438,7 +440,7 @@ const MIXIN = {
   collabTogglePreviews() {
     const cl = this.cl;
     cl.previews = !cl.previews; storage.set(PREVIEWS_KEY, cl.previews ? "on" : "off");
-    this.toast(cl.previews ? "Others' feature previews are shown" : "Others' feature previews are hidden (their sketch lines still show)");
+    this.toast(cl.previews ? "Others' drafts are shown: the sketch lines they draw, the features they have open" : "Others' drafts are hidden");
     this.collabApply();
   },
 
@@ -484,7 +486,7 @@ const MIXIN = {
     return [["Sign In...", "", () => this.collabSignInDialog()], ["Sign Out", "", () => this.collabSignOut()], "-",
       ["Share This Part...", "", () => this.collabShareDialog()], ["Open Cloud Part...", "", () => this.collabOpenDialog()],
       ...(d ? [["Stop Sharing...", "", () => this.collabStopDialog()], "-", ["History and Versions...", "", () => this.collabHistoryDialog()]] : []), "-",
-      [`${this.cl?.previews ? "✓ " : ""}Show Others' Feature Previews`, "", () => this.collabTogglePreviews()]];
+      [`${this.cl?.previews ? "✓ " : ""}Show Others' Drafts`, "", () => this.collabTogglePreviews()]];
   },
 
   async collabCmd(name, args = {}) { // a query: its result, or null after a toast
@@ -647,7 +649,7 @@ const MIXIN = {
     };
     for (const b of document.querySelectorAll("#modal-box .cl-restore")) {
       b.onclick = () => this.modal("Restore", `<p>Put <b>${esc(d.cloud_name)}</b> back to ${esc(b.dataset.label)}, for everyone?</p>
-        <p class="muted">Nothing is lost: the restore is itself a new change in the history, and can be restored away. It is refused while anyone has a sketch or feature open.</p>`, async () => {
+        <p class="muted">Nothing is lost: the restore is itself a new change in the history, and can be restored away. It is refused while someone else has a sketch or feature open.</p>`, async () => {
         await this.run("collab_restore", b.dataset.version ? { version: b.dataset.version } : { seq: Number(b.dataset.seq) });
         this.toast(`Restored ${esc(b.dataset.label)}`);
       }, "rollback");

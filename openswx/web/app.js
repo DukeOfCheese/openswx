@@ -1885,7 +1885,6 @@ class App {
     if (f.type === "sketch") return this.enterSketch(name);
     const key = FEATURE_TO_SPEC[f.type];
     if (!key) return this.toast(`${f.type} features cannot be edited in the UI yet`, "err");
-    if (this.pm.active) this.closePM();
     if (!(await this.collabLock(name, "pm"))) return; // (a cloud document: the panel is yours alone while open)
     const res = await this.api("/api/command", { name: "get_feature", args: { name } });
     if (!res.ok) { this.collabRelease("pm"); return; }
