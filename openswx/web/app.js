@@ -121,7 +121,7 @@ class App {
 
   connect() {
     $("#sb-agent").textContent = `MCP: ${location.origin}/mcp`;
-    const es = new EventSource("/api/events");
+    const es = new EventSource(`/api/events?page=${encodeURIComponent(this.cl.page)}`); // (the page: its collaboration locks)
     es.onmessage = (m) => {
       const d = JSON.parse(m.data);
       if (d.version !== this.version) {
@@ -1951,7 +1951,7 @@ class App {
     if (!this.sk.active) return;
     const name = this.sk.name;
     const isNew = this.newSketch === name;
-    this.sk.exit(); this.newSketch = null; this.prompt(""); this.status.coords(null); this.collabRelease("sketch");
+    this.sk.exit(); this.newSketch = null; this.prompt(""); this.status.coords(null); this.collabRelease("sketch", name); // (only this sketch's lock: another may be taken already)
     $("#sb-editing").textContent = "Editing Part"; this.tab = "Features";
     if (discard && isNew) await this.run("delete_feature", { name }).catch(() => {});
     this.vp.setMesh(this.mesh); this.showPane("tree");

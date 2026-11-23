@@ -11,12 +11,14 @@
 //     conflict toasts, and the list of changes refused after a reconnect.
 // The state comes from GET /api/collab, fetched when the "collab" revision on the event stream moves.
 import * as THREE from "three";
-import { el, escapeHtml } from "./propman.js";
+import { SPECS, el, escapeHtml } from "./propman.js";
 
 const $ = (s) => document.querySelector(s);
 const PRESENCE_MS = 100; // presence out: ~10 a second at most
 const DRAFT_MS = 300; // someone's feature draft: a preview at most every 300 ms per person
 const PREVIEWS_KEY = "openswx.collab.previews";
+const GHOST_EXTRA = ["variable_fillet"]; // (a panel's other command: Fillet's commandFor)
+const BIG_COUNT = /count|number|instances|copies|segments|steps|^n\d?$/i; // (pattern sizes: a ghost stays cheap)
 const STATE_LABEL = { online: "Online", connecting: "Connecting…", offline: "Offline", signed_out: "Signed out: sign in again",
   gone: "Removed from the server", error: "Not connected", closed: "Stopped", protocol: "Needs a newer openswx",
   bad_hello: "Refused by the server", replaced: "Opened elsewhere with this account" };
@@ -28,6 +30,20 @@ const r3 = (v) => v.map((x) => Math.round(x * 1000) / 1000);
 const initials = (name) => (String(name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
 const words = (s) => String(s || "").replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 const when = (t) => { const d = typeof t === "number" ? new Date(t * 1000) : new Date(t); return isNaN(d) ? "" : d.toLocaleString(); };
+const finite = (v, n) => Array.isArray(v) && v.length === n && v.every((x) => typeof x === "number" && Number.isFinite(x));
+// a draft's arguments: plain JSON (no prototypes, no functions), small, and no huge pattern counts
+function plainArgs(v, key = "", depth = 0) {
+  if (depth > 6) return false;
+  if (v === null || typeof v === "boolean") return true;
+  if (typeof v === "number") return Number.isFinite(v) && !(BIG_COUNT.test(key) && Math.abs(v) > 100);
+  if (typeof v === "string") return v.length <= 500;
+  if (Array.isArray(v)) return v.length <= 500 && v.every((x) => plainArgs(x, key, depth + 1));
+  if (typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype) {
+    const keys = Object.keys(v);
+    return keys.length <= 100 && keys.every((k) => plainArgs(v[k], k, depth + 1));
+  }
+  return false;
+}
 const storage = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch { /* (no storage) */ } } };
 
 const MIXIN = {
@@ -36,6 +52,7 @@ const MIXIN = {
     const groups = {};
     for (const k of ["sel", "drafts", "ghost"]) { groups[k] = new THREE.Group(); this.vp.scene.add(groups[k]); }
     this.cl = { rev: -1, all: [], groups, markers: new Map(), ghosts: new Map(), held: { sketch: null, pm: null },
+      page: (crypto.randomUUID?.() || `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`), // (this page: its locks)
       pointer: null, mouse: null, mouseMoved: false, skDraft: null, pmDraft: null, sentP: "", sentD: "null", inFlight: false,
       follow: null, followCam: null, seen: {}, primed: new Set(), drops: {}, texts: new Map(),
       previews: storage.get(PREVIEWS_KEY) !== "off" };
@@ -59,6 +76,14 @@ const MIXIN = {
         if (n.classList?.contains("err") && !n.classList.contains("cl-conflict") && this.cl.texts.has(n.textContent)) n.remove();
       }
     }).observe($("#toasts"), { childList: true });
+    // leaving the page frees its locks (and should the page crash, openswx frees them when its event stream ends)
+    window.addEventListener("pagehide", () => {
+      if (this.cl.noPagehide) return; // (tests: as if the tab crashed)
+      for (const h of Object.values(this.cl.held)) {
+        if (h) fetch("/api/command", { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "collab_unlock", args: { features: [h.target], document: h.doc, owner: this.cl.page } }) }).catch(() => {});
+      }
+    });
     setInterval(() => this.collabTick(), PRESENCE_MS);
     this.refreshCollab();
   },
@@ -157,7 +182,7 @@ const MIXIN = {
     const step = () => {
       cl.followRaf = null;
       const c = cl.followCam, vp = this.vp;
-      if (!cl.follow || !c || !Array.isArray(c.q) || !Array.isArray(c.t) || !(c.h > 0)) return;
+      if (!cl.follow || !c || !finite(c.q, 4) || !finite(c.t, 3) || !(Number.isFinite(c.h) && c.h > 0)) return; // (a bad camera: not followed)
       const q = new THREE.Quaternion(...c.q).normalize(), t = new THREE.Vector3(...c.t), k = 0.2;
       cl.applyingCam = true;
       try {
@@ -259,10 +284,11 @@ const MIXIN = {
     if (!d) return true;
     const f = this.model.features.find((x) => x.name === name);
     if (!f) return true;
-    const target = `f:${f.id}`;
-    if (this.cl.held[slot] === target) return true;
+    const target = `f:${f.id}`, held = this.cl.held[slot];
+    if (held && held.target === target && held.doc === d.document_id) return true;
     if (d.read_only) { this.toast(`This cloud document is read-only for you${d.read_only_reason ? ` (${d.read_only_reason})` : ""}: ${name} cannot be changed`, "err"); return false; }
-    const r = await this.api("/api/command", { name: "collab_lock", args: { features: [target] } }).catch((e) => ({ ok: false, error: String(e) }));
+    const r = await this.api("/api/command", { name: "collab_lock", args: { features: [target], document: d.document_id, owner: this.cl.page } })
+      .catch((e) => ({ ok: false, error: String(e) }));
     if (!r.ok) { this.toast(`${name} cannot be opened for editing: ${r.error}`, "err"); return false; }
     const who = r.result.denied?.[target];
     if (who) {
@@ -270,17 +296,20 @@ const MIXIN = {
       return false;
     }
     this.collabRelease(slot);
-    this.cl.held[slot] = target;
+    this.cl.held[slot] = { target, doc: d.document_id, name };
     this.refreshCollab();
     return true;
   },
 
-  collabRelease(slot) {
-    const cl = this.cl, target = cl?.held[slot];
-    if (!target) return;
+  // free the lock held for a sketch or a panel (only if it is the one for `name`, when given), on the cloud
+  // document it was taken on, whichever document is active now
+  collabRelease(slot, name = null) {
+    const cl = this.cl, h = cl?.held[slot];
+    if (!h || (name !== null && h.name !== name)) return;
     cl.held[slot] = null;
-    if (Object.values(cl.held).includes(target) || !this.collabDoc()) return;
-    this.api("/api/command", { name: "collab_unlock", args: { features: [target] } }).catch(() => {});
+    if (Object.values(cl.held).some((o) => o && o.target === h.target && o.doc === h.doc)) return;
+    if (!cl.all.some((d) => d.document_id === h.doc)) return; // (no longer open: its locks went with the connection)
+    this.api("/api/command", { name: "collab_unlock", args: { features: [h.target], document: h.doc, owner: cl.page } }).catch(() => {});
   },
 
   // FeatureManager row decorations: who is editing it (their colour; a folded row also shows its absorbed
@@ -334,12 +363,20 @@ const MIXIN = {
   },
 
   collabPlaceMarkers() {
+    const now = performance.now();
     for (const m of this.cl.markers.values()) {
       if (!m.point) { m.style.display = "none"; continue; }
       const [x, y, z] = this.vp.toScreen(m.point);
       const off = z > 1 || x < -20 || y < -20 || x > this.vp.w + 20 || y > this.vp.h + 20;
       m.style.display = off ? "none" : "";
-      if (!off) m.style.transform = `translate(${Math.round(x) - 6}px, ${Math.round(y) - 6}px)`;
+      if (off) continue;
+      m.style.transform = `translate(${Math.round(x) - 6}px, ${Math.round(y) - 6}px)`;
+      if (now - (m.occAt || 0) > 150) { // behind the model (from here): faint (a ray at most every 150 ms each)
+        m.occAt = now;
+        const ray = this.vp.ray(x, y), hit = ray.intersectObjects([...this.vp.faces.values()].filter((o) => o.visible), false)[0];
+        const far = ray.ray.origin.distanceTo(new THREE.Vector3(...m.point));
+        m.classList.toggle("behind", !!hit && hit.distance < far - Math.max(this.vp.viewHeight * 0.01, 1e-3));
+      }
     }
   },
 
@@ -376,7 +413,7 @@ const MIXIN = {
   // what they are drawing in a sketch: dashed, in their colour, on that sketch's plane
   collabDrawSketchDrafts(peers) {
     const cl = this.cl;
-    const drafts = peers.map((p) => [p, cl.previews && p.draft?.kind === "sketch" ? p.draft : null]);
+    const drafts = peers.map((p) => [p, cl.previews && p.draft?.kind === "sketch" && typeof p.draft.sketch === "string" && Array.isArray(p.draft.lines) ? p.draft : null]);
     const sig = JSON.stringify([this.mesh?.revision, this.version, drafts.map(([p, d]) => [p.colour, d])]);
     if (sig === cl.draftSig) return;
     cl.draftSig = sig;
@@ -386,9 +423,14 @@ const MIXIN = {
       const ov = d && (this.mesh?.sketches || []).find((s) => s.name === d.sketch);
       if (!ov) continue;
       const O = ov.origin, X = ov.x, Z = ov.z, Y = [Z[1] * X[2] - Z[2] * X[1], Z[2] * X[0] - Z[0] * X[2], Z[0] * X[1] - Z[1] * X[0]];
-      for (const ln of d.lines || []) {
+      for (const ln of d.lines.slice(0, 200)) {
+        if (!ln || !Array.isArray(ln.p) || ln.p.length > 20000) continue; // (malformed: skipped, the rest still drawn)
         const pts = [];
-        for (let i = 0; i + 1 < (ln.p || []).length; i += 2) { const u = +ln.p[i], v = +ln.p[i + 1]; pts.push(...[0, 1, 2].map((k) => O[k] + X[k] * u + Y[k] * v)); }
+        for (let i = 0; i + 1 < ln.p.length; i += 2) {
+          const u = ln.p[i], v = ln.p[i + 1];
+          if (typeof u !== "number" || typeof v !== "number") { pts.length = 0; break; }
+          pts.push(...[0, 1, 2].map((k) => O[k] + X[k] * u + Y[k] * v));
+        }
         if (pts.length < 6 || pts.some((x) => !isFinite(x))) continue;
         const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
         const line = new THREE.Line(geo, new THREE.LineDashedMaterial({ color: hex(p.colour), dashSize: dash, gapSize: dash * 0.7, depthTest: false }));
@@ -399,42 +441,64 @@ const MIXIN = {
   },
 
   // their open feature panel: the feature as it would come out, translucent in their colour, through the same
-  // preview as your own panel (no more than every 300 ms each)
+  // preview as your own panel. Only a feature command the UI's own panels preview, with plain small arguments, is
+  // ever run (a draft comes from someone else); one preview at a time per person, at most every 300 ms, and none
+  // while openswx is busy with a command of yours (it gives way at once and tries again).
+  collabGhostRequest(d) {
+    const args = d?.args ?? {};
+    if (!d || typeof d.command !== "string" || typeof args !== "object" || Array.isArray(args) || !plainArgs(args) || JSON.stringify(args).length > 20000) return null;
+    const allowed = new Set([...Object.values(SPECS).filter((s) => s && !s.noPreview && typeof s.command === "string").map((s) => s.command), ...GHOST_EXTRA]);
+    if (!allowed.has(d.command)) return null;
+    if (d.editing != null && !(typeof d.editing === "string" && this.model?.features.some((f) => f.name === d.editing && f.type !== "sketch"))) return null;
+    return d.editing ? { name: "redefine_feature", args: { name: d.editing, command_name: d.command, args: d.args ?? {} }, if_idle: true }
+      : { name: d.command, args: d.args ?? {}, if_idle: true };
+  },
+
   collabGhosts(peers) {
     const cl = this.cl, live = new Set();
     for (const p of peers) {
       live.add(p.client_id);
-      const d = cl.previews && p.draft?.kind === "feature" && p.draft.command ? p.draft : null;
+      const req = cl.previews && p.draft?.kind === "feature" ? this.collabGhostRequest(p.draft) : null;
       let g = cl.ghosts.get(p.client_id);
-      if (!g) { g = { key: "", last: 0, timer: null, group: new THREE.Group() }; cl.groups.ghost.add(g.group); cl.ghosts.set(p.client_id, g); }
-      const key = d ? JSON.stringify([d.command, d.args, d.editing, this.version]) : "";
+      if (!g) { g = { key: "", req: null, last: 0, timer: null, busy: false, group: new THREE.Group() }; cl.groups.ghost.add(g.group); cl.ghosts.set(p.client_id, g); }
+      g.colour = hex(p.colour); g.client = p.client_id;
+      const key = req ? JSON.stringify([req, this.version]) : "";
       if (key === g.key) continue;
-      g.key = key; clearTimeout(g.timer);
-      if (!key) { this.collabClear(g.group); this.vp.dirty = true; continue; }
-      const colour = hex(p.colour);
-      g.timer = setTimeout(async () => {
-        g.last = performance.now();
-        const req = d.editing ? { name: "redefine_feature", args: { name: d.editing, command_name: d.command, args: d.args } } : { name: d.command, args: d.args || {} };
-        let res = null;
-        try { res = await this.api("/api/preview", req); } catch { res = null; }
-        if (g.key !== key) return; // (they changed it again meanwhile)
-        this.collabClear(g.group);
-        for (const f of res?.ok ? res.faces || [] : []) {
-          const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(f.v, 3));
-          geo.setIndex(f.t); geo.computeVertexNormals();
-          const m = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: colour, transparent: true, opacity: 0.16, depthWrite: false, depthTest: false, side: THREE.DoubleSide }));
-          m.renderOrder = 8; g.group.add(m);
-        }
-        for (const e of res?.ok ? res.edges || [] : []) { // (its edges, so the shape reads through the tint)
-          const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(e.p, 3));
-          const l = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: colour, transparent: true, opacity: 0.85, depthTest: false }));
-          l.renderOrder = 9; g.group.add(l);
-        }
-        g.group.userData = { client: p.client_id, command: d.command, ok: !!res?.ok };
-        this.vp.dirty = true;
-      }, Math.max(0, DRAFT_MS - (performance.now() - g.last)));
+      g.key = key; g.req = req;
+      if (!key) { clearTimeout(g.timer); g.timer = null; this.collabClear(g.group); this.vp.dirty = true; continue; }
+      this.collabGhostSchedule(g);
     }
-    for (const [id, g] of cl.ghosts) if (!live.has(id)) { clearTimeout(g.timer); this.collabClear(g.group); cl.groups.ghost.remove(g.group); cl.ghosts.delete(id); }
+    for (const [id, g] of cl.ghosts) if (!live.has(id)) { clearTimeout(g.timer); g.key = ""; this.collabClear(g.group); cl.groups.ghost.remove(g.group); cl.ghosts.delete(id); }
+  },
+
+  collabGhostSchedule(g, wait = 0) {
+    if (g.busy || g.timer) return; // (the one on its way, or the one waiting, picks up the latest)
+    g.timer = setTimeout(() => this.collabGhostRun(g), Math.max(wait, DRAFT_MS - (performance.now() - g.last)));
+  },
+
+  async collabGhostRun(g) {
+    g.timer = null;
+    const key = g.key, req = g.req;
+    if (!key || !req) return;
+    g.busy = true;
+    let res = null;
+    try { res = await this.api("/api/preview", req); } catch { res = null; } finally { g.busy = false; g.last = performance.now(); }
+    if (res?.busy) { this.collabGhostSchedule(g, 1000); return; } // (openswx is busy with your command: later)
+    if (g.key !== key) { if (g.key) this.collabGhostSchedule(g); return; } // (they changed it meanwhile: the latest)
+    this.collabClear(g.group);
+    for (const f of res?.ok ? res.faces || [] : []) {
+      const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(f.v, 3));
+      geo.setIndex(f.t); geo.computeVertexNormals();
+      const m = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: g.colour, transparent: true, opacity: 0.16, depthWrite: false, depthTest: false, side: THREE.DoubleSide }));
+      m.renderOrder = 8; g.group.add(m);
+    }
+    for (const e of res?.ok ? res.edges || [] : []) { // (its edges, so the shape reads through the tint)
+      const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(e.p, 3));
+      const l = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: g.colour, transparent: true, opacity: 0.85, depthTest: false }));
+      l.renderOrder = 9; g.group.add(l);
+    }
+    g.group.userData = { client: g.client, command: req.name, ok: !!res?.ok };
+    this.vp.dirty = true;
   },
 
   collabTogglePreviews() {
@@ -630,10 +694,11 @@ const MIXIN = {
     if (!d) return this.toast("The active document is not a cloud document", "err");
     const h = await this.collabCmd("collab_history", { limit: 100 });
     if (!h) return;
-    const rows = (h.history || []).map((x) => `<tr><td>${x.seq}</td><td>${esc(when(x.time))}</td><td>${esc(x.author?.name || "")}</td>
-      <td>${esc(x.command || "")}${x.reverts ? ` <span class="muted">(undoes ${x.reverts})</span>` : ""}${x.reverted_by ? ` <span class="muted">(undone by ${x.reverted_by})</span>` : ""}${x.broke && Object.keys(x.broke).length ? ' <span class="cl-warn">broke features</span>' : ""}</td>
-      <td>${x.seq < h.seq ? `<button class="btn cl-restore" data-seq="${x.seq}" data-label="change ${x.seq} (${esc(x.command || "")} by ${esc(x.author?.name || "")})">Restore</button>` : '<span class="muted">now</span>'}</td></tr>`).join("");
-    const vers = (h.versions || []).map((v) => `<tr><td><b>${esc(v.name)}</b>${v.note ? `<div class="muted">${esc(v.note)}</div>` : ""}</td><td>${v.seq}</td><td>${esc(v.author?.name || "")}</td><td>${esc(when(v.created_at))}</td>
+    const N = (v) => (Number.isFinite(Number(v)) ? Number(v) : "?"); // (numbers from the server: only numbers go in)
+    const rows = (h.history || []).map((x) => `<tr><td>${N(x.seq)}</td><td>${esc(when(x.time))}</td><td>${esc(x.author?.name || "")}</td>
+      <td>${esc(x.command || "")}${x.reverts ? ` <span class="muted">(undoes ${N(x.reverts)})</span>` : ""}${x.reverted_by ? ` <span class="muted">(undone by ${N(x.reverted_by)})</span>` : ""}${x.broke && Object.keys(x.broke).length ? ' <span class="cl-warn">broke features</span>' : ""}</td>
+      <td>${N(x.seq) < h.seq ? `<button class="btn cl-restore" data-seq="${N(x.seq)}" data-label="change ${N(x.seq)} (${esc(x.command || "")} by ${esc(x.author?.name || "")})">Restore</button>` : '<span class="muted">now</span>'}</td></tr>`).join("");
+    const vers = (h.versions || []).map((v) => `<tr><td><b>${esc(v.name)}</b>${v.note ? `<div class="muted">${esc(v.note)}</div>` : ""}</td><td>${N(v.seq)}</td><td>${esc(v.author?.name || "")}</td><td>${esc(when(v.created_at))}</td>
       <td><button class="btn cl-restore" data-version="${esc(v.name)}" data-label="version ${esc(v.name)}">Restore</button></td></tr>`).join("");
     this.modal(`History and Versions — ${d.cloud_name}`, `
       <div class="cl-hist"><table class="dw-bom"><tr><th>#</th><th>When</th><th>Who</th><th>Change</th><th></th></tr>${rows || '<tr><td colspan="5" class="muted">No changes yet</td></tr>'}</table></div>
@@ -645,7 +710,7 @@ const MIXIN = {
       const name = $("#cl-vname").value.trim();
       if (!name) return this.toast("Give the version a name", "err");
       const v = await this.collabCmd("collab_name_version", { name, note: $("#cl-vnote").value.trim() });
-      if (v) { this.toast(`Version <b>${esc(v.name)}</b> is the state after change ${v.seq}`); this.collabHistoryDialog(); }
+      if (v) { this.toast(`Version <b>${esc(v.name)}</b> is the state after change ${esc(v.seq)}`); this.collabHistoryDialog(); }
     };
     for (const b of document.querySelectorAll("#modal-box .cl-restore")) {
       b.onclick = () => this.modal("Restore", `<p>Put <b>${esc(d.cloud_name)}</b> back to ${esc(b.dataset.label)}, for everyone?</p>
