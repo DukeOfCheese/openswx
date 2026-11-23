@@ -351,3 +351,40 @@ button { font: inherit; color: inherit; }
 .vc-iso { position: absolute; left: 50%; bottom: -26px; transform: translateX(-50%); font: 10px var(--font); padding: 1px 6px; border: 1px solid #b9c6d6;
   background: #fff; border-radius: 3px; cursor: pointer; }
 .vc-iso:hover { background: var(--hover); }
+
+/* ---------------- live collaboration (collab.js) */
+#collabbar { position: absolute; top: 28px; left: 10px; display: flex; align-items: center; gap: 6px; max-width: calc(100% - 300px); padding: 3px 6px; background: rgba(255,255,255,.92); border: 1px solid #d5dbe3; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,.08); z-index: 6; font-size: 11.5px; white-space: nowrap; }
+.cl-state { display: flex; align-items: center; gap: 5px; color: #333; }
+.cl-state i { width: 8px; height: 8px; border-radius: 50%; background: var(--cancel); flex: none; }
+.cl-state.cl-online i { background: var(--ok); }
+.cl-state.cl-offline i, .cl-state.cl-connecting i { background: var(--warn); }
+.cl-ro { color: #7a5200; background: #fff3d1; border-radius: 3px; padding: 1px 6px; }
+.cl-peers { display: flex; align-items: center; gap: 3px; overflow: hidden; }
+.cl-av { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 2px solid #fff; background: var(--c); color: #fff; font-size: 9.5px; font-weight: 700; cursor: pointer; padding: 0; box-shadow: 0 0 0 1px rgba(0,0,0,.18); }
+.cl-av:hover { box-shadow: 0 0 0 2px rgba(0,0,0,.25); }
+.cl-av.following { box-shadow: 0 0 0 2px var(--c); }
+.cl-tool { color: #3b4b63; font-size: 11px; margin-right: 5px; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+.cl-alone { color: var(--muted); }
+.cl-following { display: flex; align-items: center; gap: 5px; padding-left: 6px; border-left: 3px solid var(--c); }
+.cl-following button { font-size: 11px; padding: 0 6px; height: 18px; border: 1px solid var(--border); background: #fff; border-radius: 3px; cursor: pointer; }
+#collab-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 5; }
+.cl-ptr { position: absolute; left: 0; top: 0; display: flex; align-items: flex-start; gap: 2px; will-change: transform; }
+.cl-ptr i { width: 12px; height: 12px; flex: none; border-radius: 50%; background: var(--c); border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.3); }
+.cl-ptr span { margin-top: 9px; padding: 1px 6px; border-radius: 3px; background: var(--c); color: #fff; font-size: 10.5px; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.t-row .cl-lock { margin-left: 4px; width: 15px; height: 15px; flex: none; border-radius: 50%; background: var(--c); display: grid; place-items: center; }
+.t-row .cl-lock svg { width: 10px; height: 10px; }
+.t-row.cl-locked .lbl { font-style: italic; }
+.t-row .cl-broken { margin-left: 4px; padding: 0 4px; border-radius: 3px; background: #fde3e2; color: var(--cancel); font-size: 10px; flex: none; }
+.toast.cl-conflict { border-left-color: var(--warn); }
+.toast.cl-conflict div { margin-top: 3px; color: #444; }
+.toast.cl-locked { border-left-color: var(--warn); }
+.cl-oauth { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.cl-oauth p { width: 100%; margin: 2px 0 0; }
+.cl-list { max-height: 260px; overflow: auto; margin-top: 6px; }
+.cl-list tr.cl-doc { cursor: pointer; }
+.cl-list tr.cl-doc:hover { background: var(--hover); }
+.cl-list tr.cl-doc.picked { background: var(--accent-soft); }
+.cl-hist { max-height: 300px; overflow: auto; }
+.cl-name-version { display: flex; gap: 6px; margin-top: 8px; }
+.cl-name-version input { flex: 1; min-width: 0; }
+.cl-warn { color: #9a5b00; }

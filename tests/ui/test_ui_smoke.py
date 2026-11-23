@@ -77,7 +77,7 @@ def test_page_needs_the_token_link(server, page):
     page.wait_for_function("window.app && window.app.version >= 0")
     assert page.url.rstrip("/") == server  # the token left the address bar
     assert page.evaluate("[...document.querySelectorAll('#menubar .menu-root')].map(e => e.firstChild.textContent)") == \
-        ["File", "Edit", "View", "Insert", "Tools", "Window", "Help"]
+        ["File", "Edit", "View", "Insert", "Tools", "Collaborate", "Window", "Help"]
     # the menus are always shown (not behind a click on the logo)
     assert page.evaluate("[...document.querySelectorAll('#menubar .menu-root')].every(e => e.getBoundingClientRect().width > 0)")
     page.evaluate(HELPERS)

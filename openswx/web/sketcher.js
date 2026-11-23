@@ -22,7 +22,7 @@ export class Sketcher {
 
   exit() { this.name = null; this.reset(); this.vp.activeSketch = null; this.vp.setTemp([]); this.closeModify(); this.app.overlayDims.innerHTML = ""; }
 
-  reset() { this.gen = (this.gen || 0) + 1; this.clicks = []; this.chainStart = null; this.dimPick = []; this.dimPreview = null; this.cue = null; this.arcSweep = 0; this.vp.setTemp([]); this.vp.dirty = true; }
+  reset() { this.gen = (this.gen || 0) + 1; this.clicks = []; this.chainStart = null; this.dimPick = []; this.dimPreview = null; this.cue = null; this.arcSweep = 0; this.vp.setTemp([]); this.vp.dirty = true; this.app.collabSketchDraft?.(null); }
 
   setTool(t) { this.tool = t; this.reset(); this.app.prompt(TOOL_HINT[t] || ""); }
 
@@ -242,7 +242,7 @@ export class Sketcher {
     if (loc?.snapped) items.push({ pts: W(loc.uv), point: true, color: 0xf08a00, size: 10 });
     for (const a of loc?.align || []) items.push({ pts: [...W(a.from), ...W(a.to)], color: 0x4f86d9, dashed: true });
     this.cue = loc?.cue && this.mouse ? { x: this.mouse.x, y: this.mouse.y, type: loc.cue } : null;
-    if (!loc || !c.length) { this.vp.setTemp(items); return; }
+    if (!loc || !c.length) { this.vp.setTemp(items); this.app.collabSketchDraft?.(null); return; }
     const a = c[0].uv; let b = loc.uv;
     const line = (p, q, o = {}) => items.push({ pts: [...W(p), ...W(q)], ...o });
     const t = this.tool;
@@ -304,6 +304,7 @@ export class Sketcher {
       else { const w = distToLine(b, a, c[1].uv); items.push({ pts: slotPts(a, c[1].uv, w).flatMap(W) }); }
     }
     this.vp.setTemp(items);
+    this.app.collabSketchDraft?.(items); // (a cloud document: the others see what is being drawn)
   }
 
   async finishSpline(closed = false) {
