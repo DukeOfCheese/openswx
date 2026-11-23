@@ -11,6 +11,7 @@ server had it (changes not yet answered are not in it), and opens with open_part
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -32,7 +33,11 @@ def keep() -> int:
 
 
 def _slug(text: str) -> str:
-    return re.sub(r"[^A-Za-z0-9._-]+", "_", text)[:80] or "server"
+    """A safe folder name: never '.', '..' or empty, whatever the server sent (dots alone would climb out)."""
+    s = re.sub(r"[^A-Za-z0-9._-]+", "_", str(text))[:80].lstrip(".")
+    if not re.search(r"[A-Za-z0-9]", s):
+        s = "id-" + hashlib.sha256(str(text).encode("utf-8")).hexdigest()[:16]
+    return s
 
 
 def folder(server: str, document_id: str) -> Path:
