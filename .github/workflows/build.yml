@@ -26,8 +26,8 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - name: Install
@@ -52,7 +52,7 @@ jobs:
         run: |
           if [ "$RUNNER_OS" = "macOS" ]; then python packaging/smoke_study.py /Applications/openswx.app/Contents/MacOS/openswx-cli
           else python packaging/smoke_study.py dist/openswx/openswx-cli.exe; fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: openswx-${{ matrix.name }}
           path: |
@@ -68,14 +68,14 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Release notes (the CHANGELOG section for this version)
         run: python3 tools/release_notes.py "${GITHUB_REF_NAME}" > release-notes.md
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: artifacts/*
           body_path: release-notes.md

@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-22.04   # (an older glibc: the result also runs on newer distributions)
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - name: System libraries
@@ -30,7 +30,7 @@ jobs:
           check/openswx/openswx-cli convert tests/data/native/v1_bracket.oswprt check/bracket.step
           test -s check/bracket.step
           check/openswx/openswx-cli massprops tests/data/native/v1_bracket.oswprt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: openswx-linux
           path: dist/*.tar.gz
