@@ -519,3 +519,19 @@ def test_locks_a_page_took_are_freed_when_it_goes(cloud):
     assert cloud.ws.of("lock.release")[-1]["targets"] == ["f:f2"]
     with pytest.raises(S.CommandError, match="no cloud document 'nope'"):
         S.call("collab_unlock", {"features": ["f:f2"], "document": "nope"})
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows access lists")
+def test_explicit_entries_on_the_token_file_are_removed_too(tmp_path):
+    """Some machines (GitHub's Windows runners, for one) give new files explicit entries for SYSTEM and
+    Administrators, which removing inheritance alone leaves in place."""
+    import subprocess
+    p = tmp_path / "token"
+    p.write_text("x")
+    subprocess.run(["icacls", str(p), "/grant", "*S-1-5-18:F", "*S-1-5-32-544:F"], capture_output=True, check=True)
+    auth._owner_only(p)
+    acl = subprocess.run(["icacls", str(p)], capture_output=True, text=True).stdout
+    user = os.environ["USERNAME"].lower()
+    grants = [line.rsplit(":(", 1)[0].strip().lower() for line in acl.splitlines() if ":(" in line]
+    grants = [g.split(" ", 1)[1].strip() if g.startswith(str(tmp_path).lower()) else g for g in grants]
+    assert grants and all(g == user or g.endswith("\\" + user) for g in grants), acl

@@ -108,10 +108,13 @@ def _owner_only(p: Path) -> None:
         user = os.environ.get("USERNAME") or getpass.getuser()
         domain = os.environ.get("USERDOMAIN")
         who = domain + "\\" + user if domain else user
-        r = subprocess.run(["icacls", str(p), "/inheritance:r", "/grant:r", f"{who}:F"], capture_output=True,
-                           text=True, timeout=20, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        if r.returncode != 0:
-            raise OSError(r.stdout.strip() or r.stderr.strip())
+        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        # /reset first: some machines give new files explicit entries (SYSTEM, Administrators, OWNER RIGHTS) that
+        # removing inheritance would leave in place; after a reset every entry is inherited, and then goes
+        for args in (["/reset"], ["/inheritance:r", "/grant:r", f"{who}:F"]):
+            r = subprocess.run(["icacls", str(p), *args], capture_output=True, text=True, timeout=20, creationflags=flags)
+            if r.returncode != 0:
+                raise OSError(r.stdout.strip() or r.stderr.strip())
     except (OSError, KeyError, subprocess.SubprocessError) as exc:
         logging.getLogger("openswx.collab").warning("could not restrict access to %s: %s", p, exc)
 
