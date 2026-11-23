@@ -5,6 +5,7 @@ import asyncio
 import base64
 import contextlib
 import json
+import sys
 import tempfile
 from pathlib import Path
 
@@ -97,21 +98,35 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
     def state():
         return {"version": S.APP.version, "model": S.get_model(), "documents": S.list_documents()}
 
+    @app.get("/api/collab")
+    def collab():
+        """Live collaboration state for the UI, without waiting for a running command: {"revision", "documents":
+        [per cloud document: state, seq, role, peers (presence, draft), locks, broken, conflicts, recent, ...]}.
+        `revision` goes up whenever any of it changes (the event stream carries it as "collab")."""
+        mod = sys.modules.get("openswx.collab.client")  # (loaded only once a collab_* command ran)
+        return mod.status() if mod is not None else {"revision": 0, "documents": []}
+
     @app.get("/api/mesh")
     def mesh():
         return S.get_mesh()
 
+    def collab_revision() -> int:
+        mod = sys.modules.get("openswx.collab.client")
+        return mod.REVISION[0] if mod is not None else 0
+
     @app.get("/api/events")
     async def events(request: Request):
         async def stream():
-            last = -1
+            last, last_collab = -1, 0
             while True:
                 if await request.is_disconnected():
                     break
-                if S.APP.version != last:
-                    last = S.APP.version
+                rev = collab_revision()
+                if S.APP.version != last or rev != last_collab:
+                    last, last_collab = S.APP.version, rev
                     entry = S.APP.log[-1] if S.APP.log else None
-                    yield f"data: {json.dumps({'version': last, 'last': entry})}\n\n"
+                    event = {"version": last, "last": entry, **({"collab": rev} if rev else {})}
+                    yield f"data: {json.dumps(event)}\n\n"
                 await asyncio.sleep(0.15)
         return StreamingResponse(stream(), media_type="text/event-stream")
 

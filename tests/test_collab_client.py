@@ -302,3 +302,18 @@ def test_browser_sign_in_uses_a_loopback_address_and_pkce(monkeypatch, tmp_path)
         urllib.request.urlopen(q["redirect_uri"] + "?error=invite_required", timeout=10).read()
     with pytest.raises(auth.AuthError, match="needs an invitation"):
         auth.sign_in_browser("http://127.0.0.1:8787", "google", open_browser=refused, timeout=20)
+
+
+def test_the_ui_reads_collaboration_state_over_rest(cloud):
+    from fastapi.testclient import TestClient
+
+    from openswx.web_server import create_app
+    cloud.peers = {"u2.x": {"client_id": "u2.x", "user_id": "u2", "name": "Ada", "colour": "#e33",
+                            "presence": {"tool": "fillet"}, "draft": None}}
+    cloud.locks = {"f:f2": {"client_id": "u2.x", "user_id": "u2", "name": "Ada", "detached": False}}
+    with TestClient(create_app(mount_mcp=False, token=None), base_url="http://127.0.0.1:8765") as http:
+        got = http.get("/api/collab").json()
+    (d,) = got["documents"]
+    assert got["revision"] == C.REVISION[0] and d["document_id"] == "doc1" and d["seq"] == 3
+    assert d["peers"][0]["presence"] == {"tool": "fillet"}
+    assert d["locks"]["f:f2"]["target"] == "Boss-Extrude1" and d["locks"]["f:f2"]["mine"] is False
