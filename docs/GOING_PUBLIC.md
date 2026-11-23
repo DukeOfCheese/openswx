@@ -16,14 +16,13 @@ forms, pull request template, CODEOWNERS, Dependabot, labels).
       the SOLIDWORKS link as compatibility only, which is the usual practice, but a name with no reference to
       another company's product removes the question entirely. Renaming later is costlier (package name, file
       extensions `.oswprt`, URLs).
-- [ ] Tag the first release (`git tag v0.1.0 && git push origin v0.1.0`): the release workflow builds the
-      Windows and macOS installers and attaches them, so the README's install table has something to point at.
+- [x] Tag the first release (`v0.1.0`, 2026-11-23): the release workflow builds the Windows and macOS
+      installers and attaches them, so the README's install table has something to point at.
 
 ## Repository settings (GitHub → Settings)
 
-- [ ] **General**: description ("Open-source parametric CAD with a familiar layout and a built-in MCP server
-      for AI agents"), website, topics: `cad`, `parametric-cad`, `mcp`, `model-context-protocol`,
-      `opencascade`, `step`, `mechanical-engineering`, `ai-agents`. Turn on *Discussions* (the issue chooser
+- [x] Description and topics (set 2026-11-23).
+- [ ] **General**: turn on *Discussions* (the issue chooser
       links to it); turn off *Wiki* (docs live in the repository). Merge button: allow *squash merging* only,
       with the PR title as the commit message, and *automatically delete head branches*.
 - [ ] **Social preview** image (Settings → General): a 1280×640 screenshot of the UI with a model.
@@ -43,10 +42,12 @@ forms, pull request template, CODEOWNERS, Dependabot, labels).
 - [ ] **Code signing** (docs/GAPS.md I2): a Windows code-signing certificate (or Azure Trusted Signing) and an
       Apple Developer ID, so installers open without warnings. Set `OPENSWX_CODESIGN_IDENTITY` and
       `OPENSWX_INSTALLER_IDENTITY` as described in the README, and add the secrets to the release workflow.
-- [ ] **PyPI**: publish `openswx` so `pip install openswx` works (check the name is free first), with a
-      trusted-publishing workflow rather than a stored token.
+- [ ] **PyPI**: the package is ready (the name was free on 2026-11-23; `publish.yml` builds, checks and
+      test-installs it on every tag). To publish, connect it once: the two steps at the top of
+      `.github/workflows/publish.yml`, then re-run the workflow for the tag.
 - [ ] **MCP registry**: list the server in the MCP registry and client directories so agent users find it.
-- [ ] **Screenshots and a short GIF** at the top of the README: a part being built by an agent, live.
+- [x] **Demo video** at the top of the README (`docs/media/demo.mp4`, recorded by `tools/demo/record.py`). For
+      an inline player on GitHub, drag the file into the README editor on github.com and use the link it gives.
 - [ ] A handful of `good first issue`s from `docs/GAPS.md`, written with the feature-request form, so new
       contributors have somewhere to start.
 - [ ] **CITATION.cff** if people may cite it in papers (the simulation and SOLIDWORKS-format work).

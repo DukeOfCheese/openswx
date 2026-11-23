@@ -9,7 +9,7 @@
         parts gained and lost between two runs - check this before trusting a change to the rebuild.
 
 The corpus is yours to supply (for example the sample parts of a SOLIDWORKS installation); no SOLIDWORKS
-files are part of this repository, and none should be committed. Result files hold part names and outcomes
+files are part of this repository, and none should be committed. Result files hold each part's path inside the corpus and its outcome
 only. openswx reads the files natively: SOLIDWORKS is not started.
 
 Outcome of a part: exact (rebuilt history gives the stored body) - with `parametric` true when no feature
@@ -66,11 +66,15 @@ def run(corpus: str, out: str, timeout: float, limit: int | None, smallest_first
                 return report, None
             except RebuildError as exc:
                 return None, str(exc)
-    files = sorted(p for p in Path(corpus).rglob("*") if p.suffix.lower() == ".sldprt")
+    corpus = Path(corpus)
+    files = sorted(p for p in corpus.rglob("*") if p.suffix.lower() == ".sldprt")
     if smallest_first:
         files.sort(key=lambda p: p.stat().st_size)
     done = load(out)
-    todo = [p for p in files if p.name not in done]
+
+    def key(p: Path) -> str:  # the path inside the corpus: sample folders reuse file names
+        return p.relative_to(corpus).as_posix()
+    todo = [p for p in files if key(p) not in done]
     if limit is not None:
         todo = todo[:limit]
     print(f"{len(files)} parts, {len(done)} already surveyed, {len(todo)} to do", file=sys.stderr)
@@ -82,12 +86,12 @@ def run(corpus: str, out: str, timeout: float, limit: int | None, smallest_first
                 report, error = rebuild(str(p))
             except Exception as exc:  # noqa: BLE001 - one part must not end the survey
                 report, error = None, f"{type(exc).__name__}: {exc}"
-            row = {"part": p.name, "seconds": round(time.time() - t, 1), **classify(report, error)}
+            row = {"part": key(p), "seconds": round(time.time() - t, 1), **classify(report, error)}
             with lock:
                 fh.write(json.dumps(row) + "\n")
                 fh.flush()
                 count[0] += 1
-                print(f"[{count[0]}/{len(todo)}] {p.name}: {row['outcome']} ({row['seconds']} s)", file=sys.stderr)
+                print(f"[{count[0]}/{len(todo)}] {key(p)}: {row['outcome']} ({row['seconds']} s)", file=sys.stderr)
         # each rebuild runs in its own child process, so threads here only wait on them
         with ThreadPoolExecutor(max(1, jobs)) as pool:
             list(pool.map(one, todo))

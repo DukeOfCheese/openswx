@@ -46,6 +46,8 @@ def test_object_api_builds_a_bracket(tmp_path):
 def test_update_check(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENSWX_HOME", str(tmp_path))
     monkeypatch.delenv("OPENSWX_UPDATE_REPO", raising=False)
+    assert updates.repository() == "DukeOfCheese/openswx"  # (the project's own releases, by default)
+    S.set_settings({"update_repository": ""})
     r = S.check_for_updates()
     assert r["configured"] is False and "update_repository" in r["message"]  # nowhere to ask: nothing is fetched
 

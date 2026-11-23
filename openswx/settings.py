@@ -16,7 +16,7 @@ SETTINGS = {
     "mcp_toolsets": {"default": "core", "doc": "MCP tools listed when an agent connects: core, all, or e.g. core,assembly"},
     "confirm_close": {"default": True, "doc": "Ask before closing the window with unsaved changes"},
     "general_tolerance": {"default": "m", "choices": ["f", "m", "c", "v"], "doc": "ISO 2768 class for untoleranced dimensions in inspection reports"},
-    "update_repository": {"default": "", "doc": "GitHub repository (owner/name) whose releases Help > Check for Updates looks at"},
+    "update_repository": {"default": "DukeOfCheese/openswx", "doc": "GitHub repository (owner/name) whose releases Help > Check for Updates looks at"},
     "image_width": {"default": 1600, "min": 100, "max": 8000, "doc": "Width in pixels of exported pictures"},
     "image_height": {"default": 1200, "min": 100, "max": 8000, "doc": "Height in pixels of exported pictures"},
 }

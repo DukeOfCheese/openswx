@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "openswx"
 version = "0.1.0"
-description = "Open-source parametric CAD with a SOLIDWORKS-style workflow and a built-in MCP server for agents"
+description = "Open-source parametric CAD with a familiar layout and a built-in MCP server for AI agents"
 readme = "README.md"
 requires-python = ">=3.11"
 keywords = ["cad", "parametric", "solidworks", "mcp", "opencascade", "step", "parasolid"]
@@ -20,6 +20,7 @@ classifiers = [
   "Topic :: Multimedia :: Graphics :: 3D Modeling",
   "Topic :: Scientific/Engineering",
 ]
+authors = [{ name = "The openswx authors" }]
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 dependencies = [
@@ -36,6 +37,13 @@ dependencies = [
 dev = ["pytest", "httpx"]
 desktop = ["pywebview>=6", "pyinstaller>=6"]  # the native window and the release build (packaging/build.py)
 difftest = ["pywin32; platform_system == 'Windows'"]  # tools/difftest only (development oracle); openswx itself never uses SOLIDWORKS
+
+[project.urls]
+Homepage = "https://github.com/DukeOfCheese/openswx"
+Documentation = "https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md"
+Issues = "https://github.com/DukeOfCheese/openswx/issues"
+Changelog = "https://github.com/DukeOfCheese/openswx/blob/main/CHANGELOG.md"
+Source = "https://github.com/DukeOfCheese/openswx"
 
 [project.scripts]
 openswx = "openswx.__main__:main"

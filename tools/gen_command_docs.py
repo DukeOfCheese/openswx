@@ -75,7 +75,7 @@ def readme_counts(text: str) -> str:
     from openswx import session as S
     n, n_mcp = len(S.COMMANDS), sum(1 for m in S.COMMANDS.values() if m["mcp"])
     block = (f"<!-- counts -->{n} commands, {n_mcp} of them MCP tools "
-             f"([full list](docs/commands.md))<!-- /counts -->")
+             f"([full list](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md))<!-- /counts -->")
     new, k = re.subn(r"<!-- counts -->.*?<!-- /counts -->", block, text, flags=re.S)
     return new if k else text
 

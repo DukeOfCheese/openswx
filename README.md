@@ -4,9 +4,17 @@
 parts in it while you watch.**
 
 [![tests](https://github.com/DukeOfCheese/openswx/actions/workflows/test.yml/badge.svg)](https://github.com/DukeOfCheese/openswx/actions/workflows/test.yml)
-[![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
+[![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](https://github.com/DukeOfCheese/openswx/blob/main/LICENSE)
 ![platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![status: alpha](https://img.shields.io/badge/status-alpha-orange)
+
+[![Claude builds a mounting plate in openswx over MCP, live (click for the 4K video)](https://raw.githubusercontent.com/DukeOfCheese/openswx/main/docs/media/demo-poster.png)](https://github.com/DukeOfCheese/openswx/raw/main/docs/media/demo.mp4)
+
+<sub>30 s, 4K: [watch the video](https://github.com/DukeOfCheese/openswx/raw/main/docs/media/demo.mp4). Recorded in
+openswx: every feature is built by a real MCP tool call, the same calls Claude makes through Claude Code or any
+other MCP client. The chat panel illustrates the conversation and is replayed by a script
+([`tools/demo/`](https://github.com/DukeOfCheese/openswx/tree/main/tools/demo)). Claude is made by
+[Anthropic](https://www.anthropic.com/).</sub>
 
 openswx is an alternate CAD program for engineers. Its screen is laid out the way many mechanical engineers
 already know from SOLIDWORKS: a command bar across the top, a design tree on the left, a property panel for
@@ -17,9 +25,9 @@ here without retraining. Underneath, it is a different program, built on differe
 > **Not affiliated with Dassault Systèmes.** openswx is an independent open-source project. It is not
 > affiliated with, endorsed by, sponsored by or connected to Dassault Systèmes or SOLIDWORKS Corporation.
 > SOLIDWORKS is a registered trademark of Dassault Systèmes SolidWorks Corporation; Parasolid is a
-> trademark of Siemens Industry Software. The names are used only to describe compatibility and the familiar
-> layout. openswx is a clean-room implementation: it contains no SOLIDWORKS code, icons or artwork, and it
-> does not need SOLIDWORKS installed to run or to open SOLIDWORKS files. See [NOTICE](NOTICE).
+> trademark of Siemens Industry Software; Claude is a trademark of Anthropic, which is not affiliated with
+> openswx either. The names are used only to describe compatibility and the familiar layout. openswx is a clean-room implementation: it contains no SOLIDWORKS code, icons or artwork, and it
+> does not need SOLIDWORKS installed to run or to open SOLIDWORKS files. See [NOTICE](https://github.com/DukeOfCheese/openswx/blob/main/NOTICE).
 
 ## Contents
 
@@ -53,7 +61,7 @@ here without retraining. Underneath, it is a different program, built on differe
 - **Rendering**: real-time PBR, or path traced for soft shadows and reflections.
 - **Review**: design review, requirements checked like tests, tolerance stack-up, design studies, document
   compare.
-- **Agents**: <!-- counts -->426 commands, 408 of them MCP tools ([full list](docs/commands.md))<!-- /counts -->,
+- **Agents**: <!-- counts -->426 commands, 408 of them MCP tools ([full list](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md))<!-- /counts -->,
   over stdio or streamable HTTP, shown live in the UI's Agent activity pane.
 - **Files**: native `.oswprt` / `.oswasm` / `.oswdrw` (versioned JSON). Reads SOLIDWORKS `.sldprt` / `.sldasm` /
   `.slddrw` (2015 and later) natively; clean-room Parasolid reader (`.x_t`, `.x_b`) and writer (`.x_t`); STEP and
@@ -161,13 +169,13 @@ What an agent sees and can do:
   saving over or deleting something.
 - **Limits you can set.** `--workspace DIR` (or `OPENSWX_WORKSPACE`) confines agents' file reads and writes to
   one folder. `--share` prints a separate view-only link for people watching. The rules are in
-  [`openswx/security.py`](openswx/security.py).
+  [`openswx/security.py`](https://github.com/DukeOfCheese/openswx/blob/main/openswx/security.py).
 - **Your own tools.** A Python package can add commands through the `openswx.plugins` entry point; they become
-  MCP tools in the `plugins` toolset ([`openswx/plugins.py`](openswx/plugins.py)).
+  MCP tools in the `plugins` toolset ([`openswx/plugins.py`](https://github.com/DukeOfCheese/openswx/blob/main/openswx/plugins.py)).
 
 Try: *"Make a 120×60×10 mm mounting plate with four Ø8 holes 12 mm from the edges and a Ø36 boss with a
-counterbored hole, fillet the corners R6, material 6061."* [`tools/agent_demo.py`](tools/agent_demo.py) is a
-scripted agent that does exactly that. Every command and its arguments: [`docs/commands.md`](docs/commands.md).
+counterbored hole, fillet the corners R6, material 6061."* [`tools/agent_demo.py`](https://github.com/DukeOfCheese/openswx/blob/main/tools/agent_demo.py) is a
+scripted agent that does exactly that. Every command and its arguments: [`docs/commands.md`](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md).
 
 ## How it differs from SOLIDWORKS
 
@@ -193,8 +201,8 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
 
 - `.sldprt`, `.sldasm` and `.slddrw` (2015 and later) open without SOLIDWORKS installed. openswx reads the stored
   body and, where it can decode it, the feature history, and rebuilds that history to check it against the stored
-  body. In the survey of 2026-10-29, 525 of the 841 sample parts that ship with SOLIDWORKS 2025 rebuilt exactly
-  (363 fully parametric). Parts whose features are not decoded yet (many sweeps, lofts, sheet-metal and
+  body. In the survey of 2026-11-23, 526 of the 841 sample parts that ship with SOLIDWORKS 2025 rebuilt exactly
+  (351 fully parametric). Parts whose features are not decoded yet (many sweeps, lofts, sheet-metal and
   surface features) open as an imported solid that you can still measure, mate, draw and add features to.
 - SOLIDWORKS files are **read-only**. Save as openswx files, or exchange through STEP, Parasolid `.x_t` or IGES.
 - Equations, end conditions (by name or by `swEndConditions_e` number) and dimension names (`D1@Sketch1`) use
@@ -220,16 +228,16 @@ openswx is **alpha**: usable for real parts, with rough edges. Save often (autos
 - **Builds** are not code-signed yet.
 - CI runs the test suite on Linux, Windows and macOS, and UI smoke tests in a headless browser.
 
-Where things stand on one screen: [`docs/STATUS.md`](docs/STATUS.md). What is missing, with a spec for each
-item: [`docs/GAPS.md`](docs/GAPS.md). Release notes: [`CHANGELOG.md`](CHANGELOG.md).
+Where things stand on one screen: [`docs/STATUS.md`](https://github.com/DukeOfCheese/openswx/blob/main/docs/STATUS.md). What is missing, with a spec for each
+item: [`docs/GAPS.md`](https://github.com/DukeOfCheese/openswx/blob/main/docs/GAPS.md). Release notes: [`CHANGELOG.md`](https://github.com/DukeOfCheese/openswx/blob/main/CHANGELOG.md).
 
 ## Contributing
 
 Contributions from people and from coding agents are both welcome. Read
-[`CONTRIBUTING.md`](CONTRIBUTING.md) first; above all, the **clean-room rule**: no SOLIDWORKS code, artwork or
+[`CONTRIBUTING.md`](https://github.com/DukeOfCheese/openswx/blob/main/CONTRIBUTING.md) first; above all, the **clean-room rule**: no SOLIDWORKS code, artwork or
 sample files, ever. Bugs, SOLIDWORKS files that don't open correctly, and feature requests each have an issue
 form that asks for exactly what is needed to act on them. Coding agents should also read
-[`AGENTS.md`](AGENTS.md). Security problems: [`SECURITY.md`](SECURITY.md), never a public issue.
+[`AGENTS.md`](https://github.com/DukeOfCheese/openswx/blob/main/AGENTS.md). Security problems: [`SECURITY.md`](https://github.com/DukeOfCheese/openswx/blob/main/SECURITY.md), never a public issue.
 
 ## Project layout
 
@@ -241,7 +249,7 @@ form that asks for exactly what is needed to act on them. Coding agents should a
 | `openswx/sketch.py`, `features.py`, `geom.py`, `naming.py` | constraint solver, feature builders, references, persistent names |
 | `openswx/drawing*.py` | drawings |
 | `openswx/fea*.py`, `cfd.py`, `plastics.py`, `cam.py` | solvers |
-| `openswx/sldprt.py`, `sw_*.py`, `parasolid*.py` | SOLIDWORKS and Parasolid readers / writer (clean-room; notes in [`docs/re/`](docs/re/README.md)) |
+| `openswx/sldprt.py`, `sw_*.py`, `parasolid*.py` | SOLIDWORKS and Parasolid readers / writer (clean-room; notes in [`docs/re/`](https://github.com/DukeOfCheese/openswx/blob/main/docs/re/README.md)) |
 | `openswx/web_server.py`, `mcp_server.py`, `security.py` | REST + live-update server, MCP server, access rules |
 | `openswx/web/` | the UI (three.js) |
 | `tools/` | command reference generator, conformance cases, benchmarks, SOLIDWORKS survey |
@@ -249,4 +257,4 @@ form that asks for exactly what is needed to act on them. Coding agents should a
 
 ## Licence
 
-Apache License 2.0: see [`LICENSE`](LICENSE). Third-party components and their licences: [`NOTICE`](NOTICE).
+Apache License 2.0: see [`LICENSE`](https://github.com/DukeOfCheese/openswx/blob/main/LICENSE). Third-party components and their licences: [`NOTICE`](https://github.com/DukeOfCheese/openswx/blob/main/NOTICE).

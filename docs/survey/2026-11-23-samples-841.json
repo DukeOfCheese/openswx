@@ -1,0 +1,6161 @@
+{
+"date": "2026-11-23",
+"corpus": "SOLIDWORKS 2025 samples folder (841 parts)",
+"timeout_s": 115,
+"jobs": 3,
+"summary": {
+"parts": 841,
+"exact": 526,
+"fully_parametric": 351,
+"inexact": 23,
+"timeout": 49,
+"error": 242,
+"crash": 1
+},
+"parts": [
+{
+"part": "Plastics Examples/Paperclip.SLDPRT",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 12.9
+},
+{
+"part": "Plastics Examples/brush_handle.sldprt",
+"outcome": "error",
+"seconds": 10.7,
+"reason": "Standard_ConstructionError: "
+},
+{
+"part": "Plastics Examples/disk_experiment.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 26.4
+},
+{
+"part": "Plastics Examples/handle.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 12.2
+},
+{
+"part": "Plastics Examples/mounting_plate.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 2,
+"imported": 1,
+"seconds": 62.4
+},
+{
+"part": "Plastics Examples/screw_cap.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 18.1
+},
+{
+"part": "Plastics Examples/spur_gear.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 5.6
+},
+{
+"part": "Plastics Examples/switch_plate.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 6.0
+},
+{
+"part": "Plastics Examples/thin_wall_container.sldprt",
+"outcome": "error",
+"seconds": 9.6,
+"reason": "RebuildError: Move Face1: feature type moMoveFace_c is not supported yet"
+},
+{
+"part": "Plastics Examples/trim_piece.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 15.5
+},
+{
+"part": "Plastics Examples/wrench.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 2,
+"imported": 1,
+"seconds": 21.6
+},
+{
+"part": "Simulation Examples/3plates-surfaces.sldprt",
+"outcome": "error",
+"seconds": 3.4,
+"reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 12903.2000 vs 38709.6000 mm2, deviation 254 mm)"
+},
+{
+"part": "Simulation Examples/Beams/beam_diagrams.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 6,
+"imported": 0,
+"seconds": 3.8
+},
+{
+"part": "Simulation Examples/Beams/beam_truss.sldprt",
+"outcome": "error",
+"seconds": 7.2,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 638308916.9280 vs 2510367108.2880 mm3, area 19714939.6351 vs 74304367.5200 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/Composites/tjoint.sldprt",
+"outcome": "error",
+"seconds": 2.5,
+"reason": "RebuildError: Surface-Trim1: feature type moTrimRefSurface_c is not supported yet"
+},
+{
+"part": "Simulation Examples/Contact/aluminum_base.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.9
+},
+{
+"part": "Simulation Examples/Contact/inner_ring.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Contact/locker.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Contact/outer_ring.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Contact/quarterbolt.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Contact/quartereyebar.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 9,
+"imported": 0,
+"seconds": 10.2
+},
+{
+"part": "Simulation Examples/Contact/silicon_chip.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Contact/slider.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.9
+},
+{
+"part": "Simulation Examples/Design Scenarios/hanger.sldprt",
+"outcome": "error",
+"seconds": 23.4,
+"reason": "RebuildError: Boss-Extrude3: rebuilt differently from the stored body"
+},
+{
+"part": "Simulation Examples/Design Scenarios/pulley.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 6,
+"imported": 2,
+"seconds": 17.2
+},
+{
+"part": "Simulation Examples/Drop Test/aluminumbar.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.9
+},
+{
+"part": "Simulation Examples/Drop Test/block_1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Drop Test/block_2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Drop Test/foam.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 1,
+"seconds": 5.0
+},
+{
+"part": "Simulation Examples/Drop Test/harddrive.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Dynamics/ac_beam.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 7,
+"imported": 0,
+"seconds": 6.9
+},
+{
+"part": "Simulation Examples/Dynamics/ac_box.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "Simulation Examples/Dynamics/basketball_rim.sldprt",
+"outcome": "error",
+"seconds": 26.1,
+"reason": "RebuildError: Curve1: feature type moCurveInFile_c is not supported yet"
+},
+{
+"part": "Simulation Examples/Dynamics/sop-8.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 19,
+"imported": 4,
+"seconds": 81.5
+},
+{
+"part": "Simulation Examples/Dynamics/sps_cap_a.sldprt",
+"outcome": "error",
+"seconds": 25.1,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 16177.3355 vs 16148.8045 mm3, area 4364.2667 vs 4201.9998 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/Dynamics/sps_coil1.sldprt",
+"outcome": "error",
+"seconds": 44.0,
+"reason": "RebuildError: Cavity1: feature type moCavity_c is not supported yet"
+},
+{
+"part": "Simulation Examples/Dynamics/sps_coil2.sldprt",
+"outcome": "error",
+"seconds": 5.0,
+"reason": "RebuildError: Sweep1: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "Simulation Examples/Dynamics/sps_pc_board.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 14,
+"imported": 0,
+"seconds": 7.4
+},
+{
+"part": "Simulation Examples/Dynamics/sps_terminal_a.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 13,
+"imported": 2,
+"seconds": 13.1
+},
+{
+"part": "Simulation Examples/Dynamics/sps_transformer.sldprt",
+"outcome": "error",
+"seconds": 7.5,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 3304.2585 vs 3143.1382 mm3, area 3856.1146 vs 3702.3990 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/Dynamics/sps_transistor_d.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 1,
+"seconds": 16.3
+},
+{
+"part": "Simulation Examples/Dynamics/trans_heat_sink.sldprt",
+"outcome": "error",
+"seconds": 14.1,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 3430.9111 vs 2190.5715 mm3, area 6240.3519 vs 3717.4323 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/Dynamics/transformer_core.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 1,
+"seconds": 8.7
+},
+{
+"part": "Simulation Examples/Educational Examples/cantilever.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "Simulation Examples/Educational Examples/hub.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.9
+},
+{
+"part": "Simulation Examples/Educational Examples/shaft.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.0
+},
+{
+"part": "Simulation Examples/Educational Examples/spider.sldprt",
+"outcome": "error",
+"seconds": 36.9,
+"reason": "RebuildError: Boss-Extrude1: no variant builds"
+},
+{
+"part": "Simulation Examples/Fatigue/arm.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 14,
+"imported": 2,
+"seconds": 59.0
+},
+{
+"part": "Simulation Examples/Fatigue/front shock clamp.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 6,
+"imported": 0,
+"seconds": 5.4
+},
+{
+"part": "Simulation Examples/Fatigue/hub1.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 12,
+"imported": 1,
+"seconds": 11.3
+},
+{
+"part": "Simulation Examples/Fatigue/link.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "Simulation Examples/Fatigue/lwrsway_lnk.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 9.5
+},
+{
+"part": "Simulation Examples/Fatigue/mount1.sldprt",
+"outcome": "error",
+"seconds": 14.7,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 333441.3091 vs 377423.6062 mm3, area 40089.9655 vs 41626.4605 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/Fatigue/oleopiston.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.4
+},
+{
+"part": "Simulation Examples/Fatigue/oleostrut.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 14,
+"imported": 2,
+"seconds": 81.1
+},
+{
+"part": "Simulation Examples/Fatigue/part3.sldprt",
+"outcome": "error",
+"seconds": 81.3,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "Simulation Examples/Fatigue/ride-on.sldprt",
+"outcome": "error",
+"seconds": 2.9,
+"reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 349414.0720 vs 412334.1740 mm2, deviation 304.1 mm)"
+},
+{
+"part": "Simulation Examples/Fatigue/shock plunger.sldprt",
+"outcome": "error",
+"seconds": 20.8,
+"reason": "RebuildError: Base-Extrude: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "Simulation Examples/Fatigue/shock tube.sldprt",
+"outcome": "error",
+"seconds": 55.9,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 3044.2854 vs 2484.0648 mm3, area 4052.3411 vs 3829.6807 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/Fatigue/upper arm.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 2,
+"seconds": 60.1
+},
+{
+"part": "Simulation Examples/Fatigue/upprsway_lnk.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 15.9
+},
+{
+"part": "Simulation Examples/Fatigue/wheel_hub.sldprt",
+"outcome": "error",
+"seconds": 81.2,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "Simulation Examples/FloWorks/ball.sldprt",
+"outcome": "error",
+"seconds": 17.4,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 14526.3245 vs 13799.2336 mm3, area 4953.2053 vs 4820.5732 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/FloWorks/handle.sldprt",
+"outcome": "error",
+"seconds": 54.5,
+"reason": "RebuildError: 1: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "Simulation Examples/FloWorks/lid.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "Simulation Examples/FloWorks/side.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "Simulation Examples/Motion/guide.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 15,
+"imported": 4,
+"seconds": 38.0
+},
+{
+"part": "Simulation Examples/Motion/link.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.9
+},
+{
+"part": "Simulation Examples/Motion/motor.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 6.7
+},
+{
+"part": "Simulation Examples/Motion/plate.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 5.2
+},
+{
+"part": "Simulation Examples/Motion/punch.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 2,
+"seconds": 48.6
+},
+{
+"part": "Simulation Examples/Motion/sheet.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.5
+},
+{
+"part": "Simulation Examples/Nonlinear/2dsimplification/bolt.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 12,
+"imported": 7,
+"seconds": 107.2
+},
+{
+"part": "Simulation Examples/Nonlinear/2dsimplification/nut.sldprt",
+"outcome": "crash",
+"seconds": 29.3,
+"reason": "the geometry kernel crashed while rebuilding the history"
+},
+{
+"part": "Simulation Examples/Nonlinear/clip-female_qmodel.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 23,
+"imported": 2,
+"seconds": 60.3
+},
+{
+"part": "Simulation Examples/Nonlinear/clip-male_qmodel.sldprt",
+"outcome": "error",
+"seconds": 62.7,
+"reason": "RebuildError: the rebuilt history does not regenerate to the same body (Fillet3)"
+},
+{
+"part": "Simulation Examples/Nonlinear/groove.sldprt",
+"outcome": "error",
+"seconds": 73.2,
+"reason": "RebuildError: Revolve1: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "Simulation Examples/Nonlinear/holder.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.9
+},
+{
+"part": "Simulation Examples/Nonlinear/nl_archwire.sldprt",
+"outcome": "error",
+"seconds": 6.2,
+"reason": "RebuildError: Sweep1: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "Simulation Examples/Nonlinear/nl_clamp.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 9.4
+},
+{
+"part": "Simulation Examples/Nonlinear/nl_curvedsheet.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Nonlinear/nl_plate.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "Simulation Examples/Nonlinear/nl_sheet.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Nonlinear/o_ring.sldprt",
+"outcome": "error",
+"seconds": 5.4,
+"reason": "RebuildError: Fillet1: could not find its edges"
+},
+{
+"part": "Simulation Examples/Nonlinear/pipe.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.5
+},
+{
+"part": "Simulation Examples/Nonlinear/top_plate.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "Simulation Examples/Optimization/cantilever_bracket.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "Simulation Examples/Optimization/design space.sldprt",
+"outcome": "error",
+"seconds": 20.7,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 372195.5878 vs 370666.2993 mm3, area 83246.8592 vs 84006.8499 mm2, deviation 5 mm)"
+},
+{
+"part": "Simulation Examples/Optimization/disc.sldprt",
+"outcome": "error",
+"seconds": 91.9,
+"reason": "RebuildError: Boss-Extrude1: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "Simulation Examples/Thermal/chip.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Thermal/coffee.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 4,
+"imported": 0,
+"seconds": 52.5
+},
+{
+"part": "Simulation Examples/Thermal/coffeepot.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 2,
+"imported": 0,
+"seconds": 18.4
+},
+{
+"part": "Simulation Examples/Thermal/liquidjet.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.8
+},
+{
+"part": "Simulation Examples/Thermal/shield.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Thermal/substrate.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "Simulation Examples/Thermal/top.sldprt",
+"outcome": "error",
+"seconds": 46.2,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 291431.2964 vs 297660.4608 mm3, area 120256.8792 vs 118627.0000 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/Verification/aluminum_bar.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.8
+},
+{
+"part": "Simulation Examples/Verification/asly1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/asly2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/b4.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/beam.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/buckling_1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/buckling_2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/buckling_3.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 2.7
+},
+{
+"part": "Simulation Examples/Verification/buckling_4.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/buckling_5.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "Simulation Examples/Verification/buckling_6.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 4.3
+},
+{
+"part": "Simulation Examples/Verification/coldsphere.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.3
+},
+{
+"part": "Simulation Examples/Verification/comp_buck.sldprt",
+"outcome": "error",
+"seconds": 2.9,
+"reason": "RebuildError: Surface-Revolve1: no variant builds"
+},
+{
+"part": "Simulation Examples/Verification/f5.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.6
+},
+{
+"part": "Simulation Examples/Verification/f6.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.8
+},
+{
+"part": "Simulation Examples/Verification/frequency_1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "Simulation Examples/Verification/frequency_11.sldprt",
+"outcome": "error",
+"seconds": 3.1,
+"reason": "RebuildError: MidSurface1: feature type moMidSurface_c is not supported yet"
+},
+{
+"part": "Simulation Examples/Verification/frequency_12.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/frequency_13.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.6
+},
+{
+"part": "Simulation Examples/Verification/frequency_14.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/frequency_17.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 4.3
+},
+{
+"part": "Simulation Examples/Verification/frequency_2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/frequency_3.sldprt",
+"outcome": "error",
+"seconds": 3.4,
+"reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 8257259.7172 vs 4053659.8328 mm2, deviation 780.7 mm)"
+},
+{
+"part": "Simulation Examples/Verification/frequency_4.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/frequency_5.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.8
+},
+{
+"part": "Simulation Examples/Verification/frequency_6.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/frequency_7.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/frequency_9.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/half_solidbeam.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Verification/hotsphere.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.8
+},
+{
+"part": "Simulation Examples/Verification/mass.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/motor_frame.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 32.1
+},
+{
+"part": "Simulation Examples/Verification/nafems_3dnlg1.sldprt",
+"outcome": "error",
+"seconds": 3.3,
+"reason": "RebuildError: Body-Move/Copy1: feature type moMoveCopyBody_c is not supported yet"
+},
+{
+"part": "Simulation Examples/Verification/nafems_3dnlg5.sldprt",
+"outcome": "error",
+"seconds": 8.7,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 6435.1850 vs 1287036.9969 mm3, area 2303.7350 vs 203973.3116 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/Verification/nafems_3dnlg7.sldprt",
+"outcome": "error",
+"seconds": 3.7,
+"reason": "RebuildError: Surface-Fill1: feature type moFillRefSurface_c is not supported yet"
+},
+{
+"part": "Simulation Examples/Verification/nafems_3dnlg9.sldprt",
+"outcome": "error",
+"seconds": 3.1,
+"reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 48190.7450 vs 96381.4900 mm2, deviation 254 mm)"
+},
+{
+"part": "Simulation Examples/Verification/nafems_freq_test1.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 4,
+"imported": 0,
+"seconds": 3.8
+},
+{
+"part": "Simulation Examples/Verification/nafems_freq_test11.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/nafems_freq_test13.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "Simulation Examples/Verification/nafems_freq_test14.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Verification/nafems_freq_test21.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "Simulation Examples/Verification/nafems_freq_test3.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 4.5
+},
+{
+"part": "Simulation Examples/Verification/nafems_freq_test31.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "Simulation Examples/Verification/nafems_freq_test6.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 4,
+"imported": 0,
+"seconds": 18.8
+},
+{
+"part": "Simulation Examples/Verification/nafems_freq_test71.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/nafems_gnl5.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "Simulation Examples/Verification/nafems_gnl6.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 5,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/nafems_gnl7.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.5
+},
+{
+"part": "Simulation Examples/Verification/nafems_gnl8.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic13.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic14_15.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 4,
+"imported": 0,
+"seconds": 3.9
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic17.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.3
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic18.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.8
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic1_3_10.sldprt",
+"outcome": "error",
+"seconds": 3.9,
+"reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 6000000.0000 vs 12000000.0000 mm2, deviation 2000 mm)"
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic21.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic22.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic29.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 4.5
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic2_4_11.sldprt",
+"outcome": "error",
+"seconds": 3.5,
+"reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 6000000.0000 vs 12000000.0000 mm2, deviation 2000 mm)"
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic30.sldprt",
+"outcome": "error",
+"seconds": 3.2,
+"reason": "RebuildError: Surface-Extrude1: no variant builds"
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic31.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic39.sldprt",
+"outcome": "error",
+"seconds": 3.2,
+"reason": "RebuildError: Surface-Revolve1: no variant builds"
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic43.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 1,
+"seconds": 29.6
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic5_6.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/nafems_ic9.sldprt",
+"outcome": "error",
+"seconds": 3.5,
+"reason": "RebuildError: Extrude1: no variant builds"
+},
+{
+"part": "Simulation Examples/Verification/nafems_nl5a_b.sldprt",
+"outcome": "error",
+"seconds": 3.3,
+"reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 32000000000.0000 vs 33600000000.0000 mm2, deviation 2e+04 mm)"
+},
+{
+"part": "Simulation Examples/Verification/nafems_nl9.sldprt",
+"outcome": "error",
+"seconds": 5.2,
+"reason": "RebuildError: Surface-Trim1: feature type moTrimRefSurface_c is not supported yet"
+},
+{
+"part": "Simulation Examples/Verification/nafems_r0016_13h.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Verification/nafems_r0016_test 21p.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 6.3
+},
+{
+"part": "Simulation Examples/Verification/nafems_r0016_test13h.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "Simulation Examples/Verification/nafems_r0016_test13p.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "Simulation Examples/Verification/nafems_r0016_test13r.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.1
+},
+{
+"part": "Simulation Examples/Verification/nafems_r0016_test13t.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Verification/nafems_r0016_test21h.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 2.9
+},
+{
+"part": "Simulation Examples/Verification/nafems_r0016_test21p.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 10.2
+},
+{
+"part": "Simulation Examples/Verification/nafems_r0016_test21r.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "Simulation Examples/Verification/nafems_r0016_test21t.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "Simulation Examples/Verification/nafems_r0031-2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.6
+},
+{
+"part": "Simulation Examples/Verification/nafems_thermal_test10.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/nafems_thermal_test3.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "Simulation Examples/Verification/nafems_thermal_test4.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/nafems_thermal_test5.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/nafems_thermal_test8.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/nafems_thermal_test9.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "Simulation Examples/Verification/nl2a_part1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/nl2a_part2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Verification/nl2a_part3.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/nl2c_part1c.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/nl2c_part2c.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/nl2c_part3.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_dynamic_1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_10.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_11.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_12.sldprt",
+"outcome": "error",
+"seconds": 2.5,
+"reason": "RebuildError: Surface-Imported1: feature type moRefSurface_c is not supported yet"
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_13.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_14.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_15.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_16.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_3.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_6.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.6
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_7.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_8.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_static_9.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "Simulation Examples/Verification/nonlinear_thermal.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/ns26_b.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/ns37a_largecube.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/ns37a_smallcube.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/ns87_rigid.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "Simulation Examples/Verification/ns87_rubber.sldprt",
+"outcome": "error",
+"seconds": 3.0,
+"reason": "DocumentError: Surface-Plane1: sketch has no closed contour"
+},
+{
+"part": "Simulation Examples/Verification/p3.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.0
+},
+{
+"part": "Simulation Examples/Verification/p4.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.0
+},
+{
+"part": "Simulation Examples/Verification/part3.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 6,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/pinarm.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.6
+},
+{
+"part": "Simulation Examples/Verification/rblock.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Verification/rigid_punch.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/s1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.6
+},
+{
+"part": "Simulation Examples/Verification/s3.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.2
+},
+{
+"part": "Simulation Examples/Verification/s_47_1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Verification/s_47_2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "Simulation Examples/Verification/static_1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/static_10.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/static_11.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "Simulation Examples/Verification/static_12.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Verification/static_13.sldprt",
+"outcome": "error",
+"seconds": 3.1,
+"reason": "RebuildError: the history builds no surface body"
+},
+{
+"part": "Simulation Examples/Verification/static_14.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/static_15.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "Simulation Examples/Verification/static_16.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.0
+},
+{
+"part": "Simulation Examples/Verification/static_17.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/static_18.sldprt",
+"outcome": "error",
+"seconds": 3.7,
+"reason": "RebuildError: MidSurface1: feature type moMidSurface_c is not supported yet"
+},
+{
+"part": "Simulation Examples/Verification/static_19.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/static_2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Verification/static_21.sldprt",
+"outcome": "error",
+"seconds": 3.0,
+"reason": "RebuildError: Surface-Loft1: feature type moBlendRefSurface_c is not supported yet"
+},
+{
+"part": "Simulation Examples/Verification/static_22.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.6
+},
+{
+"part": "Simulation Examples/Verification/static_23.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/static_24.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/static_25.sldprt",
+"outcome": "error",
+"seconds": 3.2,
+"reason": "RebuildError: the history builds no surface body"
+},
+{
+"part": "Simulation Examples/Verification/static_26.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/static_27.sldprt",
+"outcome": "error",
+"seconds": 37.4,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 4108003.1140 vs 12900413.2157 mm3, area 1299250.3287 vs 4093421.3039 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/Verification/static_28.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/static_29.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 8.2
+},
+{
+"part": "Simulation Examples/Verification/static_3.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/static_4.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/static_5.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/static_6.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.9
+},
+{
+"part": "Simulation Examples/Verification/static_7.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/Verification/static_8.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/static_9.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/strain_hardening_mat.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/t7.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.8
+},
+{
+"part": "Simulation Examples/Verification/thermal_1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/Verification/thermal_10.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/thermal_2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "Simulation Examples/Verification/thermal_3.sldprt",
+"outcome": "error",
+"seconds": 3.1,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 145.5522 vs 1976.0000 mm3, area 443.6742 vs 1053.2800 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/Verification/thermal_4.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/thermal_5.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/Verification/thermal_6.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/thermal_7.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 4.5
+},
+{
+"part": "Simulation Examples/Verification/thermal_8.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/Verification/thermal_9.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/actuator_casing.sldprt",
+"outcome": "error",
+"seconds": 20.1,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 92984.6288 vs 92337.0657 mm3, area 24057.0832 vs 23581.4763 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/actuator_piston.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 6,
+"imported": 0,
+"seconds": 3.8
+},
+{
+"part": "Simulation Examples/back_cantilever.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "Simulation Examples/backboard.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 7,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/basketball_rim.sldprt",
+"outcome": "error",
+"seconds": 23.2,
+"reason": "RebuildError: Curve1: feature type moCurveInFile_c is not supported yet"
+},
+{
+"part": "Simulation Examples/bikeframe.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "Simulation Examples/bolt.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/bolthole.sldprt",
+"outcome": "error",
+"seconds": 4.3,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 5599.7957 vs 5711.7838 mm3, area 2260.7507 vs 2220.8007 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/car_roof.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/car_sides.sldprt",
+"outcome": "error",
+"seconds": 4.4,
+"reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 24853609.1491 vs 7020870.6345 mm2, deviation 2361 mm)"
+},
+{
+"part": "Simulation Examples/crankarm.sldprt",
+"outcome": "error",
+"seconds": 15.5,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 139864.6397 vs 152201.3719 mm3, area 29791.2364 vs 34996.3398 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/crankarmaxle.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 6,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "Simulation Examples/crankpulley.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 6,
+"imported": 2,
+"seconds": 35.3
+},
+{
+"part": "Simulation Examples/cross_beam.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 7.1
+},
+{
+"part": "Simulation Examples/filter.sldprt",
+"outcome": "error",
+"seconds": 83.6,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "Simulation Examples/first branch.sldprt",
+"outcome": "error",
+"seconds": 71.3,
+"reason": "RebuildError: Cut-Extrude1: rebuilt differently from the stored body"
+},
+{
+"part": "Simulation Examples/flange.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 5,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "Simulation Examples/frame.sldprt",
+"outcome": "error",
+"seconds": 37.9,
+"reason": "RebuildError: Fillet4: could not find its edges"
+},
+{
+"part": "Simulation Examples/front_cantilever.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/fuel_tank.sldprt",
+"outcome": "error",
+"seconds": 3.2,
+"reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 17196105.1666 vs 23167386.1782 mm2, deviation 4.687e-13 mm)"
+},
+{
+"part": "Simulation Examples/i12x14.1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/knob.sldprt",
+"outcome": "error",
+"seconds": 54.7,
+"reason": "RebuildError: Cut-Extrude2: rebuilt differently from the stored body"
+},
+{
+"part": "Simulation Examples/link1.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 2,
+"seconds": 16.2
+},
+{
+"part": "Simulation Examples/link2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 6,
+"imported": 0,
+"seconds": 4.1
+},
+{
+"part": "Simulation Examples/locker.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.9
+},
+{
+"part": "Simulation Examples/mixed-1-shell.sldprt",
+"outcome": "error",
+"seconds": 3.3,
+"reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 1272460.6798 vs 125000.0000 mm2, deviation 539.8 mm)"
+},
+{
+"part": "Simulation Examples/mixed-1-solid.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 6.7
+},
+{
+"part": "Simulation Examples/mounting_bracket.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 17,
+"imported": 2,
+"seconds": 30.5
+},
+{
+"part": "Simulation Examples/overender shaft.sldprt",
+"outcome": "error",
+"seconds": 29.6,
+"reason": "RebuildError: Fillet3: could not find its edges"
+},
+{
+"part": "Simulation Examples/pb bearing_1.50 bore.sldprt",
+"outcome": "error",
+"seconds": 35.9,
+"reason": "RebuildError: Fillet3: could not find its edges"
+},
+{
+"part": "Simulation Examples/pin.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 1,
+"seconds": 5.7
+},
+{
+"part": "Simulation Examples/pipes.sldprt",
+"outcome": "error",
+"seconds": 4.9,
+"reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 45600000.0000 vs 456000000.0000 mm2, deviation 1.442e+04 mm)"
+},
+{
+"part": "Simulation Examples/plate-with-hole.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "Simulation Examples/plunger.sldprt",
+"outcome": "error",
+"seconds": 3.3,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 5978.4505 vs 5914.2204 mm3, area 2386.1910 vs 2429.6913 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/pressurevessel.sldprt",
+"outcome": "error",
+"seconds": 4.7,
+"reason": "RebuildError: Surface-MidSurface1: feature type moMidRefSurface_c is not supported yet"
+},
+{
+"part": "Simulation Examples/pulley_bearing.sldprt",
+"outcome": "error",
+"seconds": 41.8,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 1223868.1702 vs 1285012.2964 mm3, area 211781.6781 vs 254100.0729 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/reducer-ms.sldprt",
+"outcome": "error",
+"seconds": 90.6,
+"reason": "RebuildError: Revolve1: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "Simulation Examples/regulator.sldprt",
+"outcome": "error",
+"seconds": 38.7,
+"reason": "RebuildError: Shell1: no variant builds"
+},
+{
+"part": "Simulation Examples/roof.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "Simulation Examples/second branch.sldprt",
+"outcome": "error",
+"seconds": 76.9,
+"reason": "RebuildError: Cut-Extrude2: rebuilt differently from the stored body"
+},
+{
+"part": "Simulation Examples/sheet.sldprt",
+"outcome": "error",
+"seconds": 16.1,
+"reason": "RebuildError: Base-Extrude-Thin: no variant builds"
+},
+{
+"part": "Simulation Examples/shovel.sldprt",
+"outcome": "error",
+"seconds": 31.6,
+"reason": "RebuildError: Cut-Extrude1: no variant builds"
+},
+{
+"part": "Simulation Examples/trendtracker.sldprt",
+"outcome": "error",
+"seconds": 15.9,
+"reason": "RebuildError: Fillet1: none of its edges can be rounded"
+},
+{
+"part": "Simulation Examples/tutor1.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 16,
+"imported": 1,
+"seconds": 31.4
+},
+{
+"part": "Simulation Examples/vessel weldment.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "Simulation Examples/wheel.sldprt",
+"outcome": "error",
+"seconds": 12.9,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 43180.8103 vs 37094.2390 mm3, area 12549.3927 vs 6692.5930 mm2, deviation inf mm)"
+},
+{
+"part": "Simulation Examples/window1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "Simulation Examples/window2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "introsw/bolt.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 6,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "introsw/box.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.0
+},
+{
+"part": "introsw/cabinet_bath.sldprt",
+"outcome": "error",
+"seconds": 9.5,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 30924581.5859 vs 30422081.5859 mm3, area 4193526.8031 vs 4128026.8031 mm2, deviation inf mm)"
+},
+{
+"part": "introsw/can.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 5.8
+},
+{
+"part": "introsw/can_lid.sldprt",
+"outcome": "error",
+"seconds": 4.1,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 14522.3595 vs 14419.9103 mm3, area 10283.6365 vs 10235.3089 mm2, deviation 1.482 mm)"
+},
+{
+"part": "introsw/ctrtop.sldprt",
+"outcome": "error",
+"seconds": 31.3,
+"reason": "RebuildError: Extrude-Thin1: rebuilt differently from the stored body"
+},
+{
+"part": "introsw/door.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 4.4
+},
+{
+"part": "introsw/faucet.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 25,
+"imported": 3,
+"seconds": 84.2
+},
+{
+"part": "introsw/faucet_handle.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 2,
+"seconds": 50.5
+},
+{
+"part": "introsw/hinge_1.sldprt",
+"outcome": "error",
+"seconds": 7.6,
+"reason": "RebuildError: Hem1: feature type moHem_c is not supported yet"
+},
+{
+"part": "introsw/hinge_2.sldprt",
+"outcome": "error",
+"seconds": 8.2,
+"reason": "RebuildError: Hem1: feature type moHem_c is not supported yet"
+},
+{
+"part": "introsw/lid.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "introsw/molding.sldprt",
+"outcome": "error",
+"seconds": 4.9,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 239146.4571 vs 230840.1656 mm3, area 54938.1086 vs 53270.7438 mm2, deviation inf mm)"
+},
+{
+"part": "introsw/nut.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "introsw/pin.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 3,
+"imported": 1,
+"seconds": 2.7
+},
+{
+"part": "introsw/supply_piping.sldprt",
+"outcome": "error",
+"seconds": 12.1,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 34037.0339 vs 28608.7987 mm3, area 25369.5810 vs 20467.8994 mm2, deviation inf mm)"
+},
+{
+"part": "introsw/washer.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "introsw/waste_piping.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 11,
+"imported": 1,
+"seconds": 25.3
+},
+{
+"part": "learn/Baseball Bat.SLDPRT",
+"outcome": "error",
+"seconds": 18.9,
+"reason": "ValueError: no bodies found in Contents/Config-0-Partition (Contents/Config-0-Partition: a body could not be rebuilt (geometry runs far outside the part))"
+},
+{
+"part": "learn/Carving Knife/Components/Gear Mount.SLDPRT",
+"outcome": "error",
+"seconds": 21.6,
+"reason": "RebuildError: Flatten-<EdgeBend1>1: feature type moUiBend_c is not supported yet"
+},
+{
+"part": "learn/Carving Knife/Components/Gear Rod.SLDPRT",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 3,
+"seconds": 89.6
+},
+{
+"part": "learn/Carving Knife/Components/Gear.SLDPRT",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "learn/Carving Knife/Components/Left Blade.SLDPRT",
+"outcome": "error",
+"seconds": 10.6,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 7766.7154 vs 7934.3899 mm3, area 9755.9394 vs 9744.4441 mm2, deviation inf mm)"
+},
+{
+"part": "learn/Carving Knife/Components/Left Knife Sleeve.SLDPRT",
+"outcome": "error",
+"seconds": 48.9,
+"reason": "RebuildError: Fillet1: none of its edges can be rounded"
+},
+{
+"part": "learn/Carving Knife/Components/Mirrorknife_guard.SLDPRT",
+"outcome": "error",
+"seconds": 2.5,
+"reason": "ValueError: no bodies found in Contents/Config-0-Partition (Contents/Config-0-Partition: a body could not be rebuilt (geometry runs far outside the part))"
+},
+{
+"part": "learn/Carving Knife/Components/Retaining Ring.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "learn/Carving Knife/Components/Right Blade.SLDPRT",
+"outcome": "error",
+"seconds": 55.0,
+"reason": "RebuildError: Flatten-Bends1: feature type moFlattenBends_c is not supported yet"
+},
+{
+"part": "learn/Carving Knife/Components/Right Knife Sleeve.SLDPRT",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 4.7
+},
+{
+"part": "learn/Carving Knife/Components/motor.SLDPRT",
+"outcome": "error",
+"seconds": 39.7,
+"reason": "RebuildError: no neutral plane for the draft"
+},
+{
+"part": "learn/Carving Knife/Components/shaft.SLDPRT",
+"outcome": "error",
+"seconds": 89.7,
+"reason": "RebuildError: 32.0081 Diametral Pitch, Fine Pitch Involute 25 deg: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "learn/Carving Knife/Knife Handle-DEMO.SLDPRT",
+"outcome": "error",
+"seconds": 8.6,
+"reason": "StdFail_NotDone: BRep_API: command not done"
+},
+{
+"part": "learn/Coping Saw.SLDPRT",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "learn/Garden Trowel/Garden Trowel_Garden_Trowel_Handle.SLDPRT",
+"outcome": "timeout",
+"seconds": 115.2,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "learn/Garden Trowel/Garden Trowel_Garden_Trowel_Spade.SLDPRT",
+"outcome": "error",
+"seconds": 9.7,
+"reason": "RebuildError: Shank-Surface-Extrude1: no variant builds"
+},
+{
+"part": "learn/Mouse/Bottom Housing.SLDPRT",
+"outcome": "error",
+"seconds": 27.2,
+"reason": "RebuildError: Surface-Trim2: feature type moTrimRefSurface_c is not supported yet"
+},
+{
+"part": "learn/Mouse/Contact Pad.SLDPRT",
+"outcome": "error",
+"seconds": 19.5,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 18.9277 vs 18.8951 mm3, area 85.6517 vs 82.6883 mm2, deviation inf mm)"
+},
+{
+"part": "learn/Mouse/Main Housing Overmold.SLDPRT",
+"outcome": "timeout",
+"seconds": 115.3,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "learn/Mouse/Main Housing with Overmold.SLDPRT",
+"outcome": "timeout",
+"seconds": 115.3,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "learn/Mouse/Main Housing.SLDPRT",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "learn/Mouse/Mouse Battery Cover.SLDPRT",
+"outcome": "timeout",
+"seconds": 115.3,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "learn/Mouse/Mouse Buttons.SLDPRT",
+"outcome": "error",
+"seconds": 3.3,
+"reason": "ValueError: no bodies found in Contents/Config-0-Partition (Contents/Config-0-Partition: edge 1084: could not trim its curve between the vertices)"
+},
+{
+"part": "learn/Mouse/Mouse Master.SLDPRT",
+"outcome": "error",
+"seconds": 4.4,
+"reason": "RebuildError: Bottom Portion End- Curve1: feature type moRefCurve_c is not supported yet"
+},
+{
+"part": "learn/Mouse/Mouse Wheel.SLDPRT",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.8
+},
+{
+"part": "learn/Mouse/On Off Switch.SLDPRT",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "learn/Paper Airplane.SLDPRT",
+"outcome": "error",
+"seconds": 5.9,
+"reason": "RebuildError: Cut-Extrude1: no variant builds"
+},
+{
+"part": "learn/Sheet Metal/Complex Sheet Metal Part.SLDPRT",
+"outcome": "error",
+"seconds": 6.9,
+"reason": "RebuildError: Edge-Flange1: feature type moEdgeFlange_c is not supported yet"
+},
+{
+"part": "learn/Sheet Metal/Simple Sheet Metal Part.SLDPRT",
+"outcome": "error",
+"seconds": 43.9,
+"reason": "RebuildError: Flatten-<EdgeBend1>1: feature type moUiBend_c is not supported yet"
+},
+{
+"part": "learn/Sprinkler/Adjustment Knob (sprinkler).SLDPRT",
+"outcome": "error",
+"seconds": 98.3,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "learn/Sprinkler/Base (sprinkler).SLDPRT",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "learn/Sprinkler/Body (sprinkler).SLDPRT",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "learn/Sprinkler/Cap (sprinkler).SLDPRT",
+"outcome": "error",
+"seconds": 77.3,
+"reason": "RebuildError: no neutral plane for the draft"
+},
+{
+"part": "learn/Sprinkler/Collar (sprinkler).SLDPRT",
+"outcome": "timeout",
+"seconds": 115.0,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "learn/Sprinkler/Cover (sprinkler).SLDPRT",
+"outcome": "error",
+"seconds": 8.1,
+"reason": "RebuildError: no neutral plane for the draft"
+},
+{
+"part": "learn/Sprinkler/Engage Lever (sprinkler).SLDPRT",
+"outcome": "exact",
+"parametric": false,
+"features": 21,
+"imported": 2,
+"seconds": 62.1
+},
+{
+"part": "learn/Sprinkler/Engage Spring (sprinkler).SLDPRT",
+"outcome": "error",
+"seconds": 7.2,
+"reason": "RebuildError: Base-Sweep: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "learn/Sprinkler/Gasket (sprinkler).SLDPRT",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "learn/Sprinkler/Gasket-jet (sprinkler).SLDPRT",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.5
+},
+{
+"part": "learn/Sprinkler/Jet (sprinkler).SLDPRT",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 16.7
+},
+{
+"part": "learn/Sprinkler/Locklever (sprinkler).SLDPRT",
+"outcome": "error",
+"seconds": 74.9,
+"reason": "RebuildError: the rebuilt history does not regenerate to the same body (Mirror1, Cut-Extrude5)"
+},
+{
+"part": "learn/Sprinkler/Lower Bearing (sprinkler).SLDPRT",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.9
+},
+{
+"part": "learn/Sprinkler/Lower Washer (sprinkler).SLDPRT",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "learn/Sprinkler/Name Plate (sprinkler).SLDPRT",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.2
+},
+{
+"part": "learn/Sprinkler/Rotation Adjustment (sprinkler).SLDPRT",
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 3,
+"seconds": 96.8
+},
+{
+"part": "learn/Sprinkler/Screw.SLDPRT",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 10.9
+},
+{
+"part": "learn/Sprinkler/Shaft (sprinkler).SLDPRT",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 2,
+"seconds": 29.6
+},
+{
+"part": "learn/Sprinkler/Spray Angle Adjustment (sprinkler).SLDPRT",
+"outcome": "error",
+"seconds": 71.3,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 6046.0347 vs 2365.3668 mm3, area 12373.8452 vs 3000.5432 mm2, deviation inf mm)"
+},
+{
+"part": "learn/Sprinkler/Spray Disruptor (sprinkler).SLDPRT",
+"outcome": "error",
+"seconds": 86.0,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "learn/Sprinkler/Spring-swingarm (sprinkler).SLDPRT",
+"outcome": "error",
+"seconds": 111.1,
+"reason": "RebuildError: Helix1: out of time and it cannot be imported"
+},
+{
+"part": "learn/Sprinkler/Spring-upper bearing (sprinkler).SLDPRT",
+"outcome": "error",
+"seconds": 68.2,
+"reason": "RebuildError: Helix1: out of time and it cannot be imported"
+},
+{
+"part": "learn/Sprinkler/Swingarm (sprinkler).SLDPRT",
+"outcome": "error",
+"seconds": 64.3,
+"reason": "RebuildError: Boss-Extrude3: rebuilt differently from the stored body"
+},
+{
+"part": "learn/Sprinkler/Upper Bearing (sprinkler).SLDPRT",
+"outcome": "exact",
+"parametric": true,
+"features": 5,
+"imported": 0,
+"seconds": 11.0
+},
+{
+"part": "learn/Sprinkler/Upper Washer (sprinkler).SLDPRT",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.5
+},
+{
+"part": "learn/Sprinkler/Washer-Swingarm (sprinkler).SLDPRT",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.5
+},
+{
+"part": "learn/U-Joint/Yoke_female.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 2,
+"seconds": 40.1
+},
+{
+"part": "learn/U-Joint/Yoke_male.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 13,
+"imported": 2,
+"seconds": 34.3
+},
+{
+"part": "learn/U-Joint/bracket.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 27.6
+},
+{
+"part": "learn/U-Joint/crank-arm.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 1,
+"seconds": 3.8
+},
+{
+"part": "learn/U-Joint/crank-knob.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "learn/U-Joint/crank-shaft.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 12,
+"imported": 3,
+"seconds": 19.1
+},
+{
+"part": "learn/U-Joint/pin.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "learn/U-Joint/spider.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 6.1
+},
+{
+"part": "tutorial/AutoCAD/flange.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 27.7
+},
+{
+"part": "tutorial/EDraw/claw/center.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 4,
+"seconds": 45.8
+},
+{
+"part": "tutorial/EDraw/claw/claw.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 14,
+"imported": 4,
+"seconds": 13.8
+},
+{
+"part": "tutorial/EDraw/claw/collar.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 13,
+"imported": 4,
+"seconds": 59.3
+},
+{
+"part": "tutorial/EDraw/claw/con-rod.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.1
+},
+{
+"part": "tutorial/EDraw/claw/pin.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 1,
+"seconds": 11.9
+},
+{
+"part": "tutorial/EDraw/config/drw_crosshatch_solid.sldprt",
+"outcome": "error",
+"seconds": 40.6,
+"reason": "RebuildError: Cut-Extrude1: rebuilt differently from the stored body"
+},
+{
+"part": "tutorial/PDMWorks/magnet.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "tutorial/PDMWorks/membrane.sldprt",
+"outcome": "error",
+"seconds": 3.3,
+"reason": "RebuildError: Revolve-Thin1: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/PDMWorks/second_speaker.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 2,
+"seconds": 37.7
+},
+{
+"part": "tutorial/PDMWorks/speaker_frame.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 11,
+"imported": 1,
+"seconds": 26.3
+},
+{
+"part": "tutorial/Sustainability/base plate.sldprt",
+"outcome": "error",
+"seconds": 62.6,
+"reason": "RebuildError: shell base plate: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/Sustainability/drive shaft pin.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "tutorial/Sustainability/drive shaft plate.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 3,
+"seconds": 72.8
+},
+{
+"part": "tutorial/Sustainability/drive shaft.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 6.5
+},
+{
+"part": "tutorial/Sustainability/drive sled.sldprt",
+"outcome": "timeout",
+"seconds": 115.2,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/Sustainability/gear- caddy.sldprt",
+"outcome": "error",
+"seconds": 24.5,
+"reason": "RebuildError: thin rib: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/Sustainability/middle-gear plate.sldprt",
+"outcome": "error",
+"seconds": 18.6,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 669.7660 vs 587.7306 mm3, area 3256.9516 vs 2838.4419 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/Sustainability/middle-gear.sldprt",
+"outcome": "timeout",
+"seconds": 115.2,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/Sustainability/rubber feet.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.4
+},
+{
+"part": "tutorial/Sustainability/shaft gear insert.sldprt",
+"outcome": "error",
+"seconds": 59.1,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 4493.8519 vs 442.9057 mm3, area 3133.3460 vs 481.6847 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/Sustainability/shaft gear.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/Sustainability/shaft washer.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "tutorial/advdrawings/98blade extension.sldprt",
+"outcome": "error",
+"seconds": 4.9,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 5551.7048 vs 5568.8663 mm3, area 3579.4796 vs 3579.4796 mm2, deviation 3.589 mm)"
+},
+{
+"part": "tutorial/advdrawings/98blade rivets.sldprt",
+"outcome": "error",
+"seconds": 8.8,
+"reason": "Standard_ConstructionError: "
+},
+{
+"part": "tutorial/advdrawings/98blade shaft.sldprt",
+"outcome": "error",
+"seconds": 2.3,
+"reason": "StdFail_NotDone: BRep_API: command not done"
+},
+{
+"part": "tutorial/advdrawings/98bottom blade.sldprt",
+"outcome": "error",
+"seconds": 3.1,
+"reason": "RebuildError: the history builds no surface body"
+},
+{
+"part": "tutorial/advdrawings/98top blade.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 3.7
+},
+{
+"part": "tutorial/advdrawings/base plate.sldprt",
+"outcome": "error",
+"seconds": 62.8,
+"reason": "RebuildError: shell base plate: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/advdrawings/blade extension.sldprt",
+"outcome": "error",
+"seconds": 63.3,
+"reason": "RebuildError: the rebuilt history does not regenerate to the same body (Cut-Revolve1, Fillet4)"
+},
+{
+"part": "tutorial/advdrawings/blade rivets.sldprt",
+"outcome": "error",
+"seconds": 10.9,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 31.4658 vs 103.4460 mm3, area 97.8267 vs 243.7252 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/advdrawings/blade shaft.sldprt",
+"outcome": "error",
+"seconds": 62.7,
+"reason": "RebuildError: round side slots: rebuilt differently from the stored body"
+},
+{
+"part": "tutorial/advdrawings/bottom blade.sldprt",
+"outcome": "error",
+"seconds": 93.7,
+"reason": "RebuildError: the rebuilt history does not regenerate to the same body (triangulr rib fill 1)"
+},
+{
+"part": "tutorial/advdrawings/bowl bottom.sldprt",
+"outcome": "error",
+"seconds": 42.9,
+"reason": "RebuildError: Cavity1: feature type moCavity_c is not supported yet"
+},
+{
+"part": "tutorial/advdrawings/chute lock.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 2,
+"seconds": 87.9
+},
+{
+"part": "tutorial/advdrawings/circlip.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.8
+},
+{
+"part": "tutorial/advdrawings/connector.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 15,
+"imported": 3,
+"seconds": 85.9
+},
+{
+"part": "tutorial/advdrawings/drive shaft pin.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 2.8
+},
+{
+"part": "tutorial/advdrawings/drive shaft plate.sldprt",
+"outcome": "error",
+"seconds": 38.5,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 743.3247 vs 725.4404 mm3, area 1572.0894 vs 1541.1418 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/advdrawings/drive shaft.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 6.6
+},
+{
+"part": "tutorial/advdrawings/food bowl.sldprt",
+"outcome": "error",
+"seconds": 3.8,
+"reason": "RebuildError: top tab chamfer: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/advdrawings/food chute insert.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 2,
+"seconds": 23.4
+},
+{
+"part": "tutorial/advdrawings/food chute.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/advdrawings/food pusher.sldprt",
+"outcome": "error",
+"seconds": 18.3,
+"reason": "RebuildError: Fillet1: none of its edges can be rounded"
+},
+{
+"part": "tutorial/advdrawings/food shover.sldprt",
+"outcome": "error",
+"seconds": 3.6,
+"reason": "ValueError: no bodies found in Contents/Config-0-Partition (Contents/Config-0-Partition: edge 957: could not trim its curve between the vertices)"
+},
+{
+"part": "tutorial/advdrawings/gear- caddy.sldprt",
+"outcome": "error",
+"seconds": 19.3,
+"reason": "RebuildError: thin rib: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/advdrawings/handle rod.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "tutorial/advdrawings/knob.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 1,
+"seconds": 61.3
+},
+{
+"part": "tutorial/advdrawings/marble handle.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 5,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "tutorial/advdrawings/middle-gear plate.sldprt",
+"outcome": "error",
+"seconds": 18.1,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 669.7660 vs 587.7306 mm3, area 3256.9516 vs 2838.4419 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/advdrawings/middle-gear.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/advdrawings/motor casing.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/advdrawings/motor gear.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 1,
+"seconds": 24.1
+},
+{
+"part": "tutorial/advdrawings/motor.sldprt",
+"outcome": "error",
+"seconds": 32.8,
+"reason": "RebuildError: gear end side cut: rebuilt differently from the stored body"
+},
+{
+"part": "tutorial/advdrawings/red button.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/advdrawings/rubber feet.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.5
+},
+{
+"part": "tutorial/advdrawings/shaft gear insert.sldprt",
+"outcome": "error",
+"seconds": 59.4,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 4493.8519 vs 442.9057 mm3, area 3133.3460 vs 481.6847 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/advdrawings/shaft gear.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/advdrawings/shaft washer.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.4
+},
+{
+"part": "tutorial/advdrawings/switch bottom plate.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/advdrawings/switch toggle.sldprt",
+"outcome": "error",
+"seconds": 31.6,
+"reason": "RebuildError: Cut-Extrude6: rebuilt differently from the stored body"
+},
+{
+"part": "tutorial/advdrawings/switch top plate.sldprt",
+"outcome": "error",
+"seconds": 81.1,
+"reason": "RebuildError: switch top plate shape: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/advdrawings/switch.sldprt",
+"outcome": "error",
+"seconds": 6.8,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 2886.7240 vs 2511.6350 mm3, area 2164.6003 vs 1921.0360 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/advdrawings/top blade.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 63.1
+},
+{
+"part": "tutorial/api/2012-sm.sldprt",
+"outcome": "error",
+"seconds": 7.0,
+"reason": "RebuildError: Flatten-<EdgeBend1>1: feature type moUiBend_c is not supported yet"
+},
+{
+"part": "tutorial/api/AdvancedMates/a.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "tutorial/api/AdvancedMates/b.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "tutorial/api/AdvancedMates/c.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "tutorial/api/AdvancedMates/cylinder.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "tutorial/api/AdvancedMates/magnet.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.8
+},
+{
+"part": "tutorial/api/AdvancedMates/part1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.4
+},
+{
+"part": "tutorial/api/AdvancedMates/part2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.3
+},
+{
+"part": "tutorial/api/AdvancedMates/plate.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "tutorial/api/AdvancedMates/steel disc.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "tutorial/api/Golf Ball.SLDPRT",
+"outcome": "inexact",
+"parametric": false,
+"features": 4,
+"imported": 0,
+"seconds": 19.3
+},
+{
+"part": "tutorial/api/MechanicalMates/angular slot_100.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.8
+},
+{
+"part": "tutorial/api/MechanicalMates/angular slot_220.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.8
+},
+{
+"part": "tutorial/api/MechanicalMates/bracket.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 2,
+"seconds": 30.4
+},
+{
+"part": "tutorial/api/MechanicalMates/cam.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.1
+},
+{
+"part": "tutorial/api/MechanicalMates/cam2.sldprt",
+"outcome": "error",
+"seconds": 14.4,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 1013039.5247 vs 1119107.1155 mm3, area 103839.6583 vs 111232.3744 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/api/MechanicalMates/cover plate.sldprt",
+"outcome": "error",
+"seconds": 94.4,
+"reason": "RebuildError: Base-Extrude: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/api/MechanicalMates/cover_pllug.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 17,
+"imported": 4,
+"seconds": 74.7
+},
+{
+"part": "tutorial/api/MechanicalMates/crank-arm.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 1,
+"seconds": 3.9
+},
+{
+"part": "tutorial/api/MechanicalMates/crank-knob.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.8
+},
+{
+"part": "tutorial/api/MechanicalMates/crank-shaft.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 12,
+"imported": 3,
+"seconds": 19.2
+},
+{
+"part": "tutorial/api/MechanicalMates/follower_planeface.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 5.3
+},
+{
+"part": "tutorial/api/MechanicalMates/hinge.sldprt",
+"outcome": "error",
+"seconds": 13.0,
+"reason": "RebuildError: Fillet2: could not find its edges"
+},
+{
+"part": "tutorial/api/MechanicalMates/housing.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 13,
+"imported": 4,
+"seconds": 85.2
+},
+{
+"part": "tutorial/api/MechanicalMates/offset shaft.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 1,
+"seconds": 5.7
+},
+{
+"part": "tutorial/api/MechanicalMates/pin.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.3
+},
+{
+"part": "tutorial/api/MechanicalMates/pinforyoke.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "tutorial/api/MechanicalMates/rack.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 3,
+"imported": 1,
+"seconds": 23.6
+},
+{
+"part": "tutorial/api/MechanicalMates/rod.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 6,
+"imported": 0,
+"seconds": 7.3
+},
+{
+"part": "tutorial/api/MechanicalMates/roller.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.9
+},
+{
+"part": "tutorial/api/MechanicalMates/slot_base.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 16.5
+},
+{
+"part": "tutorial/api/MechanicalMates/spider.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 6.4
+},
+{
+"part": "tutorial/api/MechanicalMates/spurgear.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 8.9
+},
+{
+"part": "tutorial/api/MechanicalMates/straight slot.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "tutorial/api/MechanicalMates/worm gear shaft.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 6,
+"imported": 0,
+"seconds": 2.8
+},
+{
+"part": "tutorial/api/MechanicalMates/worm gear.sldprt",
+"outcome": "error",
+"seconds": 100.1,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/api/MechanicalMates/yoke_female.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 2,
+"seconds": 60.6
+},
+{
+"part": "tutorial/api/MechanicalMates/yoke_male.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 13,
+"imported": 2,
+"seconds": 32.9
+},
+{
+"part": "tutorial/api/SMGussetAPI.SLDPRT",
+"outcome": "error",
+"seconds": 2.7,
+"reason": "RebuildError: Base-Flange1: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/api/bagel.sldprt",
+"outcome": "error",
+"seconds": 13.7,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 572578.0320 vs 323467.6780 mm3, area 127280.1653 vs 41684.5352 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/api/beam with holes.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "tutorial/api/block.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 7,
+"imported": 0,
+"seconds": 8.0
+},
+{
+"part": "tutorial/api/block20.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.0
+},
+{
+"part": "tutorial/api/bolt.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 4.5
+},
+{
+"part": "tutorial/api/boltholder.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "tutorial/api/bottle.sldprt",
+"outcome": "timeout",
+"seconds": 115.3,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/api/box.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 2.9
+},
+{
+"part": "tutorial/api/button.sldprt",
+"outcome": "error",
+"seconds": 12.9,
+"reason": "RebuildError: Fillet1: could not find its edges"
+},
+{
+"part": "tutorial/api/cam roller.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 18.1
+},
+{
+"part": "tutorial/api/centerlink.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 13,
+"imported": 2,
+"seconds": 29.1
+},
+{
+"part": "tutorial/api/chair.sldprt",
+"outcome": "error",
+"seconds": 6.0,
+"reason": "RebuildError: Base-Extrude: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/api/clamp1.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/api/clamp2.sldprt",
+"outcome": "error",
+"seconds": 89.7,
+"reason": "RebuildError: the rebuilt history does not regenerate to the same body (Cut-Extrude1)"
+},
+{
+"part": "tutorial/api/coffeecup.sldprt",
+"outcome": "error",
+"seconds": 11.6,
+"reason": "RebuildError: Cut-Extrude1: no variant builds"
+},
+{
+"part": "tutorial/api/cover_datum.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 1,
+"seconds": 9.1
+},
+{
+"part": "tutorial/api/cover_plate.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 2,
+"seconds": 15.5
+},
+{
+"part": "tutorial/api/cover_position.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 1,
+"seconds": 7.0
+},
+{
+"part": "tutorial/api/cover_with_dimensions.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 1,
+"seconds": 9.9
+},
+{
+"part": "tutorial/api/cover_with_geometric_tolerances.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 1,
+"seconds": 13.4
+},
+{
+"part": "tutorial/api/cstick.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 11.9
+},
+{
+"part": "tutorial/api/cube.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.5
+},
+{
+"part": "tutorial/api/cuttingtool.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "tutorial/api/cylinder20.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "tutorial/api/db15-e.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 3,
+"seconds": 64.6
+},
+{
+"part": "tutorial/api/db9 male.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 14,
+"imported": 6,
+"seconds": 64.6
+},
+{
+"part": "tutorial/api/door.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "tutorial/api/electronic housing.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 12,
+"imported": 2,
+"seconds": 24.4
+},
+{
+"part": "tutorial/api/externalreferencedpart.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 2.6
+},
+{
+"part": "tutorial/api/face_plate_ads_geo.sldprt",
+"outcome": "error",
+"seconds": 111.8,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 110814.1671 vs 110362.6120 mm3, area 36604.2221 vs 37067.0037 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/api/featurecircularpattern.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "tutorial/api/formingtool.sldprt",
+"outcome": "error",
+"seconds": 14.4,
+"reason": "RebuildError: Draft2: no variant builds"
+},
+{
+"part": "tutorial/api/fpf.sldprt",
+"outcome": "error",
+"seconds": 22.1,
+"reason": "RebuildError: Indent1: feature type moPunch_c is not supported yet"
+},
+{
+"part": "tutorial/api/freezebarneedsrebuild2.sldprt",
+"outcome": "error",
+"seconds": 4.3,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 3935754.2210 vs 2799264.6967 mm3, area 190134.1905 vs 147364.3062 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/api/hemisphere.sldprt",
+"outcome": "error",
+"seconds": 3.0,
+"reason": "Standard_ConstructionError: "
+},
+{
+"part": "tutorial/api/holder.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.9
+},
+{
+"part": "tutorial/api/holecube.sldprt",
+"outcome": "error",
+"seconds": 2.2,
+"reason": "RebuildError: Smart Feature: feature type moSmartComponentFeature_c is not supported yet"
+},
+{
+"part": "tutorial/api/insert_weld.sldprt",
+"outcome": "error",
+"seconds": 2.9,
+"reason": "RebuildError: Weld Folder: feature type moCosmeticWeldCutList_c is not supported yet"
+},
+{
+"part": "tutorial/api/lamp.sldprt",
+"outcome": "error",
+"seconds": 30.5,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 4151727.7773 vs 7124716.0375 mm3, area 759069.6182 vs 972316.9169 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/api/lineardynamic.sldprt",
+"outcome": "error",
+"seconds": 3.2,
+"reason": "RebuildError: the history builds no surface body"
+},
+{
+"part": "tutorial/api/loop.sldprt",
+"outcome": "error",
+"seconds": 26.1,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 6894184.7519 vs 14899290.8248 mm3, area 2059256.4186 vs 4077998.5026 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/api/lwrsway_lnk.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 8.9
+},
+{
+"part": "tutorial/api/maingrip.sldprt",
+"outcome": "error",
+"seconds": 16.2,
+"reason": "RebuildError: Extrude7: rebuilt differently from the stored body"
+},
+{
+"part": "tutorial/api/masspropertiesdemo.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "tutorial/api/microphonehousing.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/api/mirrormulticonfig-part.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 3.0
+},
+{
+"part": "tutorial/api/mount plate.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 9,
+"imported": 0,
+"seconds": 4.6
+},
+{
+"part": "tutorial/api/multiconfig-part-2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.0
+},
+{
+"part": "tutorial/api/multiple planar_faces2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "tutorial/api/nist_ftc_08_asme1_rc_sw1702_ra.SLDPRT",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/api/oleopiston.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 7.4
+},
+{
+"part": "tutorial/api/oleostrut.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 14,
+"imported": 2,
+"seconds": 62.4
+},
+{
+"part": "tutorial/api/originalpart.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "tutorial/api/pad_1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 5,
+"imported": 0,
+"seconds": 14.9
+},
+{
+"part": "tutorial/api/part1.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 2,
+"seconds": 30.9
+},
+{
+"part": "tutorial/api/part2.sldprt",
+"outcome": "error",
+"seconds": 12.5,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 11113.1499 vs 13171.5509 mm3, area 2897.3016 vs 3208.3506 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/api/part3.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "tutorial/api/part4.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 6,
+"imported": 0,
+"seconds": 23.2
+},
+{
+"part": "tutorial/api/partequations.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.5
+},
+{
+"part": "tutorial/api/pincap.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 3,
+"imported": 1,
+"seconds": 3.4
+},
+{
+"part": "tutorial/api/plate.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "tutorial/api/plate2.sldprt",
+"outcome": "error",
+"seconds": 5.1,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 39865.6930 vs 34795.9945 mm3, area 30802.6750 vs 26421.6583 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/api/plate_ads_plusminus.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 5,
+"imported": 0,
+"seconds": 5.0
+},
+{
+"part": "tutorial/api/plate_tolstatus.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "tutorial/api/plug-5pindin.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 13,
+"imported": 4,
+"seconds": 95.7
+},
+{
+"part": "tutorial/api/pplate.sldprt",
+"outcome": "error",
+"seconds": 2.7,
+"reason": "RebuildError: Base-Extrude: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/api/reducing outlet cross inch.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 2,
+"seconds": 25.5
+},
+{
+"part": "tutorial/api/release.sldprt",
+"outcome": "error",
+"seconds": 15.9,
+"reason": "RebuildError: Flex1: feature type moBending_c is not supported yet"
+},
+{
+"part": "tutorial/api/remoteload.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "tutorial/api/replaceview.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "tutorial/api/resetsketchvisibility.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.0
+},
+{
+"part": "tutorial/api/revolved_1_new.sldprt",
+"outcome": "error",
+"seconds": 2.3,
+"reason": "Standard_ConstructionError: "
+},
+{
+"part": "tutorial/api/ride-on.sldprt",
+"outcome": "error",
+"seconds": 7.2,
+"reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 349414.0720 vs 412334.1740 mm2, deviation 304.1 mm)"
+},
+{
+"part": "tutorial/api/screw.sldprt",
+"outcome": "error",
+"seconds": 53.1,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 2522.4876 vs 2129.5554 mm3, area 3371.8273 vs 1418.7025 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/api/secondgrip.sldprt",
+"outcome": "error",
+"seconds": 108.1,
+"reason": "RebuildError: Extrude1: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/api/shaft.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.8
+},
+{
+"part": "tutorial/api/shell.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "tutorial/api/simplehole.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.4
+},
+{
+"part": "tutorial/api/slip on weld flange.sldprt",
+"outcome": "error",
+"seconds": 43.6,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 259668.0799 vs 259668.0799 mm3, area 51001.9765 vs 47593.9188 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/api/sm1-remove-edges.sldprt",
+"outcome": "error",
+"seconds": 74.5,
+"reason": "RebuildError: Base-Flange1: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/api/solid.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "tutorial/api/squarepad_blue.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.5
+},
+{
+"part": "tutorial/api/squarepad_green.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "tutorial/api/squarepad_orange.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.5
+},
+{
+"part": "tutorial/api/squarepad_pink.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "tutorial/api/squarepad_red.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "tutorial/api/squarepad_skyblue.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.4
+},
+{
+"part": "tutorial/api/squarepad_yellow.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.3
+},
+{
+"part": "tutorial/api/straight cross inch.sldprt",
+"outcome": "error",
+"seconds": 15.0,
+"reason": "RebuildError: the rebuilt history does not regenerate to the same body (CrossChamfer)"
+},
+{
+"part": "tutorial/api/straight tee inch.sldprt",
+"outcome": "error",
+"seconds": 11.4,
+"reason": "RebuildError: the rebuilt history does not regenerate to the same body"
+},
+{
+"part": "tutorial/api/surfacetrimfeature.sldprt",
+"outcome": "error",
+"seconds": 3.1,
+"reason": "RebuildError: rebuilt surfaces differ from the stored ones (area 17087.2671 vs 50244.3240 mm2, deviation 50 mm)"
+},
+{
+"part": "tutorial/api/surfcut.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "tutorial/api/sweepcutextrude.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.9
+},
+{
+"part": "tutorial/api/sweepcutextrude2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 5,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "tutorial/api/tablepattern.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 3.8
+},
+{
+"part": "tutorial/api/testimo1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.0
+},
+{
+"part": "tutorial/api/testpart1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.3
+},
+{
+"part": "tutorial/api/testpart100.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.0
+},
+{
+"part": "tutorial/api/tjoint.sldprt",
+"outcome": "error",
+"seconds": 2.4,
+"reason": "RebuildError: Surface-Trim1: feature type moTrimRefSurface_c is not supported yet"
+},
+{
+"part": "tutorial/api/toaster base.sldprt",
+"outcome": "error",
+"seconds": 29.2,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 31943085.6157 vs 31811292.9623 mm3, area 2257640.2043 vs 2240776.9769 mm2, deviation 309 mm)"
+},
+{
+"part": "tutorial/api/toaster.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/api/upprsway_lnk.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 15.8
+},
+{
+"part": "tutorial/api/varyinstance.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 5.0
+},
+{
+"part": "tutorial/api/water.sldprt",
+"outcome": "error",
+"seconds": 4.4,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 510351.7266 vs 1102359.7294 mm3, area 35664.9306 vs 59093.3578 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/api/weldment_box3.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/api/wheel_hub.sldprt",
+"outcome": "error",
+"seconds": 80.7,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/api/workpiece.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 6.6
+},
+{
+"part": "tutorial/appearances/usb_case1.sldprt",
+"outcome": "error",
+"seconds": 6.0,
+"reason": "RebuildError: Case_body: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/appearances/usb_case2.sldprt",
+"outcome": "error",
+"seconds": 5.4,
+"reason": "RebuildError: Case_body: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/appearances/usb_connector1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.1
+},
+{
+"part": "tutorial/appearances/usb_connector2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.1
+},
+{
+"part": "tutorial/appearances/usb_connector_shell1.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 32.3
+},
+{
+"part": "tutorial/appearances/usb_connector_shell2.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 30.5
+},
+{
+"part": "tutorial/appearances/usb_cover1.sldprt",
+"outcome": "error",
+"seconds": 7.0,
+"reason": "RebuildError: Case_body: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/appearances/usb_cover2.sldprt",
+"outcome": "error",
+"seconds": 7.3,
+"reason": "RebuildError: Case_body: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/appearances/usb_insulator1.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 5.3
+},
+{
+"part": "tutorial/appearances/usb_insulator2.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 5.4
+},
+{
+"part": "tutorial/appearances/usb_led1.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 4,
+"imported": 0,
+"seconds": 10.2
+},
+{
+"part": "tutorial/appearances/usb_led2.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 4,
+"imported": 0,
+"seconds": 11.5
+},
+{
+"part": "tutorial/assemblymates/bracket.sldprt",
+"outcome": "error",
+"seconds": 3.7,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 42158.9005 vs 41873.8009 mm3, area 16480.3119 vs 16592.6239 mm2, deviation 3 mm)"
+},
+{
+"part": "tutorial/assemblymates/clamp.sldprt",
+"outcome": "error",
+"seconds": 23.5,
+"reason": "Standard_ConstructionError: "
+},
+{
+"part": "tutorial/assemblymates/head.sldprt",
+"outcome": "error",
+"seconds": 3.4,
+"reason": "RebuildError: Cut-Sweep1: needs a profile and a path sketch"
+},
+{
+"part": "tutorial/assemblymates/knee.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 5.2
+},
+{
+"part": "tutorial/assemblymates/pillar.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 1,
+"seconds": 11.3
+},
+{
+"part": "tutorial/assemblymates/pin.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 3,
+"seconds": 101.6
+},
+{
+"part": "tutorial/assemblymates/saddle.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 2,
+"seconds": 58.2
+},
+{
+"part": "tutorial/assemblymates/scale.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.8
+},
+{
+"part": "tutorial/assemblymates/table.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 16,
+"imported": 6,
+"seconds": 84.4
+},
+{
+"part": "tutorial/assemblyvisualize/base plate.sldprt",
+"outcome": "error",
+"seconds": 63.5,
+"reason": "RebuildError: shell base plate: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/assemblyvisualize/drive shaft pin.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "tutorial/assemblyvisualize/drive shaft plate.sldprt",
+"outcome": "error",
+"seconds": 55.9,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 743.3247 vs 725.4404 mm3, area 1572.0894 vs 1541.1418 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/assemblyvisualize/drive shaft.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 6.3
+},
+{
+"part": "tutorial/assemblyvisualize/gear- caddy.sldprt",
+"outcome": "error",
+"seconds": 25.9,
+"reason": "RebuildError: thin rib: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/assemblyvisualize/middle-gear plate.sldprt",
+"outcome": "error",
+"seconds": 19.0,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 669.7660 vs 587.7306 mm3, area 3256.9516 vs 2838.4419 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/assemblyvisualize/middle-gear.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/assemblyvisualize/rubber feet.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.4
+},
+{
+"part": "tutorial/assemblyvisualize/shaft gear insert.sldprt",
+"outcome": "error",
+"seconds": 62.7,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 4493.8519 vs 442.9057 mm3, area 3133.3460 vs 481.6847 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/assemblyvisualize/shaft gear.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/assemblyvisualize/shaft washer.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.7
+},
+{
+"part": "tutorial/cosmosxpress/aw_anchor_plate.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 2,
+"seconds": 13.6
+},
+{
+"part": "tutorial/cosmosxpress/aw_control_arm.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 1,
+"seconds": 12.9
+},
+{
+"part": "tutorial/cosmosxpress/aw_faucet.SLDPRT",
+"outcome": "exact",
+"parametric": false,
+"features": 22,
+"imported": 2,
+"seconds": 91.2
+},
+{
+"part": "tutorial/cosmosxpress/aw_hook.sldprt",
+"outcome": "error",
+"seconds": 21.8,
+"reason": "RebuildError: Fillet1: none of its edges can be rounded"
+},
+{
+"part": "tutorial/cosmosxpress/aw_link.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 11,
+"imported": 1,
+"seconds": 8.2
+},
+{
+"part": "tutorial/cosmosxpress/aw_rubber_duct.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/cosmosxpress/aw_spider.sldprt",
+"outcome": "error",
+"seconds": 52.5,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 40346.5993 vs 54825.7655 mm3, area 20199.4730 vs 22479.6566 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/costing/machined_part.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 12,
+"imported": 1,
+"seconds": 59.6
+},
+{
+"part": "tutorial/costing/sheet_metal_part.sldprt",
+"outcome": "error",
+"seconds": 40.2,
+"reason": "RebuildError: Base-Extrude: no variant builds"
+},
+{
+"part": "tutorial/designtables/tutor1.sldprt",
+"outcome": "error",
+"seconds": 15.8,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 81235.4710 vs 100088.6678 mm3, area 84599.9043 vs 101328.4908 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/Hardware/bearing.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/Hardware/bolt1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.5
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/Hardware/bolt2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.5
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/Hardware/bolt3.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.8
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/Hardware/hex nut beater.sldprt",
+"outcome": "error",
+"seconds": 3.2,
+"reason": "RebuildError: the history builds no body"
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/Hardware/pan cross head base.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 76.1
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/Hardware/pan cross head clamp.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 78.7
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/Hardware/pan cross head shaft.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 61.4
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/Hardware/pan cross head support.sldprt",
+"outcome": "error",
+"seconds": 88.2,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/Hardware/pan cross head.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 62.7
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/base.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 13,
+"imported": 2,
+"seconds": 87.1
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/beater_head.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 12,
+"imported": 2,
+"seconds": 32.1
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/beater_mount.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 3,
+"seconds": 66.7
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/beater_shaft.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 2.8
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/chain_piece.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 15.8
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/foot_board.sldprt",
+"outcome": "error",
+"seconds": 31.3,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 139986.0232 vs 96805.4453 mm3, area 42150.0194 vs 31693.3448 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/rocker_support.sldprt",
+"outcome": "timeout",
+"seconds": 115.5,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/shaft.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 7,
+"imported": 0,
+"seconds": 4.5
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/spring.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/spring_system_cylinder.sldprt",
+"outcome": "error",
+"seconds": 46.4,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 3081.5546 vs 3058.0528 mm3, area 2258.3628 vs 2242.8970 mm2, deviation 0.6434 mm)"
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/spring_system_piston.sldprt",
+"outcome": "error",
+"seconds": 5.6,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 780.2587 vs 799.7287 mm3, area 524.4422 vs 535.7339 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/dimxpert/advdimxpert/spring_system_shaft_clamp.sldprt",
+"outcome": "error",
+"seconds": 34.9,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 1011.7031 vs 901.5175 mm3, area 928.7751 vs 955.2560 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/dimxpert/bracket_ads_plusminus.sldprt",
+"outcome": "error",
+"seconds": 4.7,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 14519.1281 vs 14089.7117 mm3, area 6322.7616 vs 6527.7506 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/dimxpert/bracket_auto_manual.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 14,
+"imported": 2,
+"seconds": 103.9
+},
+{
+"part": "tutorial/dimxpert/bracket_auto_plusminus.sldprt",
+"outcome": "error",
+"seconds": 4.9,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 14519.1281 vs 14089.7117 mm3, area 6322.7616 vs 6527.7506 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/dimxpert/coupling_ads_geo.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.5
+},
+{
+"part": "tutorial/dimxpert/coupling_auto_geo.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.7
+},
+{
+"part": "tutorial/driveworksxpress/leg.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/driveworksxpress/universal beam.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/fillets/knob.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 5,
+"imported": 0,
+"seconds": 3.9
+},
+{
+"part": "tutorial/floxpress/ball valve/Ball.sldprt",
+"outcome": "error",
+"seconds": 14.3,
+"reason": "RebuildError: Fillet1: could not find its edges"
+},
+{
+"part": "tutorial/floxpress/ball valve/Handle.sldprt",
+"outcome": "error",
+"seconds": 48.7,
+"reason": "RebuildError: 1: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/floxpress/ball valve/Side.sldprt",
+"outcome": "timeout",
+"seconds": 115.0,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/introtosw/pressure_plate.sldprt",
+"outcome": "timeout",
+"seconds": 115.2,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/lesson1/tutor1a.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "tutorial/lesson1/tutor1b.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "tutorial/lesson1/tutor1c.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 6,
+"imported": 0,
+"seconds": 4.6
+},
+{
+"part": "tutorial/lesson1/tutor1d.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 8,
+"imported": 0,
+"seconds": 7.9
+},
+{
+"part": "tutorial/lesson1/tutor1e.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 1,
+"seconds": 12.4
+},
+{
+"part": "tutorial/lesson1/tutor1f.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 1,
+"seconds": 12.6
+},
+{
+"part": "tutorial/lesson2/tutor1.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 1,
+"seconds": 26.8
+},
+{
+"part": "tutorial/mbd/mbdadvanced/Hardware/bearing.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "tutorial/mbd/mbdadvanced/Hardware/bolt1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.8
+},
+{
+"part": "tutorial/mbd/mbdadvanced/Hardware/bolt2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.6
+},
+{
+"part": "tutorial/mbd/mbdadvanced/Hardware/bolt3.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.6
+},
+{
+"part": "tutorial/mbd/mbdadvanced/Hardware/hex nut beater.sldprt",
+"outcome": "error",
+"seconds": 2.7,
+"reason": "RebuildError: the history builds no body"
+},
+{
+"part": "tutorial/mbd/mbdadvanced/Hardware/pan cross head base.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 79.3
+},
+{
+"part": "tutorial/mbd/mbdadvanced/Hardware/pan cross head clamp.sldprt",
+"outcome": "error",
+"seconds": 90.0,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/mbd/mbdadvanced/Hardware/pan cross head shaft.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 78.9
+},
+{
+"part": "tutorial/mbd/mbdadvanced/Hardware/pan cross head support.sldprt",
+"outcome": "error",
+"seconds": 83.4,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/mbd/mbdadvanced/Hardware/pan cross head.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 71.3
+},
+{
+"part": "tutorial/mbd/mbdadvanced/base.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 13,
+"imported": 2,
+"seconds": 90.7
+},
+{
+"part": "tutorial/mbd/mbdadvanced/beater_head.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 12,
+"imported": 2,
+"seconds": 31.7
+},
+{
+"part": "tutorial/mbd/mbdadvanced/beater_mount.sldprt",
+"outcome": "error",
+"seconds": 61.3,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 3430.9421 vs 3499.1814 mm3, area 2973.2124 vs 2870.6721 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/mbd/mbdadvanced/beater_shaft.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "tutorial/mbd/mbdadvanced/chain_piece.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 15.6
+},
+{
+"part": "tutorial/mbd/mbdadvanced/foot_board.sldprt",
+"outcome": "error",
+"seconds": 31.4,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 139986.0232 vs 96805.4453 mm3, area 42150.0194 vs 31693.3448 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/mbd/mbdadvanced/rocker_support.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 12,
+"imported": 3,
+"seconds": 110.0
+},
+{
+"part": "tutorial/mbd/mbdadvanced/shaft.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 7,
+"imported": 0,
+"seconds": 4.8
+},
+{
+"part": "tutorial/mbd/mbdadvanced/spring.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/mbd/mbdadvanced/spring_system_cylinder.sldprt",
+"outcome": "error",
+"seconds": 42.6,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 3081.5546 vs 3058.0528 mm3, area 2258.3628 vs 2242.8970 mm2, deviation 0.6434 mm)"
+},
+{
+"part": "tutorial/mbd/mbdadvanced/spring_system_piston.sldprt",
+"outcome": "error",
+"seconds": 5.6,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 780.2587 vs 799.7287 mm3, area 524.4422 vs 535.7339 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/mbd/mbdadvanced/spring_system_shaft_clamp.sldprt",
+"outcome": "error",
+"seconds": 36.3,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 1011.7031 vs 901.5175 mm3, area 928.7751 vs 955.2560 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/mbd/mbdoverview/Hardware/bearing.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "tutorial/mbd/mbdoverview/Hardware/bolt1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.6
+},
+{
+"part": "tutorial/mbd/mbdoverview/Hardware/bolt2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.5
+},
+{
+"part": "tutorial/mbd/mbdoverview/Hardware/bolt3.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 4.5
+},
+{
+"part": "tutorial/mbd/mbdoverview/Hardware/hex nut beater.sldprt",
+"outcome": "error",
+"seconds": 5.3,
+"reason": "RebuildError: the history builds no body"
+},
+{
+"part": "tutorial/mbd/mbdoverview/Hardware/pan cross head base.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 86.8
+},
+{
+"part": "tutorial/mbd/mbdoverview/Hardware/pan cross head clamp.sldprt",
+"outcome": "error",
+"seconds": 84.8,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/mbd/mbdoverview/Hardware/pan cross head shaft.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 79.3
+},
+{
+"part": "tutorial/mbd/mbdoverview/Hardware/pan cross head support.sldprt",
+"outcome": "timeout",
+"seconds": 115.4,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/mbd/mbdoverview/Hardware/pan cross head.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 72.2
+},
+{
+"part": "tutorial/mbd/mbdoverview/base.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 12,
+"imported": 3,
+"seconds": 108.4
+},
+{
+"part": "tutorial/mbd/mbdoverview/beater_head.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 12,
+"imported": 2,
+"seconds": 31.5
+},
+{
+"part": "tutorial/mbd/mbdoverview/beater_mount.sldprt",
+"outcome": "error",
+"seconds": 53.8,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 3443.9637 vs 3499.1814 mm3, area 2987.3677 vs 2870.6721 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/mbd/mbdoverview/beater_shaft.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.0
+},
+{
+"part": "tutorial/mbd/mbdoverview/chain_ piece.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 14.3
+},
+{
+"part": "tutorial/mbd/mbdoverview/foot_board.sldprt",
+"outcome": "error",
+"seconds": 32.2,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 139986.0232 vs 96805.4453 mm3, area 42150.0194 vs 31693.3448 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/mbd/mbdoverview/rocker_support.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 12,
+"imported": 3,
+"seconds": 110.3
+},
+{
+"part": "tutorial/mbd/mbdoverview/shaft.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 7,
+"imported": 0,
+"seconds": 4.8
+},
+{
+"part": "tutorial/mbd/mbdoverview/spring.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/mbd/mbdoverview/spring_system_cylinder.sldprt",
+"outcome": "error",
+"seconds": 55.7,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 3081.5546 vs 3058.0528 mm3, area 2258.3628 vs 2242.8970 mm2, deviation 0.6434 mm)"
+},
+{
+"part": "tutorial/mbd/mbdoverview/spring_system_piston.sldprt",
+"outcome": "error",
+"seconds": 5.6,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 780.2587 vs 799.7287 mm3, area 524.4422 vs 535.7339 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/mbd/mbdoverview/spring_system_shaft_clamp.sldprt",
+"outcome": "error",
+"seconds": 36.3,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 1011.7031 vs 901.5175 mm3, area 928.7751 vs 955.2560 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/moldedproductdesignadvanced/mousebase.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/moldedproductdesignadvanced/mousemultibody.sldprt",
+"outcome": "error",
+"seconds": 94.2,
+"reason": "RebuildError: Sweep1: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/moldedproductdesignadvanced/mousesplit.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/molds/telephone.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/motionstudies/animation/arm left.sldprt",
+"outcome": "error",
+"seconds": 28.7,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 5614.4468 vs 5590.1886 mm3, area 4505.8143 vs 4489.1340 mm2, deviation 1.01 mm)"
+},
+{
+"part": "tutorial/motionstudies/animation/arm right.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 3.6
+},
+{
+"part": "tutorial/motionstudies/animation/base_plunger.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 11,
+"imported": 3,
+"seconds": 20.3
+},
+{
+"part": "tutorial/motionstudies/animation/center.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 24,
+"imported": 3,
+"seconds": 77.6
+},
+{
+"part": "tutorial/motionstudies/animation/collar.sldprt",
+"outcome": "error",
+"seconds": 9.3,
+"reason": "RebuildError: Boss-Extrude1: rebuilt differently from the stored body"
+},
+{
+"part": "tutorial/motionstudies/animation/con-rod.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 1,
+"seconds": 10.7
+},
+{
+"part": "tutorial/motionstudies/animation/hook.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 15,
+"imported": 2,
+"seconds": 21.0
+},
+{
+"part": "tutorial/motionstudies/animation/link_plunger.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 5,
+"imported": 0,
+"seconds": 11.4
+},
+{
+"part": "tutorial/motionstudies/animation/long bolt_plunger.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 1,
+"seconds": 61.9
+},
+{
+"part": "tutorial/motionstudies/animation/nut_plunger.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 2,
+"seconds": 67.6
+},
+{
+"part": "tutorial/motionstudies/animation/plunger.sldprt",
+"outcome": "error",
+"seconds": 4.6,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 11491.2840 vs 11380.1604 mm3, area 4506.3684 vs 4561.9846 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/motionstudies/animation/short bolt_plunger.sldprt",
+"outcome": "error",
+"seconds": 62.7,
+"reason": "RebuildError: the rebuilt history does not regenerate to the same body (Head Cut)"
+},
+{
+"part": "tutorial/motionstudies/camshaft.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 3.1
+},
+{
+"part": "tutorial/motionstudies/motionalongpath/chainpath.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "tutorial/motionstudies/motionalongpath/clip1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 5,
+"imported": 0,
+"seconds": 10.8
+},
+{
+"part": "tutorial/motionstudies/motionalongpath/clip2.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 2,
+"seconds": 7.6
+},
+{
+"part": "tutorial/motionstudies/motionalongpath/link1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.4
+},
+{
+"part": "tutorial/motionstudies/motionalongpath/link2.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.9
+},
+{
+"part": "tutorial/motionstudies/motionalongpath/paddle.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 3,
+"imported": 1,
+"seconds": 23.9
+},
+{
+"part": "tutorial/motionstudies/motionalongpath/pin.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "tutorial/motionstudies/redundancies/bar.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "tutorial/motionstudies/redundancies/base linkage.sldprt",
+"outcome": "error",
+"seconds": 7.5,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 17306117.2663 vs 17207942.4959 mm3, area 751180.0873 vs 755107.0781 mm2, deviation 25 mm)"
+},
+{
+"part": "tutorial/motionstudies/redundancies/base.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 6.4
+},
+{
+"part": "tutorial/motionstudies/redundancies/connector.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.2
+},
+{
+"part": "tutorial/motionstudies/redundancies/piston female.sldprt",
+"outcome": "error",
+"seconds": 12.1,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 1918701.6583 vs 1921177.0346 mm3, area 426985.4707 vs 417119.4906 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/motionstudies/redundancies/piston male.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 1,
+"seconds": 12.3
+},
+{
+"part": "tutorial/motionstudies/rocker.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 3.5
+},
+{
+"part": "tutorial/motionstudies/rocker_shaft.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 2,
+"imported": 1,
+"seconds": 2.5
+},
+{
+"part": "tutorial/motionstudies/shaft_mount.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 4.3
+},
+{
+"part": "tutorial/motionstudies/valve.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 55.3
+},
+{
+"part": "tutorial/motionstudies/valve_guide.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 1,
+"imported": 1,
+"seconds": 3.2
+},
+{
+"part": "tutorial/motionstudies/weldingrobot/baseplate.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 13,
+"imported": 1,
+"seconds": 39.1
+},
+{
+"part": "tutorial/motionstudies/weldingrobot/holdarm.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 18,
+"imported": 2,
+"seconds": 59.2
+},
+{
+"part": "tutorial/motionstudies/weldingrobot/metal.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.3
+},
+{
+"part": "tutorial/motionstudies/weldingrobot/plate1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.4
+},
+{
+"part": "tutorial/motionstudies/weldingrobot/robotlink1.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 8,
+"imported": 0,
+"seconds": 6.5
+},
+{
+"part": "tutorial/motionstudies/weldingrobot/robotlink2.sldprt",
+"outcome": "error",
+"seconds": 49.4,
+"reason": "RebuildError: Fillet4: could not find its edges"
+},
+{
+"part": "tutorial/motionstudies/weldingrobot/robotsupport.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 1,
+"seconds": 27.8
+},
+{
+"part": "tutorial/motionstudies/weldingrobot/sliderbase.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 7.7
+},
+{
+"part": "tutorial/motionstudies/weldingrobot/weldarm.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 15,
+"imported": 2,
+"seconds": 59.1
+},
+{
+"part": "tutorial/multibody/multi_bridge.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 4,
+"imported": 0,
+"seconds": 7.8
+},
+{
+"part": "tutorial/multibody/multi_inter.sldprt",
+"outcome": "error",
+"seconds": 25.6,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 363407.0751 vs 426823.0016 mm3, area 52751.3262 vs 70804.4227 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/multibody/multi_local.sldprt",
+"outcome": "error",
+"seconds": 13.3,
+"reason": "RebuildError: Extrude2: rebuilt differently from the stored body"
+},
+{
+"part": "tutorial/parts/equations/ejector_pin.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 1,
+"seconds": 11.4
+},
+{
+"part": "tutorial/patterns/mhousing.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 46.6
+},
+{
+"part": "tutorial/routing-pipes/15inschedule40-routeassy1-finalskid.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 2.3
+},
+{
+"part": "tutorial/routing-pipes/1inschedule40-routeassy1-finalskid.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 3.0
+},
+{
+"part": "tutorial/routing-pipes/4inschedule40-routeassy1-finalskid.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 2.3
+},
+{
+"part": "tutorial/routing-pipes/90deg lr inch elbow.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 26.1
+},
+{
+"part": "tutorial/routing-pipes/cabinet.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 12,
+"imported": 4,
+"seconds": 21.2
+},
+{
+"part": "tutorial/routing-pipes/door.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 3,
+"seconds": 23.2
+},
+{
+"part": "tutorial/routing-pipes/filter.sldprt",
+"outcome": "error",
+"seconds": 89.4,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/routing-pipes/fittings/Ball Valve.SLDPRT",
+"outcome": "exact",
+"parametric": false,
+"features": 16,
+"imported": 6,
+"seconds": 88.6
+},
+{
+"part": "tutorial/routing-pipes/fittings/Filter.SLDPRT",
+"outcome": "error",
+"seconds": 80.4,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/routing-pipes/fittings/Regulator.SLDPRT",
+"outcome": "error",
+"seconds": 64.5,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 5916102.0608 vs 18024378.3505 mm3, area 184614.4725 vs 1029810.8498 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/routing-pipes/fittings/cabinet.SLDPRT",
+"outcome": "inexact",
+"parametric": false,
+"features": 12,
+"imported": 4,
+"seconds": 22.3
+},
+{
+"part": "tutorial/routing-pipes/fittings/door.SLDPRT",
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 3,
+"seconds": 25.6
+},
+{
+"part": "tutorial/routing-pipes/framework (done).sldprt",
+"outcome": "error",
+"seconds": 11.8,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 8385124.1115 vs 15068474.1421 mm3, area 2379943.7348 vs 4727851.3366 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/routing-pipes/pipe.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 2.5
+},
+{
+"part": "tutorial/routing-pipes/reducer.sldprt",
+"outcome": "error",
+"seconds": 5.7,
+"reason": "RebuildError: Base-Sweep: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/routing-pipes/regulator.sldprt",
+"outcome": "error",
+"seconds": 70.6,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 520842.8528 vs 18024378.3505 mm3, area 21061.8189 vs 1029810.8498 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/routing-pipes/routes/4in Schedule40-ReducerRoute.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 2.9
+},
+{
+"part": "tutorial/routing-pipes/routes/6in Schedule40-ReducerRoute.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 2.4
+},
+{
+"part": "tutorial/routing-pipes/routes/Framework (Done).SLDPRT",
+"outcome": "error",
+"seconds": 13.0,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 8385124.1115 vs 15068474.1421 mm3, area 2379943.7348 vs 4727851.3366 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/routing-pipes/slip on weld flange.sldprt",
+"outcome": "error",
+"seconds": 43.8,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 259668.0799 vs 259668.0799 mm3, area 51001.9765 vs 47593.9188 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/routing-pipes/solidworks-lok male pipe weld connector.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 13,
+"imported": 2,
+"seconds": 60.6
+},
+{
+"part": "tutorial/routing-pipes/tube - rubber.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 9.0
+},
+{
+"part": "tutorial/routing-pipes/tube-500x010-routeassy2-finalskid.sldprt",
+"outcome": "error",
+"seconds": 53.6,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 10475.4075 vs 12111.0764 mm3, area 82503.3865 vs 95485.5875 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/routing/electrical/electronic housing.sldprt",
+"outcome": "inexact",
+"parametric": false,
+"features": 12,
+"imported": 2,
+"seconds": 27.0
+},
+{
+"part": "tutorial/sheetmetal/formtools/cover.sldprt",
+"outcome": "error",
+"seconds": 20.6,
+"reason": "RebuildError: Flatten-<BaseBend1>1: feature type moUiBend_c is not supported yet"
+},
+{
+"part": "tutorial/sheetmetal/formtools/sample_louver.sldprt",
+"outcome": "error",
+"seconds": 67.5,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 525.7993 vs 525.7993 mm3, area 537.9758 vs 534.3784 mm2, deviation 0.9273 mm)"
+},
+{
+"part": "tutorial/smartcomponents/base_plate.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "tutorial/smartcomponents/bearing.sldprt",
+"outcome": "timeout",
+"seconds": 115.0,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/smartcomponents/bearing_trainer.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "tutorial/smartcomponents/flatwasher.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.3
+},
+{
+"part": "tutorial/smartcomponents/lockwasher.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 2.5
+},
+{
+"part": "tutorial/smartcomponents/npd bearing.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/smartcomponents/pb bearing trainer.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 3.8
+},
+{
+"part": "tutorial/smartcomponents/socket head cap screw.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 10.2
+},
+{
+"part": "tutorial/smartcomponents/stepped_shaft.sldprt",
+"outcome": "error",
+"seconds": 6.8,
+"reason": "RebuildError: Fillet6: could not find its edges"
+},
+{
+"part": "tutorial/smartcomponents/training shaft.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "tutorial/smartcomponents/training_shaft.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.7
+},
+{
+"part": "tutorial/surfaces/nozzle.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 15,
+"imported": 0,
+"seconds": 3.0
+},
+{
+"part": "tutorial/swutilities/bracket_a.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/swutilities/bracket_b.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/tolanalyst/introduction/cover plate.sldprt",
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
+},
+{
+"part": "tutorial/tolanalyst/introduction/housing.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 27,
+"imported": 2,
+"seconds": 67.9
+},
+{
+"part": "tutorial/tolanalyst/introduction/offset shaft.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 1,
+"seconds": 5.6
+},
+{
+"part": "tutorial/tolanalyst/introduction/round cover plate.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 9,
+"imported": 0,
+"seconds": 13.6
+},
+{
+"part": "tutorial/tolanalyst/introduction/worm gear shaft.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 6,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "tutorial/tolanalyst/introduction/worm gear.sldprt",
+"outcome": "error",
+"seconds": 90.4,
+"reason": "RebuildError: Base-Revolve: the base feature could not be rebuilt as an editable feature"
+},
+{
+"part": "tutorial/tolanalyst/minimum_clearance/axle.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 11.0
+},
+{
+"part": "tutorial/tolanalyst/minimum_clearance/axle_support.sldprt",
+"outcome": "error",
+"seconds": 25.4,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 60948.1959 vs 60022.4156 mm3, area 18589.0831 vs 16338.8473 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/tolanalyst/minimum_clearance/bushing.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 9.1
+},
+{
+"part": "tutorial/tolanalyst/minimum_clearance/top_plate.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 6.1
+},
+{
+"part": "tutorial/tolanalyst/minimum_clearance/wheel.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 1,
+"seconds": 11.4
+},
+{
+"part": "tutorial/tolanalyst/offset/axle.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.6
+},
+{
+"part": "tutorial/tolanalyst/offset/axle_support.sldprt",
+"outcome": "error",
+"seconds": 25.9,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 60948.1959 vs 60022.4156 mm3, area 18589.0831 vs 16338.8473 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/tolanalyst/offset/bushing.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 8.4
+},
+{
+"part": "tutorial/tolanalyst/offset/top_plate.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 1,
+"seconds": 6.0
+},
+{
+"part": "tutorial/tolanalyst/offset/wheel.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 1,
+"seconds": 12.0
+},
+{
+"part": "tutorial/toolbox/baseplate.sldprt",
+"outcome": "error",
+"seconds": 29.8,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 1723075.2036 vs 1709456.2424 mm3, area 205331.3818 vs 208084.0453 mm2, deviation inf mm)"
+},
+{
+"part": "tutorial/toolbox/braceleft.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 4.6
+},
+{
+"part": "tutorial/toolbox/braceright.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 3,
+"imported": 0,
+"seconds": 5.0
+},
+{
+"part": "tutorial/toolbox/camtest.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 59.9
+},
+{
+"part": "tutorial/toolbox/crossbar.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.4
+},
+{
+"part": "tutorial/toolbox/filterholder.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 8.4
+},
+{
+"part": "tutorial/toolbox/frontplate.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 3,
+"seconds": 30.3
+},
+{
+"part": "tutorial/toolbox/lensholder.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 4,
+"imported": 0,
+"seconds": 6.0
+},
+{
+"part": "tutorial/toolbox/rail.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.5
+},
+{
+"part": "tutorial/toolbox/slider.sldprt",
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 1,
+"seconds": 6.2
+},
+{
+"part": "tutorial/toolbox/square-rail.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.6
+},
+{
+"part": "tutorial/toolbox/table.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 2.4
+},
+{
+"part": "tutorial/weldments/weldment_box.sldprt",
+"outcome": "exact",
+"parametric": true,
+"features": 2,
+"imported": 0,
+"seconds": 3.1
+},
+{
+"part": "tutorial/weldments/weldment_box2.sldprt",
+"outcome": "error",
+"seconds": 75.4,
+"reason": "RebuildError: Square tube 30 X 30 X 2.6(1): rebuilt differently from the stored body"
+}
+]
+}
