@@ -40,7 +40,7 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1 libglu1-mesa libegl1
       - name: Install
-        run: python -m pip install -e ".[dev]"
+        run: python -m pip install -e ".[dev,collab]"
       - name: Errors only (syntax, undefined names)
         run: |
           python -m pip install ruff
@@ -63,7 +63,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1 libglu1-mesa libegl1
       - name: Install
         run: |
-          python -m pip install -e ".[dev]" playwright
+          python -m pip install -e ".[dev,collab]" playwright
           python -m playwright install --with-deps chromium
       - name: UI tests
         run: python -m pytest tests/ui -q -rs
