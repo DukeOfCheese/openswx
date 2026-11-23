@@ -62,7 +62,7 @@ since 2026-11-23 the suite also runs green in CI on Linux and macOS; the desktop
 | I2 code signing | not planned | Decided 2026-11-23: the certificates cost more than the project wants to spend. Builds stay unsigned; the README tells users how to get past Gatekeeper and SmartScreen. The signing hooks in `packaging/build.py` (`OPENSWX_CODESIGN_IDENTITY`, `OPENSWX_INSTALLER_IDENTITY`) stay for anyone who has a certificate |
 | I3 update check | done | Help > Check for Updates (`updates.py`): asks the GitHub releases of the repository in the `update_repository` setting, only when the user asks; nothing is downloaded. **Left:** set the repository once there is one |
 | I4 benchmarks | partly | `tools/bench.py`. **Left:** tracking per release, lazy imports, bundle audit |
-| I5 PyPI | partly | Classifiers and keywords. Not published; no project URLs until there is a remote |
+| I5 PyPI | done | Published: openswx 0.2.0 on PyPI by trusted publishing from `publish.yml` on each version tag; listed in the MCP Registry as `io.github.DukeOfCheese/openswx` (`server.json`, published with `mcp-publisher`) |
 | I6 stray build folders | done | `build/`, `build-new/`, the two build logs and the stack dump deleted on the owner's say. Builds now go to one folder, `dist/` (`packaging/build.py`, which stops with a message if openswx is running from it); the old `dist/` and `dist-new/` builds were deleted 2026-11-23 |
 | J1 review loop | done | `review_model` |
 | J2 design as text | done | `export_script` (documents record their commands); run it as a macro or with `python` |
