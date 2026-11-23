@@ -39,9 +39,7 @@ forms, pull request template, CODEOWNERS, Dependabot, labels).
 
 ## Worth doing soon after
 
-- [ ] **Code signing** (docs/GAPS.md I2): a Windows code-signing certificate (or Azure Trusted Signing) and an
-      Apple Developer ID, so installers open without warnings. Set `OPENSWX_CODESIGN_IDENTITY` and
-      `OPENSWX_INSTALLER_IDENTITY` as described in the README, and add the secrets to the release workflow.
+- Code signing: not planned (cost). Builds are unsigned; the README explains the first-launch steps.
 - [ ] **PyPI**: the package is ready (the name was free on 2026-11-23; `publish.yml` builds, checks and
       test-installs it on every tag). To publish, connect it once: the two steps at the top of
       `.github/workflows/publish.yml`, then re-run the workflow for the tag.

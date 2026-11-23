@@ -211,11 +211,12 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
 
 **Not the same yet (see [Status](#status-and-limitations))**
 
-- Simulation: linear static studies of single parts mesh with curvature-based quadratic tetrahedra when the
-  optional mesher is installed (`pip install openswx[mesh]`), with peak stresses at holes and fillets within a
-  few percent of closed-form results. Frequency, buckling, thermal, nonlinear and drop studies, bonded
-  assemblies, bolts and contact still use the finite-cell voxel mesh, whose stresses at curved boundaries are
-  approximate. Flow is lattice-Boltzmann with a large-eddy turbulence model, without wall functions.
+- Simulation: static, frequency, buckling and steady thermal studies, including bonded assemblies, mesh with
+  curvature-based quadratic tetrahedra when the optional mesher is installed (`pip install openswx[mesh]`; not
+  yet in the desktop installers): peak stresses at holes and fillets within a few percent of closed-form
+  results. Contact, springs and bolts between separate bodies, transient thermal, nonlinear and drop studies
+  use the finite-cell voxel mesh, whose stresses at curved boundaries are approximate. Flow is
+  lattice-Boltzmann with a large-eddy turbulence model, without wall functions.
 - CAM is 3-axis: roughing, flat floors and drilling, and 3D finishing with ball, bull-nose or flat mills; no
   4- or 5-axis.
 - DWG needs the free ODA File Converter installed. Models are shared as a self-contained HTML viewer

@@ -75,3 +75,69 @@ def test_static_study_uses_the_tetrahedral_mesh(tmp_path):
     assert probe["probes"][0]["von_mises"] > 0
     life = S.fatigue_run(cycles=1e6)
     assert life["study"] == "fatigue"
+
+
+def test_quadrature_rules_are_exact():
+    import math
+    p, w = fea_tet.tet_rule(4)
+    for a, b, c in [(0, 0, 0), (2, 1, 0), (1, 1, 2), (4, 0, 0), (2, 2, 1)]:
+        exact = math.factorial(a) * math.factorial(b) * math.factorial(c) / math.factorial(a + b + c + 3)
+        assert (w * p[:, 0] ** a * p[:, 1] ** b * p[:, 2] ** c).sum() == pytest.approx(exact, rel=1e-12)
+    q, v = fea_tet.tri_rule(4)
+    assert (v * q[:, 0] ** 2 * q[:, 1] ** 2).sum() == pytest.approx(4 / math.factorial(6), rel=1e-12)
+
+
+def test_frequency_buckling_and_thermal_match_closed_forms():
+    import math
+    steel = dict(STEEL, density=7850.0)
+    b = Box(200, 10, 10)
+    root, _tip = _ends(b)
+    r = fea_tet.solve_modal(b, steel, [root], modes=2)
+    f1 = 1.875104 ** 2 / (2 * math.pi * 0.2 ** 2) * math.sqrt(200e9 * (0.01 ** 4 / 12) / (7850 * 1e-4))
+    assert r["frequencies_hz"][0] == pytest.approx(f1, rel=0.01) and r["mass_kg"] == pytest.approx(0.157, rel=1e-6)
+    col = Box(10, 10, 300)
+    fs = col.faces()
+    base, top = min(fs, key=lambda f: f.center().Z), max(fs, key=lambda f: f.center().Z)
+    k = fea_tet.solve_buckling(col, steel, [base], [(top, (0, 0, -1000))], modes=1)
+    euler = math.pi ** 2 * 200000 * (10 ** 4 / 12) / (4 * 300 ** 2) / 1000
+    assert k["load_factors"][0] == pytest.approx(euler, rel=0.01)
+    bar = Box(100, 10, 10)
+    e0, e1 = _ends(bar)
+    t = fea_tet.solve_thermal(bar, 50.0, [(e0, 100.0)], [], [(e1, 500.0, 20.0)])
+    series = 80 / (0.1 / (50 * 1e-4) + 1 / (500 * 1e-4))  # conduction then convection, in series
+    assert t["heat_in_per_temperature_boundary"][0] == pytest.approx(series, rel=1e-6)
+
+
+def test_bonded_bodies_of_two_materials():
+    from build123d import Compound, Pos
+    s1, s2 = Box(50, 10, 10), Pos(50, 0, 0) * Box(50, 10, 10)
+    body = Compound([s1, s2])
+    e0 = min(body.faces(), key=lambda f: f.center().X)
+    e1 = max(body.faces(), key=lambda f: f.center().X)
+    r = fea_tet.solve_static(body, STEEL, [e0], [(e1, (1000, 0, 0))], regions=[(s1, 1.0), (s2, 0.5)])
+    series = 1000 * 50 / (200000 * 100) + 1000 * 50 / (100000 * 100)  # the two halves in series
+    assert r["_grid"]["U"][:, 0].max() == pytest.approx(series, rel=0.01)
+
+
+def test_studies_choose_the_tetrahedral_mesh():
+    S.new_part(name="TetStudies")
+    S.create_sketch(plane="Top")
+    S.sketch_rectangle(sketch="Sketch1", corner1=[0, 0], corner2=[80, 10])
+    S.extrude(sketch="Sketch1", depth=10)
+    S.set_material(name="Plain Carbon Steel")
+    faces = S.get_topology()["faces"]
+    root = min(faces, key=lambda f: f["point"][0])["id"]
+    tip = max(faces, key=lambda f: f["point"][0])["id"]
+    S.simulation_add_fixture(face=root)
+    S.simulation_add_force(face=tip, force=[-100, 0, 0])
+    fr = S.frequency_run(modes=2)
+    assert fr["mesh"].startswith("tetrahedral") and S.frequency_mode_shape(mode=1)["displacement"]
+    bk = S.buckling_run(modes=1)
+    assert bk["mesh"].startswith("tetrahedral") and bk["load_factors"][0] > 0
+    S.thermal_add_temperature(face=root, temperature=100.0)
+    S.thermal_add_convection(face=tip, coefficient=50.0, ambient=20.0)
+    th = S.thermal_run()
+    assert th["mesh"].startswith("tetrahedral") and 20 < th["min_temperature"] < 100
+    assert S.thermal_results()["temperature"]
+    with pytest.raises(Exception, match="voxel"):
+        S.thermal_run(transient=True, mesh="tetrahedral")

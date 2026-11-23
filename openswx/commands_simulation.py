@@ -176,13 +176,31 @@ def simulation_clear(fixtures: bool = True, loads: bool = True) -> dict:
     return _study_edit(f)
 
 
+
+
+def _mesh_kind(mesh: str, contact: bool = False, transient: bool = False) -> str:
+    """auto: tetrahedral when the mesher is installed and the study can use it (contact and transient thermal
+    studies are voxel-only)."""
+    from . import fea_tet
+    if mesh == "auto":
+        return "tetrahedral" if fea_tet.available() and not contact and not transient else "voxel"
+    if mesh == "tetrahedral":
+        if not fea_tet.available():
+            raise DocumentError("the tetrahedral mesher is not installed (pip install netgen-mesher); use mesh='voxel'")
+        if contact:
+            raise DocumentError("contact, and springs or bolts between separate bodies, need mesh='voxel'")
+        if transient:
+            raise DocumentError("transient thermal studies need mesh='voxel'")
+    return mesh
+
+
 @command(mutates=False, category="simulation")
 def simulation_run(element_size: float | None = None, mesh: Literal["auto", "tetrahedral", "voxel"] = "auto") -> dict:
     """Run the linear static study; returns max displacement (mm), max von Mises stress (MPa), factor of
     safety (material yield / max stress), reactions (N). mesh: tetrahedral = quadratic tetrahedra graded to the
     faces' curvature, accurate peak stresses at fillets and holes (needs the optional Netgen mesher); voxel =
-    hexahedral grid, stair-stepped at curved faces (stresses there approximate), also handles bonded
-    assemblies, springs, bolts and contact; auto = tetrahedral when it is installed and the study allows it.
+    hexahedral grid, stair-stepped at curved faces (stresses there approximate); contact, and springs or bolts
+    between separate bodies, need it. Bonded assemblies work on both. auto = tetrahedral when it is installed and the study allows it.
     Smaller element_size = more accurate and slower (default: ~12k elements)."""
     from .fea import solve_static
     doc = _sim_doc()
@@ -201,17 +219,15 @@ def simulation_run(element_size: float | None = None, mesh: Literal["auto", "tet
         material["yield_strength"] = min(m.get("yield_strength") or m.get("tensile_strength") or 1e18 for _, _, m in mats)
         regions = [(sol, m["elastic_modulus"] / material["elastic_modulus"]) for _, shape, m in mats for sol in shape.solids()]
     from . import fea_tet
-    if mesh == "auto":
-        mesh = "tetrahedral" if fea_tet.available() and not regions and not connectors else "voxel"
-    elif mesh == "tetrahedral":
-        if not fea_tet.available():
-            raise DocumentError("the tetrahedral mesher is not installed (pip install netgen-mesher); use mesh='voxel'")
-        if regions or connectors:
-            raise DocumentError("bonded assemblies, springs, bolts and contact need mesh='voxel'")
+    # contact, and connectors between separate bodies, keep the bodies apart: voxel meshes them separately (a
+    # tetrahedral mesh glues touching bodies, which would bond the faces a bolt or spring is meant to join)
+    mesh = _mesh_kind(mesh, contact=bool(connectors) and (any(c.get("contact") for c in connectors)
+                                                         or len(doc.body.solids()) > 1))
     try:
         with unlocked():
             if mesh == "tetrahedral":
-                r = fea_tet.solve_static(doc.body, material, fixtures, loads, element_size or doc.study.get("element_size"))
+                r = fea_tet.solve_static(doc.body, material, fixtures, loads, element_size or doc.study.get("element_size"),
+                                         regions=regions, connectors=connectors)
             else:
                 r = solve_static(doc.body, material, fixtures, loads, element_size or doc.study.get("element_size"),
                                  regions=regions, connectors=connectors)
@@ -244,9 +260,11 @@ def simulation_results() -> dict:
 
 
 @command(mutates=False, category="simulation")
-def frequency_run(modes: int = 5, element_size: float | None = None) -> dict:
+def frequency_run(modes: int = 5, element_size: float | None = None, mesh: Literal["auto", "tetrahedral", "voxel"] = "auto") -> dict:
     """Frequency study: the first `modes` natural frequencies (Hz) of the part / bonded assembly with the
-    study's fixtures (material density and modulus from the library)."""
+    study's fixtures (material density and modulus from the library). mesh: as for simulation_run
+    (tetrahedral: consistent mass on curvature-based quadratic tetrahedra)."""
+    from . import fea_tet
     from .fea import solve_modal
     doc = _sim_doc()
     if doc.body is None:
@@ -260,7 +278,8 @@ def frequency_run(modes: int = 5, element_size: float | None = None) -> dict:
                    for shape, m in mats for sol in shape.solids()]
     try:
         with unlocked():
-            r = solve_modal(doc.body, material, fixtures, modes, element_size or doc.study.get("element_size"), regions=regions)
+            solver = fea_tet.solve_modal if _mesh_kind(mesh) == "tetrahedral" else solve_modal
+            r = solver(doc.body, material, fixtures, modes, element_size or doc.study.get("element_size"), regions=regions)
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.modal_result = (doc.revision, r)
@@ -285,9 +304,10 @@ def frequency_mode_shape(mode: int = 1) -> dict:
 
 
 @command(mutates=False, category="simulation")
-def buckling_run(modes: int = 3, element_size: float | None = None) -> dict:
+def buckling_run(modes: int = 3, element_size: float | None = None, mesh: Literal["auto", "tetrahedral", "voxel"] = "auto") -> dict:
     """Buckling study (linear): load factors for the study's fixtures and loads; critical load = factor x the
-    applied loads (a factor below 1 means the part buckles under them)."""
+    applied loads (a factor below 1 means the part buckles under them). mesh: as for simulation_run."""
+    from . import fea_tet
     from .fea import solve_buckling
     doc = APP.doc
     if doc.body is None:
@@ -295,7 +315,8 @@ def buckling_run(modes: int = 3, element_size: float | None = None) -> dict:
     fixtures, loads, _con = _resolve_study(doc)
     try:
         with unlocked():
-            r = solve_buckling(doc.body, doc.material, fixtures, loads, modes, element_size or doc.study.get("element_size"))
+            solver = fea_tet.solve_buckling if _mesh_kind(mesh) == "tetrahedral" else solve_buckling
+            r = solver(doc.body, doc.material, fixtures, loads, modes, element_size or doc.study.get("element_size"))
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.buckling_result = (doc.revision, r)
@@ -348,15 +369,18 @@ def thermal_clear() -> dict:
 
 @command(mutates=False, category="simulation")
 def thermal_run(element_size: float | None = None, transient: bool = False, duration: float = 60.0,
-                steps: int = 50, initial_temperature: float = 20.0) -> dict:
-    """Run the thermal study (finite-cell voxel mesh, material thermal conductivity). Steady state by default:
+                steps: int = 50, initial_temperature: float = 20.0, mesh: Literal["auto", "tetrahedral", "voxel"] = "auto") -> dict:
+    """Run the thermal study (material thermal conductivity; mesh as for simulation_run, transient studies on
+    the voxel mesh). Steady state by default:
     returns min/max temperature (degC), the heat (W) into the part through each
     temperature boundary (heat_in_per_temperature_boundary, in the order added; negative = out) and their net sum.
     transient=True: the part starts at initial_temperature (degC) and is integrated over `duration` seconds in
     `steps` implicit steps using the material density and specific heat; returns the min/max/mean
     temperature history and the final field."""
+    from . import fea_tet
     from .fea import solve_thermal, solve_thermal_transient
     from .geom import resolve_face
+    kind = _mesh_kind(mesh, transient=transient)
     doc = APP.doc
     if doc.body is None:
         raise DocumentError("the part has no body")
@@ -376,7 +400,8 @@ def thermal_run(element_size: float | None = None, transient: bool = False, dura
                                             element_size=element_size)
         else:
             with unlocked():
-                r = solve_thermal(doc.body, doc.material.get("thermal_conductivity"), *loads, element_size)
+                solver = fea_tet.solve_thermal if kind == "tetrahedral" else solve_thermal
+                r = solver(doc.body, doc.material.get("thermal_conductivity"), *loads, element_size)
     except ValueError as exc:
         raise DocumentError(str(exc)) from exc
     APP.thermal_result = (doc.revision, r)

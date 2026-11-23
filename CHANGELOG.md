@@ -7,9 +7,10 @@ formats or commands; files are migrated automatically and the change is listed h
 ## Unreleased
 
 ### Added
-- Static studies mesh with curvature-based quadratic tetrahedra (Netgen, optional: `pip install openswx[mesh]`):
-  peak stresses at holes and fillets within a few percent of closed-form results. `simulation_run(mesh=...)`
-  chooses tetrahedral, voxel or auto (tetrahedral when installed and the study allows it).
+- Static, frequency, buckling and steady thermal studies (bonded assemblies too) mesh with curvature-based
+  quadratic tetrahedra (Netgen, optional: `pip install openswx[mesh]`): peak stresses at holes and fillets
+  within a few percent of closed-form results; frequencies with a consistent mass matrix. Each study takes
+  `mesh=` tetrahedral, voxel or auto (tetrahedral when installed and the study allows it).
 - About 70 more library materials: carbon, alloy, tool and stainless steels, aluminium, copper, nickel,
   magnesium and zinc alloys, engineering plastics, rubbers, composites, woods and ceramics.
 

@@ -2983,7 +2983,7 @@ Remove the study's fixtures and/or loads.
 simulation_run(element_size: float | None = None, mesh: Literal['auto', 'tetrahedral', 'voxel'] = 'auto')
 ```
 
-Run the linear static study; returns max displacement (mm), max von Mises stress (MPa), factor of safety (material yield / max stress), reactions (N). mesh: tetrahedral = quadratic tetrahedra graded to the faces' curvature, accurate peak stresses at fillets and holes (needs the optional Netgen mesher); voxel = hexahedral grid, stair-stepped at curved faces (stresses there approximate), also handles bonded assemblies, springs, bolts and contact; auto = tetrahedral when it is installed and the study allows it. Smaller element_size = more accurate and slower (default: ~12k elements).
+Run the linear static study; returns max displacement (mm), max von Mises stress (MPa), factor of safety (material yield / max stress), reactions (N). mesh: tetrahedral = quadratic tetrahedra graded to the faces' curvature, accurate peak stresses at fillets and holes (needs the optional Netgen mesher); voxel = hexahedral grid, stair-stepped at curved faces (stresses there approximate); contact, and springs or bolts between separate bodies, need it. Bonded assemblies work on both. auto = tetrahedral when it is installed and the study allows it. Smaller element_size = more accurate and slower (default: ~12k elements).
 
 ### `simulation_results` *(UI only, read-only)*
 
@@ -2996,10 +2996,10 @@ Per-vertex von Mises stress and displacement on the display mesh for the last si
 ### `frequency_run` *(read-only)*
 
 ```
-frequency_run(modes: int = 5, element_size: float | None = None)
+frequency_run(modes: int = 5, element_size: float | None = None, mesh: Literal['auto', 'tetrahedral', 'voxel'] = 'auto')
 ```
 
-Frequency study: the first `modes` natural frequencies (Hz) of the part / bonded assembly with the study's fixtures (material density and modulus from the library).
+Frequency study: the first `modes` natural frequencies (Hz) of the part / bonded assembly with the study's fixtures (material density and modulus from the library). mesh: as for simulation_run (tetrahedral: consistent mass on curvature-based quadratic tetrahedra).
 
 ### `frequency_mode_shape` *(UI only, read-only)*
 
@@ -3012,10 +3012,10 @@ Normalised mode shape (per display-mesh vertex displacement) of the last frequen
 ### `buckling_run` *(read-only)*
 
 ```
-buckling_run(modes: int = 3, element_size: float | None = None)
+buckling_run(modes: int = 3, element_size: float | None = None, mesh: Literal['auto', 'tetrahedral', 'voxel'] = 'auto')
 ```
 
-Buckling study (linear): load factors for the study's fixtures and loads; critical load = factor x the applied loads (a factor below 1 means the part buckles under them).
+Buckling study (linear): load factors for the study's fixtures and loads; critical load = factor x the applied loads (a factor below 1 means the part buckles under them). mesh: as for simulation_run.
 
 ### `buckling_mode_shape` *(UI only, read-only)*
 
@@ -3060,10 +3060,10 @@ Remove all thermal loads and boundary conditions.
 ### `thermal_run` *(read-only)*
 
 ```
-thermal_run(element_size: float | None = None, transient: bool = False, duration: float = 60.0, steps: int = 50, initial_temperature: float = 20.0)
+thermal_run(element_size: float | None = None, transient: bool = False, duration: float = 60.0, steps: int = 50, initial_temperature: float = 20.0, mesh: Literal['auto', 'tetrahedral', 'voxel'] = 'auto')
 ```
 
-Run the thermal study (finite-cell voxel mesh, material thermal conductivity). Steady state by default: returns min/max temperature (degC), the heat (W) into the part through each temperature boundary (heat_in_per_temperature_boundary, in the order added; negative = out) and their net sum. transient=True: the part starts at initial_temperature (degC) and is integrated over `duration` seconds in `steps` implicit steps using the material density and specific heat; returns the min/max/mean temperature history and the final field.
+Run the thermal study (material thermal conductivity; mesh as for simulation_run, transient studies on the voxel mesh). Steady state by default: returns min/max temperature (degC), the heat (W) into the part through each temperature boundary (heat_in_per_temperature_boundary, in the order added; negative = out) and their net sum. transient=True: the part starts at initial_temperature (degC) and is integrated over `duration` seconds in `steps` implicit steps using the material density and specific heat; returns the min/max/mean temperature history and the final field.
 
 ### `thermal_results` *(UI only, read-only)*
 

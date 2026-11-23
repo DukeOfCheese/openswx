@@ -778,6 +778,9 @@ def solve_thermal_transient(body, conductivity: float, density: float, specific_
 def map_temperature(result: dict, mesh: dict) -> dict:
     """Trilinearly interpolated temperature at every display-mesh vertex."""
     g = result["_grid"]
+    if g.get("kind") == "tet":
+        from .fea_tet import map_to_mesh as tet_map
+        return {"temperature": tet_map(g, mesh, key="T")["stress"]}
     origin, h, n, used, T = g["origin"], g["h"], g["n"], g["used"], g["T"]
     eidx = -np.ones(n, int)
     eidx[tuple(g["elem_ijk"].T)] = np.arange(len(g["elem_ijk"]))

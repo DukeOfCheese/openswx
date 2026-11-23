@@ -21,6 +21,10 @@ for pkg in ("build123d", "OCP", "webview", "uvicorn", "mcp", "ezdxf", "ocpsvg", 
     datas += d
     binaries += b
     hidden += h
+# Netgen (the optional tetrahedral mesher, fea_tet.py) is left out of the desktop builds for now: its own
+# OpenCASCADE libraries have the same file names as OCP's (TKBRep.dll ...) and would overwrite them in the one
+# bundle folder. Without it the app reports the mesher missing and meshes with voxels.
+NOT_BUNDLED = ["netgen", "pyngcore"]
 hidden += ["openswx.fea_tet", "openswx.desktop", "openswx.web_server", "openswx.mcp_server", "openswx.assembly", "openswx.drawing",
            "openswx.sldprt", "openswx.render", "openswx.equations", "openswx.sw_tree", "openswx.sw_sketch",
            "openswx.sw_rebuild", "openswx.drawing_sheets", "openswx.fileassoc", "openswx.sw_drawing",
@@ -29,7 +33,7 @@ hidden += ["openswx.fea_tet", "openswx.desktop", "openswx.web_server", "openswx.
            "openswx.naming", "openswx.cache", "openswx.security", "openswx.recovery", "openswx.commands_app", "openswx.migrate", "openswx.applog", "openswx.tolerance", "openswx.commands_tol", "openswx.commands_review", "openswx.cli", "openswx.snapshots", "openswx.jobs", "openswx.settings", "openswx.commands_settings", "openswx.plugins", "openswx.isolated", "openswx.commands_asm", "openswx.commands_blocks", "openswx.commands_simreport", "openswx.commands_std", "openswx.fcstd", "openswx.updates", "openswx.api", "openswx.commands_document", "openswx.commands_sketch", "openswx.commands_features", "openswx.commands_assembly", "openswx.commands_drawing", "openswx.commands_simulation"]
 
 a = Analysis([str(ROOT / "packaging" / "entry.py")], pathex=[str(ROOT)], datas=datas, binaries=binaries,
-             hiddenimports=hidden, excludes=["tkinter", "matplotlib", "pytest", "jedi", "parso"], noarchive=False)
+             hiddenimports=hidden, excludes=["tkinter", "matplotlib", "pytest", "jedi", "parso", *NOT_BUNDLED], noarchive=False)
 # (build123d needs IPython; IPython uses jedi only for completion, when installed: 22 MB, and the deepest paths)
 pyz = PYZ(a.pure)
 icon = str(ROOT / "packaging" / ("openswx.icns" if IS_MAC else "openswx.ico"))
