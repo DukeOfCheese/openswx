@@ -497,16 +497,10 @@ def solve_buckling(body, material: dict, fixtures: list, loads: list, modes: int
             "max_von_mises": st["max_von_mises"], "_grid": model.grid(shapes=shapes, vm=st["_grid"]["vm"], U=shapes[0])}
 
 
-def solve_thermal(body, conductivity: float, temperatures: list, heat: list, convection: list,
-                  element_size: float | None = None, target_elements: int = 12000) -> dict:
-    """Steady-state conduction. conductivity in W/(m K); temperatures: [(Face, T degC)]; heat: [(Face, W)] into
-    the part; convection: [(Face, h W/(m^2 K), T_ambient)]. Units: mm, W, degC."""
+def _thermal_system(model: Model, conductivity: float, temperatures: list, heat: list, convection: list):
+    """Conduction + convection matrix (W/K), load vector (W), fixed temperatures {node: degC} and the node
+    groups of each temperature boundary."""
     from scipy.sparse import coo_matrix
-    if not conductivity:
-        raise ValueError("assign a library material (with thermal conductivity) first")
-    if not temperatures and not convection:
-        raise ValueError("add a temperature or a convection boundary (otherwise the temperature is undefined)")
-    model = Model(body, element_size, target_elements)
     nn = model.nn
     G, det = _gradients(model.X, GAUSS)
     Ke = np.einsum("eq,eqia,eqja->eij", det / 24.0 * conductivity / 1000.0, G, G, optimize=True)  # W/K
@@ -536,6 +530,20 @@ def solve_thermal(body, conductivity: float, temperatures: list, heat: list, con
         groups.append(sel)
         for c in sel:
             fixed[int(c)] = tv
+    return K, rhs, fixed, groups
+
+
+def solve_thermal(body, conductivity: float, temperatures: list, heat: list, convection: list,
+                  element_size: float | None = None, target_elements: int = 12000) -> dict:
+    """Steady-state conduction. conductivity in W/(m K); temperatures: [(Face, T degC)]; heat: [(Face, W)] into
+    the part; convection: [(Face, h W/(m^2 K), T_ambient)]. Units: mm, W, degC."""
+    if not conductivity:
+        raise ValueError("assign a library material (with thermal conductivity) first")
+    if not temperatures and not convection:
+        raise ValueError("add a temperature or a convection boundary (otherwise the temperature is undefined)")
+    model = Model(body, element_size, target_elements)
+    nn = model.nn
+    K, rhs, fixed, groups = _thermal_system(model, conductivity, temperatures, heat, convection)
     T = np.zeros(nn)
     fd = np.array(sorted(fixed), int)
     T[fd] = [fixed[c] for c in fd]
@@ -555,6 +563,60 @@ def solve_thermal(body, conductivity: float, temperatures: list, heat: list, con
             "max_temperature": float(T.max()), "min_temperature": float(T.min()),
             "heat_through_fixed_faces": float(-react[fd].sum()) if len(fd) else 0.0,
             "heat_in_per_temperature_boundary": per, "_grid": model.grid(T=T)}
+
+
+def solve_thermal_transient(body, conductivity: float, density: float, specific_heat: float, temperatures: list,
+                            heat: list, convection: list, initial: float, duration: float, steps: int = 50,
+                            element_size: float | None = None, target_elements: int = 12000) -> dict:
+    """Transient conduction from a uniform initial temperature (degC) over `duration` seconds in `steps`
+    implicit steps (one backward-Euler step, then BDF2: second order, unconditionally stable) with the
+    consistent heat-capacity matrix. density kg/m^3, specific_heat J/(kg K); loads as in solve_thermal.
+    Returns the history of min / max / mean temperature and the final field."""
+    from scipy.sparse.linalg import splu
+    if not conductivity:
+        raise ValueError("assign a library material (with thermal conductivity) first")
+    if not specific_heat or not density:
+        raise ValueError("the material needs a density and a specific heat for a transient study")
+    if duration <= 0 or steps < 1:
+        raise ValueError("duration must be positive and steps at least 1")
+    model = Model(body, element_size, target_elements)
+    nn = model.nn
+    K, rhs, fixed, _groups = _thermal_system(model, conductivity, temperatures, heat, convection)
+    p, wq = tet_rule(4)
+    Nv = shape_values(p)
+    _, det = _gradients(model.X, p)
+    rc = density * 1e-9 * specific_heat  # J/(mm^3 K)
+    Ce = np.einsum("eq,qi,qj->eij", det * wq[None] * rc, Nv, Nv, optimize=True)
+    C = _assemble(Ce, model.T, nn)  # J/K
+    wnode = np.zeros(nn)
+    np.add.at(wnode, model.T.ravel(), np.einsum("eq,qi->ei", det * wq[None], Nv).ravel())  # integral of each N
+    wnode /= wnode.sum()
+    dt = duration / steps
+    T = np.full(nn, float(initial))
+    fd = np.array(sorted(fixed), int)
+    T[fd] = [fixed[c] for c in fd]
+    free = np.setdiff1d(np.arange(nn), fd)
+    Cff = C[free][:, free]
+
+    def lu(A):
+        return splu(((A + A.T) * 0.5).tocsc(), permc_spec="MMD_AT_PLUS_A")
+    lu1 = lu(Cff / dt + K[free][:, free])
+    lu2 = lu(1.5 * Cff / dt + K[free][:, free]) if steps > 1 else None
+    load = rhs[free] - (K[free][:, fd] @ T[fd] if len(fd) else 0.0)
+    hist = [{"time": 0.0, "max": float(T.max()), "min": float(T.min()), "mean": float(wnode @ T)}]
+    Tprev = None
+    for i in range(1, steps + 1):
+        cur = T[free].copy()
+        b = (Cff @ cur) / dt if Tprev is None else Cff @ (2.0 * cur - 0.5 * Tprev) / dt
+        T[free] = (lu1 if Tprev is None else lu2).solve(b + load)
+        Tprev = cur
+        hist.append({"time": i * dt, "max": float(T.max()), "min": float(T.min()), "mean": float(wnode @ T)})
+    if not np.all(np.isfinite(T)):
+        raise ValueError("transient thermal solution diverged")
+    return {"element_size": model.h, "elements": int(model.ne), "nodes": int(nn), "time_step": dt,
+            "mesh": "tetrahedral (quadratic, curvature-based)",
+            "max_temperature": float(T.max()), "min_temperature": float(T.min()), "history": hist,
+            "_grid": model.grid(T=T)}
 
 
 def map_to_mesh(g: dict, mesh: dict, key: str = "vm") -> dict:

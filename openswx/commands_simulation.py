@@ -178,19 +178,16 @@ def simulation_clear(fixtures: bool = True, loads: bool = True) -> dict:
 
 
 
-def _mesh_kind(mesh: str, contact: bool = False, transient: bool = False) -> str:
-    """auto: tetrahedral when the mesher is installed and the study can use it (contact and transient thermal
-    studies are voxel-only)."""
+def _mesh_kind(mesh: str, contact: bool = False) -> str:
+    """auto: tetrahedral when the mesher is installed and the study can use it (contact is voxel-only)."""
     from . import fea_tet
     if mesh == "auto":
-        return "tetrahedral" if fea_tet.available() and not contact and not transient else "voxel"
+        return "tetrahedral" if fea_tet.available() and not contact else "voxel"
     if mesh == "tetrahedral":
         if not fea_tet.available():
             raise DocumentError("the tetrahedral mesher is not installed (pip install netgen-mesher); use mesh='voxel'")
         if contact:
             raise DocumentError("contact, and springs or bolts between separate bodies, need mesh='voxel'")
-        if transient:
-            raise DocumentError("transient thermal studies need mesh='voxel'")
     return mesh
 
 
@@ -370,8 +367,7 @@ def thermal_clear() -> dict:
 @command(mutates=False, category="simulation")
 def thermal_run(element_size: float | None = None, transient: bool = False, duration: float = 60.0,
                 steps: int = 50, initial_temperature: float = 20.0, mesh: Literal["auto", "tetrahedral", "voxel"] = "auto") -> dict:
-    """Run the thermal study (material thermal conductivity; mesh as for simulation_run, transient studies on
-    the voxel mesh). Steady state by default:
+    """Run the thermal study (material thermal conductivity; mesh as for simulation_run). Steady state by default:
     returns min/max temperature (degC), the heat (W) into the part through each
     temperature boundary (heat_in_per_temperature_boundary, in the order added; negative = out) and their net sum.
     transient=True: the part starts at initial_temperature (degC) and is integrated over `duration` seconds in
@@ -380,7 +376,7 @@ def thermal_run(element_size: float | None = None, transient: bool = False, dura
     from . import fea_tet
     from .fea import solve_thermal, solve_thermal_transient
     from .geom import resolve_face
-    kind = _mesh_kind(mesh, transient=transient)
+    kind = _mesh_kind(mesh)
     doc = APP.doc
     if doc.body is None:
         raise DocumentError("the part has no body")
@@ -395,7 +391,8 @@ def thermal_run(element_size: float | None = None, transient: bool = False, dura
             mat = doc.material
             cp = mat.get("specific_heat") or (lookup(mat.get("name", "")) or {}).get("specific_heat")
             with unlocked():
-                r = solve_thermal_transient(doc.body, mat.get("thermal_conductivity"), mat.get("density"), cp, *loads,
+                solver = fea_tet.solve_thermal_transient if kind == "tetrahedral" else solve_thermal_transient
+                r = solver(doc.body, mat.get("thermal_conductivity"), mat.get("density"), cp, *loads,
                                             initial=initial_temperature, duration=duration, steps=steps,
                                             element_size=element_size)
         else:

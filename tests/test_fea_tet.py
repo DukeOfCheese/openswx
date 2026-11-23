@@ -139,5 +139,16 @@ def test_studies_choose_the_tetrahedral_mesh():
     th = S.thermal_run()
     assert th["mesh"].startswith("tetrahedral") and 20 < th["min_temperature"] < 100
     assert S.thermal_results()["temperature"]
-    with pytest.raises(Exception, match="voxel"):
-        S.thermal_run(transient=True, mesh="tetrahedral")
+    tr = S.thermal_run(transient=True, duration=30.0, steps=10)
+    assert tr["mesh"].startswith("tetrahedral") and len(tr["history"]) == 11
+
+
+def test_transient_cooling_matches_lumped_capacitance():
+    """A small aluminium cube (Biot number ~5e-4) cooling by convection on every face:
+    T(t) = T_amb + (T0 - T_amb) exp(-t / tau), tau = rho c V / (h A)."""
+    import math
+    b = Box(10, 10, 10)
+    r = fea_tet.solve_thermal_transient(b, 167.0, 2700.0, 896.0, [], [], [(f, 50.0, 20.0) for f in b.faces()],
+                                        initial=100.0, duration=60.0, steps=60)
+    tau = 2700 * 896 * 1e-6 / (50 * 6e-4)
+    assert r["history"][-1]["mean"] == pytest.approx(20 + 80 * math.exp(-60 / tau), abs=0.05)
