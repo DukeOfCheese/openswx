@@ -14,7 +14,7 @@ Snapshot
 | Tests | 162 test functions, 158 of them in one 4,128-line file |
 | Commands never named in a test | 47 |
 | Commands not reachable from the web UI | 15 (11 are agent / query only by design) |
-| SOLIDWORKS sample parts rebuilt exactly | 534 of 841 (352 fully parametric), survey of 2026-11-23 |
+| SOLIDWORKS sample parts rebuilt exactly | 584 of 841 (352 fully parametric), survey of 2026-11-23 |
 | SOLIDWORKS sample mates imported | 125 of 155 on 40 small assemblies |
 
 ## Status after the first pass (2026-11-23)
@@ -322,7 +322,7 @@ sketch_offset sketch_polygon sketch_slot sketch_trim swept_surface`
 
 | Gap | State | Spec |
 |---|---|---|
-| Feature history | 534 / 841 exact (2026-11-23); sweeps, lofts, sheet metal, most surface features, multibody, cavity not decoded; ~90 body mismatches, 48 over time | Work the survey's failure table by feature class, each backed by oracle pairs from `tools/difftest/feature_samples.py`: (1) sweep as base feature (7 of the 25 remaining base failures), (2) loft, (3) mirror and pattern selections decoded instead of searched, (4) fillet / chamfer / shell selections decoded (removes most candidate search and with it most timeouts), (5) sheet-metal base / edge flange |
+| Feature history | 584 / 841 exact (2026-11-23); sweeps, lofts, sheet metal, most surface features, multibody, cavity not decoded; ~90 body mismatches, 48 over time | Work the survey's failure table by feature class, each backed by oracle pairs from `tools/difftest/feature_samples.py`: (1) sweep as base feature (7 of the 25 remaining base failures), (2) loft, (3) mirror and pattern selections decoded instead of searched, (4) fillet / chamfer / shell selections decoded (removes most candidate search and with it most timeouts), (5) sheet-metal base / edge flange |
 | Partial open | A part either rebuilds or falls back to one imported body | Always open with the longest exactly rebuilt prefix, then one imported feature for the rest, and a per-feature report in the tree ("imported: reason") |
 | Configurations of SW parts | The active configuration's body is read | Read every `Config-<n>` partition into openswx configurations (bodies as imports when the history does not cover them) |
 | Assembly mates | 81 % on small assemblies; width, gear, cam, in-place, pattern / mirror faces unsupported | Decode the remaining mate classes with oracle assemblies; import unsupported ones as suppressed mates with their name and type so nothing vanishes silently |

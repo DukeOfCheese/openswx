@@ -27,6 +27,9 @@ formats or commands; files are migrated automatically and the change is listed h
 - SOLIDWORKS and Parasolid files: faces on a cylinder, torus or other periodic surface that a split line cuts
   along the seam were read with zero area, so the stored body's volume was wrong (part3: 512,932 mm³ instead of
   SOLIDWORKS' 448,221 mm³) and correct rebuilds were rejected.
+- SOLIDWORKS feature history: when the finished body does not match the stored one, the history is rebuilt
+  once more with the base feature tried and every later feature taken from the stored body, so the part opens
+  exact with an editable base instead of only as an imported body (50 more sample parts).
 - SOLIDWORKS feature history: the base feature is always tried, however long earlier steps took. Under load it
   could be imported once the trial time ran out, and an imported base feature fails the whole part.
 

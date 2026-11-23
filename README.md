@@ -211,7 +211,7 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
 
 - `.sldprt`, `.sldasm` and `.slddrw` (2015 and later) open without SOLIDWORKS installed. openswx reads the stored
   body and, where it can decode it, the feature history, and rebuilds that history to check it against the stored
-  body. In the survey of 2026-11-23, 534 of the 841 sample parts that ship with SOLIDWORKS 2025 rebuilt exactly
+  body. In the survey of 2026-11-23, 584 of the 841 sample parts that ship with SOLIDWORKS 2025 rebuilt exactly
   (352 fully parametric). Parts whose features are not decoded yet (many sweeps, lofts, sheet-metal and
   surface features) open as an imported solid that you can still measure, mate, draw and add features to.
 - SOLIDWORKS files are **read-only**. Save as openswx files, or exchange through STEP, Parasolid `.x_t` or IGES.

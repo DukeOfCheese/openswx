@@ -38,7 +38,7 @@ state), and how the program got here, pass by pass, in [`PLAN.md`](PLAN.md) (a l
 
 ## Known limits
 
-- SOLIDWORKS feature history: 534 of the 841 sample parts rebuilt exactly (352 fully parametric) in the survey
+- SOLIDWORKS feature history: 584 of the 841 sample parts rebuilt exactly (352 fully parametric) in the survey
   of 2026-11-23 (`docs/survey/2026-11-23-samples-841.json`; 2026-10-29: 525 / 363). The rest open as an
   imported body. `.sldprt` is read-only.
 - Simulation: static, frequency, buckling and thermal (steady and transient) studies (bonded assemblies too) use

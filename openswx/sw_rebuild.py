@@ -1522,6 +1522,19 @@ def rebuild_part(path: str, doc: PartDocument, config: int | None = None, budget
         return _rebuild(path, doc, config, budget, trust_built=False)
     except RebuildError as exc:
         rest = budget - (time.monotonic() - start)
+        if "differs from the stored one" in str(exc) and rest >= 5.0:
+            # a trial accepted a reading that the finished body shows was wrong: rebuild once more with the base
+            # feature tried and every later feature read off the stored body (what a run short of time does),
+            # so the part opens exact with its base feature editable
+            _log(f"retrying with the features after the base imported ({exc})")
+            for x in reversed([x["name"] for x in doc.features]):
+                if any(y["name"] == x for y in doc.features):
+                    doc.delete_feature(x, with_children=False)
+            try:
+                return _rebuild(path, doc, config, rest, trust_built=False, import_after_base=True)
+            except RebuildError as again:
+                _log(f"retry failed too: {again}")
+                raise exc from again
         if "base feature could not be rebuilt" not in str(exc) or rest < 5.0:
             raise
         _log(f"retrying, keeping built features ({exc})")
@@ -1537,7 +1550,8 @@ def rebuild_part(path: str, doc: PartDocument, config: int | None = None, budget
             raise again from exc  # (the retry got past the base feature: its failure is the one to fix)
 
 
-def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, trust_built: bool) -> dict:
+def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, trust_built: bool,
+             import_after_base: bool = False) -> dict:
     from .geom import edge_ref, face_ref
     from .sldprt import read_sldprt
     from .sw_sketch import read_sketches, read_sketches3d
@@ -1546,7 +1560,7 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
     import time
     # past 60 % of the budget the remaining features come in as their stored contribution, past 85 % all of
     # the material still missing comes in at once (the part still opens with its rebuilt features editable)
-    _DEADLINE[0] = time.monotonic() + 0.6 * budget
+    _DEADLINE[0] = time.monotonic() + (0.0 if import_after_base else 0.6 * budget)
     _BASE_TRIALS[0] = False
     _LUMP[0] = time.monotonic() + 0.85 * budget
     lumped = went_late = False

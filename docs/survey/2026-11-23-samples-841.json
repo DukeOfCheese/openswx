@@ -3,14 +3,14 @@
 "corpus": "SOLIDWORKS 2025 samples folder (841 parts)",
 "timeout_s": 115,
 "jobs": 3,
-"note": "after the periodic-face reader fix and the base-feature trial change; parts near the time limit vary from run to run",
+"note": "full survey after the periodic-face fix and the base-feature change, with the 85 parts that failed with a body mismatch re-run after the import-after-base retry (the retry runs only after that failure, so no other part can change); parts near the time limit vary between runs",
 "summary": {
 "parts": 841,
-"exact": 534,
+"exact": 584,
 "fully_parametric": 352,
-"inexact": 23,
-"timeout": 66,
-"error": 217,
+"inexact": 24,
+"timeout": 69,
+"error": 163,
 "crash": 1
 },
 "parts": [
@@ -114,9 +114,11 @@
 },
 {
 "part": "Simulation Examples/Beams/beam_truss.sldprt",
-"outcome": "error",
-"seconds": 8.5,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 638308916.9280 vs 2510367108.2880 mm3, area 19714939.6351 vs 74304367.5200 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 2,
+"seconds": 22.0
 },
 {
 "part": "Simulation Examples/Composites/tjoint.sldprt",
@@ -274,9 +276,11 @@
 },
 {
 "part": "Simulation Examples/Dynamics/sps_cap_a.sldprt",
-"outcome": "error",
-"seconds": 32.2,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 16177.3355 vs 16148.8045 mm3, area 4364.2667 vs 4201.9998 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 1,
+"seconds": 36.2
 },
 {
 "part": "Simulation Examples/Dynamics/sps_coil1.sldprt",
@@ -309,7 +313,7 @@
 {
 "part": "Simulation Examples/Dynamics/sps_transformer.sldprt",
 "outcome": "error",
-"seconds": 7.5,
+"seconds": 9.2,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 3304.2585 vs 3143.1382 mm3, area 3856.1146 vs 3702.3990 mm2, deviation inf mm)"
 },
 {
@@ -323,7 +327,7 @@
 {
 "part": "Simulation Examples/Dynamics/trans_heat_sink.sldprt",
 "outcome": "error",
-"seconds": 16.5,
+"seconds": 19.2,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 3430.9111 vs 2190.5715 mm3, area 6240.3519 vs 3717.4323 mm2, deviation inf mm)"
 },
 {
@@ -407,8 +411,8 @@
 {
 "part": "Simulation Examples/Fatigue/mount1.sldprt",
 "outcome": "error",
-"seconds": 5.5,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 333441.3091 vs 377423.6062 mm3, area 40089.9655 vs 41626.4605 mm2, deviation inf mm)"
+"seconds": 9.9,
+"reason": "RebuildError: the rebuilt history does not regenerate to the same body (Cut-Extrude1)"
 },
 {
 "part": "Simulation Examples/Fatigue/oleopiston.sldprt",
@@ -448,9 +452,11 @@
 },
 {
 "part": "Simulation Examples/Fatigue/shock tube.sldprt",
-"outcome": "error",
-"seconds": 57.2,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 3044.2854 vs 2484.0648 mm3, area 4052.3411 vs 3829.6807 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 11,
+"imported": 2,
+"seconds": 62.0
 },
 {
 "part": "Simulation Examples/Fatigue/upper arm.sldprt",
@@ -478,9 +484,11 @@
 },
 {
 "part": "Simulation Examples/FloWorks/ball.sldprt",
-"outcome": "error",
-"seconds": 21.9,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 14526.3245 vs 13799.2336 mm3, area 4953.2053 vs 4820.5732 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 1,
+"seconds": 26.8
 },
 {
 "part": "Simulation Examples/FloWorks/handle.sldprt",
@@ -583,7 +591,7 @@
 {
 "part": "Simulation Examples/Nonlinear/groove.sldprt",
 "outcome": "error",
-"seconds": 64.3,
+"seconds": 73.2,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 8.4030 vs 222.3266 mm3, area 194.6930 vs 321.0915 mm2, deviation inf mm)"
 },
 {
@@ -664,9 +672,11 @@
 },
 {
 "part": "Simulation Examples/Optimization/design space.sldprt",
-"outcome": "error",
-"seconds": 25.7,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 372195.5878 vs 370666.2993 mm3, area 83246.8592 vs 84006.8499 mm2, deviation 5 mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 2,
+"seconds": 64.6
 },
 {
 "part": "Simulation Examples/Optimization/disc.sldprt",
@@ -724,9 +734,11 @@
 },
 {
 "part": "Simulation Examples/Thermal/top.sldprt",
-"outcome": "error",
-"seconds": 59.0,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 291431.2964 vs 297660.4608 mm3, area 120256.8792 vs 118627.0000 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 2,
+"seconds": 62.6
 },
 {
 "part": "Simulation Examples/Verification/aluminum_bar.sldprt",
@@ -987,7 +999,7 @@
 {
 "part": "Simulation Examples/Verification/nafems_3dnlg5.sldprt",
 "outcome": "error",
-"seconds": 6.6,
+"seconds": 6.8,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 6435.1850 vs 1287036.9969 mm3, area 2303.7350 vs 203973.3116 mm2, deviation inf mm)"
 },
 {
@@ -1795,7 +1807,7 @@
 {
 "part": "Simulation Examples/Verification/static_27.sldprt",
 "outcome": "error",
-"seconds": 38.8,
+"seconds": 35.7,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 4108003.1140 vs 12900413.2157 mm3, area 1299250.3287 vs 4093421.3039 mm2, deviation inf mm)"
 },
 {
@@ -1913,7 +1925,7 @@
 {
 "part": "Simulation Examples/Verification/thermal_3.sldprt",
 "outcome": "error",
-"seconds": 3.3,
+"seconds": 4.4,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 145.5522 vs 1976.0000 mm3, area 443.6742 vs 1053.2800 mm2, deviation inf mm)"
 },
 {
@@ -1966,9 +1978,11 @@
 },
 {
 "part": "Simulation Examples/actuator_casing.sldprt",
-"outcome": "error",
-"seconds": 22.8,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 92984.6288 vs 92337.0657 mm3, area 24057.0832 vs 23581.4763 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 15,
+"imported": 4,
+"seconds": 43.9
 },
 {
 "part": "Simulation Examples/actuator_piston.sldprt",
@@ -2016,9 +2030,11 @@
 },
 {
 "part": "Simulation Examples/bolthole.sldprt",
-"outcome": "error",
-"seconds": 4.8,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 5599.7957 vs 5711.7838 mm3, area 2260.7507 vs 2220.8007 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 5.1
 },
 {
 "part": "Simulation Examples/car_roof.sldprt",
@@ -2037,7 +2053,7 @@
 {
 "part": "Simulation Examples/crankarm.sldprt",
 "outcome": "error",
-"seconds": 18.3,
+"seconds": 20.2,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 139864.6397 vs 152201.3719 mm3, area 29791.2364 vs 34996.3398 mm2, deviation inf mm)"
 },
 {
@@ -2200,9 +2216,11 @@
 },
 {
 "part": "Simulation Examples/plunger.sldprt",
-"outcome": "error",
-"seconds": 3.5,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 5978.4505 vs 5914.2204 mm3, area 2386.1910 vs 2429.6913 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 5.3
 },
 {
 "part": "Simulation Examples/pressurevessel.sldprt",
@@ -2213,7 +2231,7 @@
 {
 "part": "Simulation Examples/pulley_bearing.sldprt",
 "outcome": "error",
-"seconds": 47.4,
+"seconds": 86.6,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 1223868.1702 vs 1285012.2964 mm3, area 211781.6781 vs 254100.0729 mm2, deviation inf mm)"
 },
 {
@@ -2277,7 +2295,7 @@
 {
 "part": "Simulation Examples/wheel.sldprt",
 "outcome": "error",
-"seconds": 10.0,
+"seconds": 10.3,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 43180.8103 vs 37094.2390 mm3, area 12549.3927 vs 6692.5930 mm2, deviation inf mm)"
 },
 {
@@ -2314,9 +2332,11 @@
 },
 {
 "part": "introsw/cabinet_bath.sldprt",
-"outcome": "error",
-"seconds": 11.9,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 30924581.5859 vs 30422081.5859 mm3, area 4193526.8031 vs 4128026.8031 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 1,
+"seconds": 17.1
 },
 {
 "part": "introsw/can.sldprt",
@@ -2328,9 +2348,11 @@
 },
 {
 "part": "introsw/can_lid.sldprt",
-"outcome": "error",
-"seconds": 3.6,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 14522.3595 vs 14419.9103 mm3, area 10283.6365 vs 10235.3089 mm2, deviation 1.482 mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 2,
+"seconds": 5.0
 },
 {
 "part": "introsw/ctrtop.sldprt",
@@ -2384,9 +2406,11 @@
 },
 {
 "part": "introsw/molding.sldprt",
-"outcome": "error",
-"seconds": 4.1,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 239146.4571 vs 230840.1656 mm3, area 54938.1086 vs 53270.7438 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 2,
+"seconds": 6.4
 },
 {
 "part": "introsw/nut.sldprt",
@@ -2407,7 +2431,7 @@
 {
 "part": "introsw/supply_piping.sldprt",
 "outcome": "error",
-"seconds": 10.4,
+"seconds": 13.7,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 34037.0339 vs 28608.7987 mm3, area 25369.5810 vs 20467.8994 mm2, deviation inf mm)"
 },
 {
@@ -2454,9 +2478,11 @@
 },
 {
 "part": "learn/Carving Knife/Components/Left Blade.SLDPRT",
-"outcome": "error",
-"seconds": 13.4,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 7766.7154 vs 7934.3899 mm3, area 9755.9394 vs 9744.4441 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 3,
+"imported": 1,
+"seconds": 21.4
 },
 {
 "part": "learn/Carving Knife/Components/Left Knife Sleeve.SLDPRT",
@@ -2536,9 +2562,11 @@
 },
 {
 "part": "learn/Mouse/Contact Pad.SLDPRT",
-"outcome": "error",
-"seconds": 10.6,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 18.9277 vs 18.8951 mm3, area 85.6517 vs 82.6883 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 3,
+"imported": 1,
+"seconds": 23.2
 },
 {
 "part": "learn/Mouse/Main Housing Overmold.SLDPRT",
@@ -2954,9 +2982,11 @@
 },
 {
 "part": "tutorial/Sustainability/drive shaft plate.sldprt",
-"outcome": "error",
-"seconds": 41.8,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 743.3247 vs 725.4404 mm3, area 1572.0894 vs 1541.1418 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 2,
+"seconds": 49.2
 },
 {
 "part": "tutorial/Sustainability/drive shaft.sldprt",
@@ -2981,7 +3011,7 @@
 {
 "part": "tutorial/Sustainability/middle-gear plate.sldprt",
 "outcome": "error",
-"seconds": 18.3,
+"seconds": 24.0,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 669.7660 vs 587.7306 mm3, area 3256.9516 vs 2838.4419 mm2, deviation inf mm)"
 },
 {
@@ -3000,9 +3030,11 @@
 },
 {
 "part": "tutorial/Sustainability/shaft gear insert.sldprt",
-"outcome": "error",
-"seconds": 60.0,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 4493.8519 vs 442.9057 mm3, area 3133.3460 vs 481.6847 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 63.7
 },
 {
 "part": "tutorial/Sustainability/shaft gear.sldprt",
@@ -3020,9 +3052,11 @@
 },
 {
 "part": "tutorial/advdrawings/98blade extension.sldprt",
-"outcome": "error",
-"seconds": 5.4,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 5551.7048 vs 5568.8663 mm3, area 3579.4796 vs 3579.4796 mm2, deviation 3.589 mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 3,
+"imported": 1,
+"seconds": 9.3
 },
 {
 "part": "tutorial/advdrawings/98blade rivets.sldprt",
@@ -3064,15 +3098,17 @@
 },
 {
 "part": "tutorial/advdrawings/blade rivets.sldprt",
-"outcome": "error",
-"seconds": 9.3,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 31.4658 vs 103.4460 mm3, area 97.8267 vs 243.7252 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 2,
+"seconds": 12.0
 },
 {
 "part": "tutorial/advdrawings/blade shaft.sldprt",
 "outcome": "error",
-"seconds": 85.0,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 34755.7657 vs 32495.3823 mm3, area 18031.4245 vs 17888.3658 mm2, deviation inf mm)"
+"seconds": 74.0,
+"reason": "RebuildError: round side slots: rebuilt differently from the stored body"
 },
 {
 "part": "tutorial/advdrawings/bottom blade.sldprt",
@@ -3118,9 +3154,11 @@
 },
 {
 "part": "tutorial/advdrawings/drive shaft plate.sldprt",
-"outcome": "error",
-"seconds": 36.7,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 743.3247 vs 725.4404 mm3, area 1572.0894 vs 1541.1418 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 2,
+"seconds": 58.8
 },
 {
 "part": "tutorial/advdrawings/drive shaft.sldprt",
@@ -3195,7 +3233,7 @@
 {
 "part": "tutorial/advdrawings/middle-gear plate.sldprt",
 "outcome": "error",
-"seconds": 17.7,
+"seconds": 23.3,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 669.7660 vs 587.7306 mm3, area 3256.9516 vs 2838.4419 mm2, deviation inf mm)"
 },
 {
@@ -3240,9 +3278,11 @@
 },
 {
 "part": "tutorial/advdrawings/shaft gear insert.sldprt",
-"outcome": "error",
-"seconds": 60.8,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 4493.8519 vs 442.9057 mm3, area 3133.3460 vs 481.6847 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 62.5
 },
 {
 "part": "tutorial/advdrawings/shaft gear.sldprt",
@@ -3278,9 +3318,11 @@
 },
 {
 "part": "tutorial/advdrawings/switch.sldprt",
-"outcome": "error",
-"seconds": 5.8,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 2886.7240 vs 2511.6350 mm3, area 2164.6003 vs 1921.0360 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 1,
+"seconds": 8.0
 },
 {
 "part": "tutorial/advdrawings/top blade.sldprt",
@@ -3411,7 +3453,7 @@
 {
 "part": "tutorial/api/MechanicalMates/cam2.sldprt",
 "outcome": "error",
-"seconds": 12.2,
+"seconds": 14.8,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 1013039.5247 vs 1119107.1155 mm3, area 103839.6583 vs 111232.3744 mm2, deviation inf mm)"
 },
 {
@@ -3594,9 +3636,11 @@
 },
 {
 "part": "tutorial/api/bagel.sldprt",
-"outcome": "error",
-"seconds": 17.7,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 572578.0320 vs 323467.6780 mm3, area 127280.1653 vs 41684.5352 mm2, deviation inf mm)"
+"outcome": "inexact",
+"parametric": false,
+"features": 8,
+"imported": 0,
+"seconds": 22.2
 },
 {
 "part": "tutorial/api/beam with holes.sldprt",
@@ -3840,9 +3884,11 @@
 },
 {
 "part": "tutorial/api/freezebarneedsrebuild2.sldprt",
-"outcome": "error",
-"seconds": 3.5,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 3935754.2210 vs 2799264.6967 mm3, area 190134.1905 vs 147364.3062 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 5,
+"imported": 1,
+"seconds": 5.7
 },
 {
 "part": "tutorial/api/hemisphere.sldprt",
@@ -3872,9 +3918,11 @@
 },
 {
 "part": "tutorial/api/lamp.sldprt",
-"outcome": "error",
-"seconds": 28.4,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 4151727.7773 vs 7124716.0375 mm3, area 759069.6182 vs 972316.9169 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 11,
+"imported": 3,
+"seconds": 49.2
 },
 {
 "part": "tutorial/api/lineardynamic.sldprt",
@@ -3884,9 +3932,11 @@
 },
 {
 "part": "tutorial/api/loop.sldprt",
-"outcome": "error",
-"seconds": 32.2,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 6894184.7519 vs 14899290.8248 mm3, area 2059256.4186 vs 4077998.5026 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 2,
+"seconds": 69.7
 },
 {
 "part": "tutorial/api/lwrsway_lnk.sldprt",
@@ -4001,7 +4051,7 @@
 {
 "part": "tutorial/api/part2.sldprt",
 "outcome": "error",
-"seconds": 12.0,
+"seconds": 15.3,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 11113.1499 vs 13171.5509 mm3, area 2897.3016 vs 3208.3506 mm2, deviation inf mm)"
 },
 {
@@ -4046,9 +4096,11 @@
 },
 {
 "part": "tutorial/api/plate2.sldprt",
-"outcome": "error",
-"seconds": 4.1,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 39865.6930 vs 34795.9945 mm3, area 30802.6750 vs 26421.6583 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 6,
+"imported": 1,
+"seconds": 6.0
 },
 {
 "part": "tutorial/api/plate_ads_plusminus.sldprt",
@@ -4168,9 +4220,11 @@
 },
 {
 "part": "tutorial/api/slip on weld flange.sldprt",
-"outcome": "error",
-"seconds": 37.7,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 259668.0799 vs 259668.0799 mm3, area 51001.9765 vs 47593.9188 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 1,
+"seconds": 41.1
 },
 {
 "part": "tutorial/api/sm1-remove-edges.sldprt",
@@ -4326,9 +4380,11 @@
 },
 {
 "part": "tutorial/api/toaster base.sldprt",
-"outcome": "error",
-"seconds": 33.4,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 31943085.6157 vs 31811292.9623 mm3, area 2257640.2043 vs 2240776.9769 mm2, deviation 309 mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 2,
+"seconds": 95.8
 },
 {
 "part": "tutorial/api/toaster.sldprt",
@@ -4354,9 +4410,11 @@
 },
 {
 "part": "tutorial/api/water.sldprt",
-"outcome": "error",
-"seconds": 3.7,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 510351.7266 vs 1102359.7294 mm3, area 35664.9306 vs 59093.3578 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 3,
+"imported": 1,
+"seconds": 6.0
 },
 {
 "part": "tutorial/api/weldment_box3.sldprt",
@@ -4470,9 +4528,11 @@
 },
 {
 "part": "tutorial/assemblymates/bracket.sldprt",
-"outcome": "error",
-"seconds": 4.0,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 42158.9005 vs 41873.8009 mm3, area 16480.3119 vs 16592.6239 mm2, deviation 3 mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 2,
+"seconds": 6.0
 },
 {
 "part": "tutorial/assemblymates/clamp.sldprt",
@@ -4550,9 +4610,11 @@
 },
 {
 "part": "tutorial/assemblyvisualize/drive shaft plate.sldprt",
-"outcome": "error",
-"seconds": 38.3,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 743.3247 vs 725.4404 mm3, area 1572.0894 vs 1541.1418 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 2,
+"seconds": 48.4
 },
 {
 "part": "tutorial/assemblyvisualize/drive shaft.sldprt",
@@ -4571,7 +4633,7 @@
 {
 "part": "tutorial/assemblyvisualize/middle-gear plate.sldprt",
 "outcome": "error",
-"seconds": 18.2,
+"seconds": 25.9,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 669.7660 vs 587.7306 mm3, area 3256.9516 vs 2838.4419 mm2, deviation inf mm)"
 },
 {
@@ -4590,9 +4652,11 @@
 },
 {
 "part": "tutorial/assemblyvisualize/shaft gear insert.sldprt",
-"outcome": "error",
-"seconds": 60.9,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 4493.8519 vs 442.9057 mm3, area 3133.3460 vs 481.6847 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 4,
+"imported": 1,
+"seconds": 64.0
 },
 {
 "part": "tutorial/assemblyvisualize/shaft gear.sldprt",
@@ -4655,7 +4719,7 @@
 {
 "part": "tutorial/cosmosxpress/aw_spider.sldprt",
 "outcome": "error",
-"seconds": 83.8,
+"seconds": 69.1,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 40346.5993 vs 54825.7655 mm3, area 20199.4730 vs 22479.6566 mm2, deviation inf mm)"
 },
 {
@@ -4674,9 +4738,11 @@
 },
 {
 "part": "tutorial/designtables/tutor1.sldprt",
-"outcome": "error",
-"seconds": 17.0,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 81235.4710 vs 100088.6678 mm3, area 84599.9043 vs 101328.4908 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 4,
+"seconds": 30.3
 },
 {
 "part": "tutorial/dimxpert/advdimxpert/Hardware/bearing.sldprt",
@@ -4772,9 +4838,11 @@
 },
 {
 "part": "tutorial/dimxpert/advdimxpert/beater_mount.sldprt",
-"outcome": "error",
-"seconds": 45.4,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 3443.9637 vs 3499.1814 mm3, area 2987.3677 vs 2870.6721 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 11,
+"imported": 4,
+"seconds": 60.7
 },
 {
 "part": "tutorial/dimxpert/advdimxpert/beater_shaft.sldprt",
@@ -4795,14 +4863,14 @@
 {
 "part": "tutorial/dimxpert/advdimxpert/foot_board.sldprt",
 "outcome": "error",
-"seconds": 26.3,
+"seconds": 39.5,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 139986.0232 vs 96805.4453 mm3, area 42150.0194 vs 31693.3448 mm2, deviation inf mm)"
 },
 {
 "part": "tutorial/dimxpert/advdimxpert/rocker_support.sldprt",
-"outcome": "error",
-"seconds": 54.9,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 46964.9970 vs 49957.4260 mm3, area 14805.6252 vs 14442.6413 mm2, deviation inf mm)"
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
 },
 {
 "part": "tutorial/dimxpert/advdimxpert/shaft.sldprt",
@@ -4821,26 +4889,32 @@
 {
 "part": "tutorial/dimxpert/advdimxpert/spring_system_cylinder.sldprt",
 "outcome": "error",
-"seconds": 40.3,
+"seconds": 64.0,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 3081.5546 vs 3058.0528 mm3, area 2258.3628 vs 2242.8970 mm2, deviation 0.6434 mm)"
 },
 {
 "part": "tutorial/dimxpert/advdimxpert/spring_system_piston.sldprt",
-"outcome": "error",
-"seconds": 5.3,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 780.2587 vs 799.7287 mm3, area 524.4422 vs 535.7339 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 2,
+"seconds": 8.1
 },
 {
 "part": "tutorial/dimxpert/advdimxpert/spring_system_shaft_clamp.sldprt",
-"outcome": "error",
-"seconds": 33.5,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 1011.7031 vs 901.5175 mm3, area 928.7751 vs 955.2560 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 3,
+"seconds": 45.3
 },
 {
 "part": "tutorial/dimxpert/bracket_ads_plusminus.sldprt",
-"outcome": "error",
-"seconds": 5.5,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 14519.1281 vs 14089.7117 mm3, area 6322.7616 vs 6527.7506 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 2,
+"seconds": 14.5
 },
 {
 "part": "tutorial/dimxpert/bracket_auto_manual.sldprt",
@@ -4852,9 +4926,11 @@
 },
 {
 "part": "tutorial/dimxpert/bracket_auto_plusminus.sldprt",
-"outcome": "error",
-"seconds": 6.0,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 14519.1281 vs 14089.7117 mm3, area 6322.7616 vs 6527.7506 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 2,
+"seconds": 12.7
 },
 {
 "part": "tutorial/dimxpert/coupling_ads_geo.sldprt",
@@ -5066,9 +5142,11 @@
 },
 {
 "part": "tutorial/mbd/mbdadvanced/beater_mount.sldprt",
-"outcome": "error",
-"seconds": 27.6,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 3430.9421 vs 3499.1814 mm3, area 2973.2124 vs 2870.6721 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 11,
+"imported": 3,
+"seconds": 45.5
 },
 {
 "part": "tutorial/mbd/mbdadvanced/beater_shaft.sldprt",
@@ -5089,14 +5167,14 @@
 {
 "part": "tutorial/mbd/mbdadvanced/foot_board.sldprt",
 "outcome": "error",
-"seconds": 25.9,
+"seconds": 41.5,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 139986.0232 vs 96805.4453 mm3, area 42150.0194 vs 31693.3448 mm2, deviation inf mm)"
 },
 {
 "part": "tutorial/mbd/mbdadvanced/rocker_support.sldprt",
 "outcome": "error",
-"seconds": 56.0,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 46964.9948 vs 49850.6522 mm3, area 14805.6252 vs 14228.7393 mm2, deviation inf mm)"
+"seconds": 97.3,
+"reason": "RebuildError: rebuilt body differs from the stored one (volume 49195.6197 vs 49850.6522 mm3, area 14224.6359 vs 14228.7393 mm2, deviation inf mm)"
 },
 {
 "part": "tutorial/mbd/mbdadvanced/shaft.sldprt",
@@ -5114,21 +5192,27 @@
 },
 {
 "part": "tutorial/mbd/mbdadvanced/spring_system_cylinder.sldprt",
-"outcome": "error",
-"seconds": 40.0,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 3081.5546 vs 3058.0528 mm3, area 2258.3628 vs 2242.8970 mm2, deviation 0.6434 mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 5,
+"seconds": 63.1
 },
 {
 "part": "tutorial/mbd/mbdadvanced/spring_system_piston.sldprt",
-"outcome": "error",
-"seconds": 5.4,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 780.2587 vs 799.7287 mm3, area 524.4422 vs 535.7339 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 2,
+"seconds": 7.2
 },
 {
 "part": "tutorial/mbd/mbdadvanced/spring_system_shaft_clamp.sldprt",
-"outcome": "error",
-"seconds": 34.8,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 1011.7031 vs 901.5175 mm3, area 928.7751 vs 955.2560 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 3,
+"seconds": 47.8
 },
 {
 "part": "tutorial/mbd/mbdoverview/Hardware/bearing.sldprt",
@@ -5224,9 +5308,11 @@
 },
 {
 "part": "tutorial/mbd/mbdoverview/beater_mount.sldprt",
-"outcome": "error",
-"seconds": 45.5,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 3443.9637 vs 3499.1814 mm3, area 2987.3677 vs 2870.6721 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 11,
+"imported": 4,
+"seconds": 60.8
 },
 {
 "part": "tutorial/mbd/mbdoverview/beater_shaft.sldprt",
@@ -5247,14 +5333,14 @@
 {
 "part": "tutorial/mbd/mbdoverview/foot_board.sldprt",
 "outcome": "error",
-"seconds": 26.3,
+"seconds": 38.4,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 139986.0232 vs 96805.4453 mm3, area 42150.0194 vs 31693.3448 mm2, deviation inf mm)"
 },
 {
 "part": "tutorial/mbd/mbdoverview/rocker_support.sldprt",
-"outcome": "error",
-"seconds": 55.5,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 46964.9948 vs 49850.6522 mm3, area 14805.6252 vs 14228.7393 mm2, deviation inf mm)"
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
 },
 {
 "part": "tutorial/mbd/mbdoverview/shaft.sldprt",
@@ -5273,20 +5359,24 @@
 {
 "part": "tutorial/mbd/mbdoverview/spring_system_cylinder.sldprt",
 "outcome": "error",
-"seconds": 40.8,
+"seconds": 63.5,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 3081.5546 vs 3058.0528 mm3, area 2258.3628 vs 2242.8970 mm2, deviation 0.6434 mm)"
 },
 {
 "part": "tutorial/mbd/mbdoverview/spring_system_piston.sldprt",
-"outcome": "error",
-"seconds": 5.5,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 780.2587 vs 799.7287 mm3, area 524.4422 vs 535.7339 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 2,
+"seconds": 7.2
 },
 {
 "part": "tutorial/mbd/mbdoverview/spring_system_shaft_clamp.sldprt",
-"outcome": "error",
-"seconds": 33.8,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 1011.7031 vs 901.5175 mm3, area 928.7751 vs 955.2560 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 3,
+"seconds": 46.2
 },
 {
 "part": "tutorial/moldedproductdesignadvanced/mousebase.sldprt",
@@ -5314,9 +5404,11 @@
 },
 {
 "part": "tutorial/motionstudies/animation/arm left.sldprt",
-"outcome": "error",
-"seconds": 32.0,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 5614.4468 vs 5590.1886 mm3, area 4505.8143 vs 4489.1340 mm2, deviation 1.01 mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 11,
+"imported": 2,
+"seconds": 50.0
 },
 {
 "part": "tutorial/motionstudies/animation/arm right.sldprt",
@@ -5388,9 +5480,11 @@
 },
 {
 "part": "tutorial/motionstudies/animation/plunger.sldprt",
-"outcome": "error",
-"seconds": 4.9,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 11491.2840 vs 11380.1604 mm3, area 4506.3684 vs 4561.9846 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 7,
+"imported": 3,
+"seconds": 9.9
 },
 {
 "part": "tutorial/motionstudies/animation/short bolt_plunger.sldprt",
@@ -5472,9 +5566,11 @@
 },
 {
 "part": "tutorial/motionstudies/redundancies/base linkage.sldprt",
-"outcome": "error",
-"seconds": 6.5,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 17306117.2663 vs 17207942.4959 mm3, area 751180.0873 vs 755107.0781 mm2, deviation 25 mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 9,
+"imported": 2,
+"seconds": 12.5
 },
 {
 "part": "tutorial/motionstudies/redundancies/base.sldprt",
@@ -5494,9 +5590,11 @@
 },
 {
 "part": "tutorial/motionstudies/redundancies/piston female.sldprt",
-"outcome": "error",
-"seconds": 12.3,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 1918701.6583 vs 1921177.0346 mm3, area 426985.4707 vs 417119.4906 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 8,
+"imported": 1,
+"seconds": 17.4
 },
 {
 "part": "tutorial/motionstudies/redundancies/piston male.sldprt",
@@ -5629,7 +5727,7 @@
 {
 "part": "tutorial/multibody/multi_inter.sldprt",
 "outcome": "error",
-"seconds": 29.9,
+"seconds": 72.2,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 363407.0751 vs 426823.0016 mm3, area 52751.3262 vs 70804.4227 mm2, deviation inf mm)"
 },
 {
@@ -5725,7 +5823,7 @@
 {
 "part": "tutorial/routing-pipes/fittings/Regulator.SLDPRT",
 "outcome": "error",
-"seconds": 67.1,
+"seconds": 93.3,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 5916102.0608 vs 18024378.3505 mm3, area 184614.4725 vs 1029810.8498 mm2, deviation inf mm)"
 },
 {
@@ -5747,7 +5845,7 @@
 {
 "part": "tutorial/routing-pipes/framework (done).sldprt",
 "outcome": "error",
-"seconds": 14.8,
+"seconds": 30.4,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 8385124.1115 vs 15068474.1421 mm3, area 2379943.7348 vs 4727851.3366 mm2, deviation inf mm)"
 },
 {
@@ -5766,9 +5864,9 @@
 },
 {
 "part": "tutorial/routing-pipes/regulator.sldprt",
-"outcome": "error",
-"seconds": 70.6,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 520842.8528 vs 18024378.3505 mm3, area 21061.8189 vs 1029810.8498 mm2, deviation inf mm)"
+"outcome": "timeout",
+"seconds": 115.1,
+"reason": "rebuilding the history took longer than 115 s"
 },
 {
 "part": "tutorial/routing-pipes/routes/4in Schedule40-ReducerRoute.sldprt",
@@ -5789,14 +5887,16 @@
 {
 "part": "tutorial/routing-pipes/routes/Framework (Done).SLDPRT",
 "outcome": "error",
-"seconds": 14.0,
+"seconds": 28.7,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 8385124.1115 vs 15068474.1421 mm3, area 2379943.7348 vs 4727851.3366 mm2, deviation inf mm)"
 },
 {
 "part": "tutorial/routing-pipes/slip on weld flange.sldprt",
-"outcome": "error",
-"seconds": 50.8,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 259668.0799 vs 259668.0799 mm3, area 51001.9765 vs 47593.9188 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 10,
+"imported": 1,
+"seconds": 37.9
 },
 {
 "part": "tutorial/routing-pipes/solidworks-lok male pipe weld connector.sldprt",
@@ -5817,7 +5917,7 @@
 {
 "part": "tutorial/routing-pipes/tube-500x010-routeassy2-finalskid.sldprt",
 "outcome": "error",
-"seconds": 69.6,
+"seconds": 81.8,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 10475.4075 vs 12111.0764 mm3, area 82503.3865 vs 95485.5875 mm2, deviation inf mm)"
 },
 {
@@ -6001,7 +6101,7 @@
 {
 "part": "tutorial/tolanalyst/minimum_clearance/axle_support.sldprt",
 "outcome": "error",
-"seconds": 26.3,
+"seconds": 33.9,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 60948.1959 vs 60022.4156 mm3, area 18589.0831 vs 16338.8473 mm2, deviation inf mm)"
 },
 {
@@ -6039,7 +6139,7 @@
 {
 "part": "tutorial/tolanalyst/offset/axle_support.sldprt",
 "outcome": "error",
-"seconds": 26.3,
+"seconds": 34.2,
 "reason": "RebuildError: rebuilt body differs from the stored one (volume 60948.1959 vs 60022.4156 mm3, area 18589.0831 vs 16338.8473 mm2, deviation inf mm)"
 },
 {
@@ -6068,9 +6168,11 @@
 },
 {
 "part": "tutorial/toolbox/baseplate.sldprt",
-"outcome": "error",
-"seconds": 27.9,
-"reason": "RebuildError: rebuilt body differs from the stored one (volume 1723075.2036 vs 1709456.2424 mm3, area 205331.3818 vs 208084.0453 mm2, deviation inf mm)"
+"outcome": "exact",
+"parametric": false,
+"features": 16,
+"imported": 4,
+"seconds": 103.2
 },
 {
 "part": "tutorial/toolbox/braceleft.sldprt",
