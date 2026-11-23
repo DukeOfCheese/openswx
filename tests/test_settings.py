@@ -49,3 +49,32 @@ def test_settings_are_used(monkeypatch):
     monkeypatch.delenv("OPENSWX_TOOLSETS")
     S.set_settings({"mcp_toolsets": "nonsense"})
     assert mcp_server.starting_toolsets() == ["core"]  # a mistyped setting does not stop agents connecting
+
+
+def test_view_mouse_and_keyboard_settings(home):
+    r = S.set_settings({"view_body_color": "#AA2200", "mouse_preset": "onshape", "mouse_zoom_reverse": True,
+                        "shortcuts": {"zoom_fit": "Shift+F", "shortcut_bar": ""}})["settings"]
+    assert (r["view_body_color"], r["mouse_preset"], r["mouse_zoom_reverse"]) == ("#aa2200", "onshape", True)
+    assert r["shortcuts"] == {"zoom_fit": "Shift+F", "shortcut_bar": ""}
+    for bad in ({"view_body_color": "red"}, {"view_body_color": "#12345"}, {"mouse_preset": "trackball"},
+                {"shortcuts": ["Ctrl+S"]}, {"shortcuts": {"save": "Shift+Ctrl+S"}}, {"shortcuts": {"save": "s"}},
+                {"shortcuts": {"Save": "Ctrl+S"}}, {"shortcuts": {"save": 5}}):
+        with pytest.raises(S.CommandError):
+            S.set_settings(bad)
+    assert S.set_settings(reset=True)["settings"]["shortcuts"] == {}
+
+
+def test_web_ui_tables_match_the_settings():
+    """keys.js's default keys are in the format settings.py accepts, and viewport.js has every mouse preset."""
+    import re
+    from pathlib import Path
+    web = Path(settings.__file__).parent / "web"
+    keys_js = (web / "keys.js").read_text(encoding="utf-8")
+    rows = re.findall(r'\["([a-z0-9_]+)", "[^"]+", "([^"]*)", "[^"]+"\]', keys_js)
+    assert len(rows) >= 30 and len({a for a, _ in rows}) == len(rows)
+    for action, combo in rows:
+        assert settings._check("shortcuts", {action: combo}) == {action: combo}
+    assert len({c for _, c in rows}) == len(rows), "two actions share default keys"
+    vp = (web / "viewport.js").read_text(encoding="utf-8")
+    block = vp[vp.index("export const MOUSE = {"):vp.index("};", vp.index("export const MOUSE = {"))]
+    assert set(re.findall(r"^\s+(\w+): \(b, e\)", block, re.M)) == set(settings.MOUSE_PRESETS)
