@@ -97,6 +97,7 @@ def test_release_metadata_agrees():
     assert meta["version"] == openswx.__version__
     assert re.search(rf'#define AppVersion "{re.escape(meta["version"])}"', (root / "packaging" / "openswx.iss").read_text(encoding="utf-8"))
     assert meta["urls"]["Homepage"].startswith("https://github.com/") and meta["readme"] == "README.md"
+    assert re.search(rf'^version: {re.escape(meta["version"])}$', (root / "CITATION.cff").read_text(encoding="utf-8"), re.M)
 
 
 def test_material_library_entries_are_plausible():
@@ -125,3 +126,18 @@ def test_release_notes_come_from_the_changelog():
     import pytest
     with pytest.raises(SystemExit):
         release_notes.notes("9.9.9")
+
+
+def test_mcp_registry_entry_matches_the_package():
+    """server.json (the MCP Registry listing) names this package and version, and the README carries the
+    mcp-name marker the registry looks for on PyPI."""
+    import json
+    import tomllib
+    root = Path(__file__).resolve().parent.parent
+    entry = json.loads((root / "server.json").read_text(encoding="utf-8"))
+    version = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    pkg = entry["packages"][0]
+    assert entry["version"] == pkg["version"] == version and pkg["identifier"] == "openswx"
+    assert len(entry["description"]) <= 100
+    assert f"mcp-name: {entry['name']}" in (root / "README.md").read_text(encoding="utf-8")
+

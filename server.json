@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.DukeOfCheese/openswx",
+  "title": "openswx",
+  "description": "Open-source parametric CAD: agents design parts, assemblies and drawings, live in the open app.",
+  "repository": {
+    "url": "https://github.com/DukeOfCheese/openswx",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "openswx",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ]
+    }
+  ]
+}

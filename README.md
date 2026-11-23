@@ -1,5 +1,7 @@
 # openswx
 
+<!-- mcp-name: io.github.DukeOfCheese/openswx -->
+
 **Open-source parametric CAD with a familiar layout, and a built-in MCP server so AI agents can design
 parts in it while you watch.**
 
@@ -8,12 +10,12 @@ parts in it while you watch.**
 ![platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![status: alpha](https://img.shields.io/badge/status-alpha-orange)
 
-[![Claude builds a mounting plate in openswx over MCP, live (click for the 4K video)](https://raw.githubusercontent.com/DukeOfCheese/openswx/main/docs/media/demo-poster.png)](https://github.com/DukeOfCheese/openswx/raw/main/docs/media/demo.mp4)
+[![Claude builds a mounting plate in openswx over MCP, live (click for the 4K video)](https://raw.githubusercontent.com/DukeOfCheese/openswx/main/docs/media/demo-poster.png)](https://github.com/DukeOfCheese/openswx/blob/main/docs/media/demo.mp4)
 
-<sub>30 s, 4K: [watch the video](https://github.com/DukeOfCheese/openswx/raw/main/docs/media/demo.mp4). Recorded in
+<sub>30 s, 4K: [watch the video](https://github.com/DukeOfCheese/openswx/blob/main/docs/media/demo.mp4). Recorded in
 openswx: every feature is built by a real MCP tool call, the same calls Claude makes through Claude Code or any
 other MCP client. The chat panel illustrates the conversation and is replayed by a script
-([`tools/demo/`](https://github.com/DukeOfCheese/openswx/tree/main/tools/demo)). Claude is made by
+([`tools/demo/`](https://github.com/DukeOfCheese/openswx/blob/main/tools/demo)). Claude is made by
 [Anthropic](https://www.anthropic.com/).</sub>
 
 openswx is an alternate CAD program for engineers. Its screen is laid out the way many mechanical engineers
@@ -62,7 +64,7 @@ here without retraining. Underneath, it is a different program, built on differe
 - **Rendering**: real-time PBR, or path traced for soft shadows and reflections.
 - **Review**: design review, requirements checked like tests, tolerance stack-up, design studies, document
   compare.
-- **Agents**: <!-- counts -->426 commands, 408 of them MCP tools ([full list](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md))<!-- /counts -->,
+- **Agents**: <!-- counts -->427 commands, 408 of them MCP tools ([full list](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md))<!-- /counts -->,
   over stdio or streamable HTTP, shown live in the UI's Agent activity pane.
 - **Files**: native `.oswprt` / `.oswasm` / `.oswdrw` (versioned JSON). Reads SOLIDWORKS `.sldprt` / `.sldasm` /
   `.slddrw` (2015 and later) natively; clean-room Parasolid reader (`.x_t`, `.x_b`) and writer (`.x_t`); STEP and
@@ -120,8 +122,8 @@ window.
 
 | Route | For | Access control |
 |---|---|---|
-| MCP over HTTP, `http://127.0.0.1:8765/mcp` | agents (Claude Code, Claude Desktop, Cursor, any MCP client) while the app or `openswx serve` runs | `Authorization: Bearer <token>`; local connections only unless started with `--allow-remote` |
-| MCP over stdio, `openswx mcp` | agents that start the program themselves | the agent's own process; the UI it starts is token-protected |
+| MCP over HTTP, `http://127.0.0.1:8765/mcp` | agents that reach this computer over HTTP (Claude Code, Cursor) while the app or `openswx serve` runs | `Authorization: Bearer <token>`; local connections only unless started with `--allow-remote` |
+| MCP over stdio, `openswx mcp` | chat apps that start local programs (Claude Desktop); with openswx open it relays to that window | relays with your token; on its own, the UI it starts is token-protected |
 | REST, `POST /api/command` | scripts and other programs | same token as MCP over HTTP |
 | Python, `openswx.api` | notebooks and scripts in the same process | none (your own process) |
 
@@ -134,13 +136,20 @@ claude mcp add --transport http openswx http://127.0.0.1:8765/mcp \
 
 With the desktop app, use `openswx-cli token` in place of `python -m openswx token`.
 
-**Any MCP client** (stdio; starts its own instance and the live UI on port 8765):
+**Claude Desktop** (and other chat apps that start local MCP servers): add openswx to its config (Claude
+Desktop: *Settings → Developer → Edit Config*) and restart it. While openswx is open, `openswx mcp` relays to
+the open window, so you watch the agent's edits live; without it, it starts its own copy and UI.
 
 ```json
-{ "mcpServers": { "openswx": { "command": "python", "args": ["-m", "openswx", "mcp"] } } }
+{ "mcpServers": { "openswx": { "command": "openswx-cli", "args": ["mcp"] } } }
 ```
 
-The UI also shows these steps for the running instance: *Help → Agent (MCP) Setup*.
+`openswx-cli` is the desktop app's command-line program (on Windows give its full path: *Help → Agent (MCP)
+Setup* shows the exact entry for your installation); from source use `"command": "python", "args": ["-m",
+"openswx", "mcp"]`.
+
+**Claude on the web (claude.ai)** cannot connect: its connectors call MCP servers from Anthropic's servers,
+which cannot reach an app running on your computer. Use Claude Desktop or Claude Code.
 
 **Python**:
 
@@ -195,15 +204,15 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
 | AI agents | none built in | MCP server built in, with toolsets, atomic batches and persistent face and edge names |
 | Headless use | needs the full application | `openswx convert`, `render`, `massprops`, `check`, `drawing`, `script` and `diff` run without a window, for example in CI |
 | Requirements | not part of the model | requirements live in the document and are checked like tests (`openswx check` exits non-zero on failure) |
-| Collaboration | PDM server | file-based; a local vault with check-in / check-out, and a live view-only share link |
+| Collaboration | PDM server | today file-based: a local vault with check-in / check-out, and a live view-only share link. Live multi-user editing is in development (see below) |
 | Rendering | PhotoView 360 / Visualize | in the browser: real-time PBR, or path traced on the GPU |
 
 **Compatibility with SOLIDWORKS files**
 
 - `.sldprt`, `.sldasm` and `.slddrw` (2015 and later) open without SOLIDWORKS installed. openswx reads the stored
   body and, where it can decode it, the feature history, and rebuilds that history to check it against the stored
-  body. In the survey of 2026-11-23, 526 of the 841 sample parts that ship with SOLIDWORKS 2025 rebuilt exactly
-  (351 fully parametric). Parts whose features are not decoded yet (many sweeps, lofts, sheet-metal and
+  body. In the survey of 2026-11-23, 534 of the 841 sample parts that ship with SOLIDWORKS 2025 rebuilt exactly
+  (352 fully parametric). Parts whose features are not decoded yet (many sweeps, lofts, sheet-metal and
   surface features) open as an imported solid that you can still measure, mate, draw and add features to.
 - SOLIDWORKS files are **read-only**. Save as openswx files, or exchange through STEP, Parasolid `.x_t` or IGES.
 - Equations, end conditions (by name or by `swEndConditions_e` number) and dimension names (`D1@Sketch1`) use
@@ -211,10 +220,10 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
 
 **Not the same yet (see [Status](#status-and-limitations))**
 
-- Simulation: static, frequency, buckling and steady thermal studies, including bonded assemblies, mesh with
+- Simulation: static, frequency, buckling, steady and transient thermal studies, including bonded assemblies, mesh with
   curvature-based quadratic tetrahedra when the optional mesher is installed (`pip install openswx[mesh]`; included
   in the Windows installer, not yet in the macOS one): peak stresses at holes and fillets within a few percent of closed-form
-  results. Contact, springs and bolts between separate bodies, transient thermal, nonlinear and drop studies
+  results. Contact, springs and bolts between separate bodies, nonlinear and drop studies
   use the finite-cell voxel mesh, whose stresses at curved boundaries are approximate. Flow is
   lattice-Boltzmann with a large-eddy turbulence model, without wall functions.
 - CAM is 3-axis: roughing, flat floors and drilling, and 3D finishing with ball, bull-nose or flat mills; no
@@ -225,6 +234,13 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
   and washers). The material library has about 100 common grades with typical handbook values; add your own
   as custom materials.
 - Icons are original, and some commands sit in slightly different places.
+- Live collaboration is not in openswx yet. It is being built in a separate repository, openswx-collab (not
+  public yet): several people editing the same part at once with live cursors and feature locks, full edit
+  history with named versions and restore, assemblies that reference parts pinned to a version, and a server
+  you can host yourself (SQLite or PostgreSQL). The server never runs a geometry kernel: each person's openswx
+  applies the edits locally and sends the change. The server and its protocol are built and tested; the part
+  inside openswx (sharing a file, the sync client, cursors) has not started, and will be an optional module
+  that is off by default.
 
 ## Status and limitations
 

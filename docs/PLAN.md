@@ -713,7 +713,9 @@ Composer and Insert > Routing on assemblies; Manufacturing, Electrical and Compo
       instructions or disassembly) or by hand (offsets, hidden, see-through, view, note), published in the
       single-file HTML viewer with Play / previous / next animation (`viewer_payload` / `write_viewer` now shared
       with eDrawings export).
-- Not done: Cloud (3DEXPERIENCE-style collaboration) - out of scope for a local app; PDM covers check-in / out.
+- Not done: Cloud (3DEXPERIENCE-style collaboration). Live collaboration is being built separately in openswx-collab
+  (server and wire protocol; self-hostable); the openswx side will be an optional module, developed on the branch
+  dev/openswx-collab. Until then PDM covers check-in / out.
 
 ## Interop, naming and speed pass (2026-10-29, user: "commit, fix the rebuilding of feature history, opening solidworks drawings, importing assemblies, persistent naming, opening speed then fix the installer")
 - [x] Feature history (sw_rebuild.py): the child's budget now follows the isolation timeout (it was 150 s inside a

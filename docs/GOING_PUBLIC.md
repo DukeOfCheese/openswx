@@ -43,9 +43,12 @@ forms, pull request template, CODEOWNERS, Dependabot, labels).
 - [ ] **PyPI**: the package is ready (the name was free on 2026-11-23; `publish.yml` builds, checks and
       test-installs it on every tag). To publish, connect it once: the two steps at the top of
       `.github/workflows/publish.yml`, then re-run the workflow for the tag.
-- [ ] **MCP registry**: list the server in the MCP registry and client directories so agent users find it.
+- [ ] **MCP Registry**: `server.json` is ready (name `io.github.DukeOfCheese/openswx`; the README carries the
+      matching `mcp-name` marker the registry checks on PyPI). After the first PyPI upload: install
+      `mcp-publisher`, `mcp-publisher login github`, `mcp-publisher publish`. Bump the two versions in
+      `server.json` with each release (a test checks they match pyproject.toml).
 - [x] **Demo video** at the top of the README (`docs/media/demo.mp4`, recorded by `tools/demo/record.py`). For
       an inline player on GitHub, drag the file into the README editor on github.com and use the link it gives.
 - [ ] A handful of `good first issue`s from `docs/GAPS.md`, written with the feature-request form, so new
       contributors have somewhere to start.
-- [ ] **CITATION.cff** if people may cite it in papers (the simulation and SOLIDWORKS-format work).
+- [x] **CITATION.cff** (GitHub shows a *Cite this repository* button from it; its version is tested against pyproject.toml).

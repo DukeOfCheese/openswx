@@ -46,7 +46,7 @@ if _ng is not None and sys.platform == "win32":
     binaries += [(str(f), "netgen_occt") for f in _occt.glob("TK*.dll")]
 else:
     NOT_BUNDLED = ["netgen", "pyngcore"]
-hidden += ["openswx.fea_tet", "openswx.desktop", "openswx.web_server", "openswx.mcp_server", "openswx.assembly", "openswx.drawing",
+hidden += ["openswx.fea_tet", "openswx.mcp_bridge", "openswx.desktop", "openswx.web_server", "openswx.mcp_server", "openswx.assembly", "openswx.drawing",
            "openswx.sldprt", "openswx.render", "openswx.equations", "openswx.sw_tree", "openswx.sw_sketch",
            "openswx.sw_rebuild", "openswx.drawing_sheets", "openswx.fileassoc", "openswx.sw_drawing",
            "openswx.advanced", "openswx.commands_more", "openswx.drawing_more", "openswx.fea_more",

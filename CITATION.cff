@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use openswx in your work, please cite it as below."
+type: software
+title: "openswx: open-source parametric CAD with a built-in MCP server"
+authors:
+  - name: "The openswx authors"
+repository-code: "https://github.com/DukeOfCheese/openswx"
+license: Apache-2.0
+version: 0.1.0
+date-released: 2026-11-23
+keywords:
+  - CAD
+  - parametric modelling
+  - finite element analysis
+  - Model Context Protocol
+  - OpenCASCADE
