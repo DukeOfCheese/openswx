@@ -9,6 +9,10 @@ const box = (x = 6, y = 12, w = 14, h = 12, d = 6) =>
 const arrowUp = (x, y, c = sk) => `<path d="M${x} ${y}v-9m-3 3l3 -3l3 3" stroke="${c}" stroke-width="2"/>`;
 
 export const ICONS = {
+  // sheet metal Rip: two walls of a corner pulled apart by a red slot
+  rip: S(`<path d="M6 5v19h4" stroke="${solidDark}" stroke-width="4"/><path d="M6 5v19h4" stroke="${solid}" stroke-width="2.2"/><path d="M15 27h12" stroke="${solidDark}" stroke-width="4"/><path d="M15 27h12" stroke="${solid}" stroke-width="2.2"/><path d="M9 30l5-8" stroke="${cut}" stroke-width="2"/>`),
+  // sheet metal Vent: a plate with a row of slots
+  vent: S(`<rect x="4" y="5" width="24" height="22" rx="2" fill="${solid}" stroke="${solidDark}"/><path d="M9 10h14M9 14h14M9 18h14M9 22h14" stroke="${cut}" stroke-width="2.2"/>`),
   new: S(`<path d="M8 3h11l6 6v20H8z" fill="#fff" stroke="${ink}"/><path d="M19 3v6h6" stroke="${ink}"/><path d="M16 14v10M11 19h10" stroke="${grn}" stroke-width="2.4"/>`),
   open: S(`<path d="M3 9h9l2 3h14v15H3z" fill="#ffd877" stroke="${solidDark}"/><path d="M3 27l4-11h23l-4 11z" fill="${solid}" stroke="${solidDark}"/>`),
   save: S(`<rect x="5" y="5" width="22" height="22" rx="2" fill="#4a7bd0" stroke="#24508f"/><rect x="9" y="5" width="13" height="8" fill="#fff"/><rect x="9" y="18" width="14" height="9" fill="#dfe8f6"/>`),

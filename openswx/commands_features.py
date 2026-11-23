@@ -22,14 +22,17 @@ __all__ = ["export_flat_pattern_dxf", "set_feature_visibility", "extrude", "cut_
            "forming_tool_extruded_flange", "forming_tool_rib", "corner_relief_auto", "revolved_surface",
            "swept_surface", "lofted_surface", "boundary_surface", "planar_surface", "filled_surface",
            "offset_surface", "knit_surface", "trim_surface", "end_cap", "gusset", "base_flange", "edge_flange",
-           "flatten", "sheet_metal_info", "fillet", "chamfer", "shell", "hole", "linear_pattern", "circular_pattern",
+           "flatten", "sheet_metal_info", "rip", "vent", "fillet", "chamfer", "shell", "hole", "linear_pattern", "circular_pattern",
            "mirror", "reference_plane", "reference_axis", "reference_point", "coordinate_system", "helix"]
 
 
 @command(mutates=False, category="sheet_metal")
 def export_flat_pattern_dxf(path: str) -> dict:
     """Sheet metal > Export flat pattern to DXF: the largest planar face of the flattened part (with its
-    holes) as 2D geometry, for laser / waterjet cutting. The part is returned to its formed state."""
+    holes) as 2D geometry in millimetres, for laser / waterjet cutting, plus each bend's centreline (layer
+    BEND), a bend note such as "UP 90° R2" seen from the exported face (layer NOTES) and the flat
+    bounding box with its size (layer BBOX). Bends of miter flanges have no bend line yet. The part is
+    returned to its formed state. Returns the path, the face area (mm2), its size and the notes."""
     from .dxf_io import export_face_outline
     doc = APP.doc
     if doc.ctx.sheet is None:
@@ -40,11 +43,17 @@ def export_flat_pattern_dxf(path: str) -> dict:
             doc.flattened = True
             doc.rebuild()
         faces = [f for f in doc.body.faces() if f.geom_type.name.lower() == "plane"]
-        face = max(faces, key=lambda f: f.area)
+        big = max(f.area for f in faces)
+        from build123d import Vector
+        up = Vector(*doc.ctx.sheet["normal"])
+        # the largest face; of the two sides of the sheet, the one facing the base flange's normal (so a
+        # flange folded up towards it reads UP)
+        face = max((f for f in faces if f.area > big * (1 - 1e-6)), key=lambda f: f.normal_at(f.center()).dot(up))
         p = Path(path).with_suffix(".dxf")
-        export_face_outline(face, str(p))
+        bends = [b for b in (doc.ctx.sheet or {}).get("bends", []) if b.get("flat_line")]
+        notes = export_face_outline(face, str(p), bends=bends)
         bb = face.bounding_box()
-        return {"path": str(p.resolve()), "area": face.area, "size": [bb.size.X, bb.size.Y, bb.size.Z]}
+        return {"path": str(p.resolve()), "area": face.area, "size": [bb.size.X, bb.size.Y, bb.size.Z], "notes": notes}
     finally:
         if not was:
             doc.flattened = False
@@ -711,6 +720,25 @@ def flatten(flat: bool = True) -> dict:
     doc.flattened = flat
     doc.rebuild()
     return _S.sheet_metal_info.__wrapped__() | {"model": doc.summary()}
+
+
+@command(category="sheet_metal")
+def rip(edges: list[str], gap: float = 0.1) -> dict:
+    """Sheet Metal > Rip: open a slot `gap` mm wide (default 0.1) along each straight outside corner edge
+    ('Edge#') where two flat walls meet, through the wall thickness and centred on the corner, so a hollow
+    part (for example a shelled box) can then be unfolded. Returns the feature name and the model."""
+    return _feat("rip", {"edges": [_edge(APP.doc, e) for e in edges], "gap": gap})
+
+
+@command(category="sheet_metal")
+def vent(sketch: str, ribs: int = 0, rib_width: float = 2.0, rib_angle: float = 0.0,
+         rib_spacing: float | None = None, depth: float | None = None) -> dict:
+    """Sheet Metal > Vent: cut the closed outline(s) of `sketch` (drawn on the sheet face) through the sheet,
+    leaving `ribs` straight ribs `rib_width` mm wide across the opening at `rib_angle` degrees from the
+    sketch x axis, `rib_spacing` mm apart centre to centre (default: spread evenly across the opening).
+    `depth` (mm) is only needed on a part without a Base Flange; otherwise the sheet thickness is used."""
+    return _feat("vent", {"sketch": sketch, "ribs": ribs, "rib_width": rib_width, "rib_angle": rib_angle,
+                          "rib_spacing": rib_spacing, "depth": depth})
 
 
 @command(mutates=False, category="sheet_metal")

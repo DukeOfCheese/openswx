@@ -720,7 +720,12 @@ def build_edge_flange(ctx: Ctx, p: dict, name: str) -> None:
         prof = _F(_W(edges))
         tool = extrude(prof, amount=e_len, dir=e_dir)
     apply_op(ctx, "add", tool)
-    ctx.sheet["bends"].append({"feature": name, "angle": math.degrees(phi), "radius": r, "allowance": BA, "length": L})
+    bend = {"feature": name, "angle": math.degrees(phi), "radius": r, "allowance": BA, "length": L}
+    if ctx.flat:
+        y = n.cross(x_dir).normalized()
+        c0 = origin + y * (BA / 2)
+        bend |= {"flat_line": [list(c0), list(c0 + x_dir * e_len)], "toward": list(n)}
+    ctx.sheet["bends"].append(bend)
     ctx.tools[name] = [("add", tool)]
 
 
@@ -818,19 +823,29 @@ def _bend_line(ctx: Ctx, p: dict):
     return a, u, n, m
 
 
+def _flat_bend_line(ctx: Ctx, a: Vector, u: Vector) -> list:
+    """The bend line through `a` along `u`, across the whole flat sheet (for the flat pattern's bend notes)."""
+    us = [Vector(v.X, v.Y, v.Z).dot(u) for v in ctx.body.vertices()]
+    a0 = a - u * a.dot(u)
+    return [list(a0 + u * min(us)), list(a0 + u * max(us))]
+
+
 def build_sketched_bend(ctx: Ctx, p: dict, name: str) -> None:
     """Sheet metal Sketched Bend: bend the sheet along a sketch line (bend centreline) on its face by
     `angle` with inside radius r. The side containing `fixed` ([x, y, z], default the side holding the base
     sketch origin) stays put; flattened, the part is unchanged (bend allowance BA = phi (r + K t))."""
     if ctx.sheet is None or ctx.body is None:
         raise FeatureError("insert a Base Flange first")
-    if ctx.flat:
-        return  # the flat pattern ignores bends
     r = float(p.get("bend_radius", ctx.sheet["radius"]))
     phi = math.radians(float(p.get("angle", 90.0)))
     if not 0 < phi < math.pi:
         raise FeatureError("bend angle must be between 0 and 180 degrees")
     a, u, n, m = _bend_line(ctx, p)
+    if ctx.flat:  # the flat pattern keeps the sheet flat: only the bend line is noted
+        BA = phi * (r + ctx.sheet["k"] * ctx.sheet["thickness"])
+        ctx.sheet["bends"].append({"feature": name, "angle": math.degrees(phi), "radius": r, "allowance": BA, "sketched": True,
+                                   "flat_line": _flat_bend_line(ctx, a, u), "toward": list(n * (-1 if p.get("flip") else 1))})
+        return
     BA, arc, _, _ = _bend(ctx, a, u, n, m, phi, r, -1.0 if p.get("flip") else 1.0)
     ctx.sheet["bends"].append({"feature": name, "angle": math.degrees(phi), "radius": r, "allowance": BA, "sketched": True})
     ctx.tools[name] = [("add", arc)]
@@ -1238,8 +1253,6 @@ def build_jog(ctx: Ctx, p: dict, name: str) -> None:
     between the two bend centrelines), offsetting the rest of the sheet. Flat pattern unchanged."""
     if ctx.sheet is None or ctx.body is None:
         raise FeatureError("insert a Base Flange first")
-    if ctx.flat:
-        return
     r = float(p.get("bend_radius", ctx.sheet["radius"]))
     phi = math.radians(float(p.get("angle", 90.0)))
     D = float(p.get("distance", 10.0))
@@ -1251,6 +1264,11 @@ def build_jog(ctx: Ctx, p: dict, name: str) -> None:
         raise FeatureError(f"jog distance must exceed the bend allowance ({BA:.3f} mm)")
     a, u, n, m = _bend_line(ctx, p)
     up = -1.0 if p.get("flip") else 1.0
+    if ctx.flat:  # two bend lines, D apart, bending opposite ways
+        common = {"feature": name, "angle": math.degrees(phi), "radius": r, "allowance": BA, "jog": True}
+        ctx.sheet["bends"] += [common | {"flat_line": _flat_bend_line(ctx, a, u), "toward": list(n * up)},
+                               common | {"flat_line": _flat_bend_line(ctx, a + m * D, u), "toward": list(n * -up)}]
+        return
     _, arc1, pt, vv = _bend(ctx, a, u, n, m, phi, r, up)
     a2, n2, m2 = pt(a + m * D), vv(n), vv(m)
     _, arc2, pt2, _ = _bend(ctx, a2, u, n2, m2, phi, r, -up)
@@ -2973,3 +2991,9 @@ BUILDERS.update(_advanced.BUILDERS)
 NAME_PREFIX.update(_advanced.NAME_PREFIX)
 _filled_from_sketch = BUILDERS["filled_surface"]
 BUILDERS["filled_surface"] = lambda c, p, n: (_advanced.build_filled_surface_edges if p.get("edges") else _filled_from_sketch)(c, p, n)
+
+# sheet metal Rip and Vent
+from . import sheet_more as _sheet_more  # noqa: E402
+
+BUILDERS.update(_sheet_more.BUILDERS)
+NAME_PREFIX.update(_sheet_more.NAME_PREFIX)

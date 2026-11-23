@@ -12,6 +12,10 @@ formats or commands; files are migrated automatically and the change is listed h
   more); clashes are flagged before saving, and the menus and the Task Pane show the keys in use.
 - User Settings: graphics area background, body, edge, highlight and selection colours; a mouse preset
   (SOLIDWORKS-style, Onshape-style, Fusion-style or Blender-style buttons for rotate, pan and zoom); reversing the wheel.
+- Sheet Metal > Rip: open a slot along the corner edges of a hollow part so it can be unfolded.
+- Sheet Metal > Vent: an opening cut through the sheet from a sketched outline, with ribs left across it.
+- The flat-pattern DXF has each bend's centreline (layer BEND), a note such as "UP 90° R2" (layer NOTES) and
+  the bounding box with its size (layer BBOX).
 - Keyboard navigation: Alt+T moves to the FeatureManager tree (arrows, Enter, F2, Shift+F10); F10 opens the menu
   bar (arrows, Enter, Escape).
 

@@ -49,7 +49,7 @@ since 2026-11-23 the suite also runs green in CI on Linux and macOS; the desktop
 | F SOLIDWORKS interop | partly | Custom properties from `.sldprt`; `import_sw_configurations`: every configuration with stored geometry becomes an openswx configuration (checked on sample parts: volumes match, the saved configuration keeps its editable history). The owner has allowed the development oracle and survey runs (2026-11-23). **Left:** feature-history coverage by feature class (sweep and loft as base features first), remaining mate types, large-assembly loading, `.slddrw` dimension positions - each needs SOLIDWORKS-made test files |
 | F neutral formats | partly | `.stl` / `.3mf` import as faceted solids. **Left:** STEP AP242 with colours and structure, OBJ, binary Parasolid writer |
 | G sketch | partly | Equation-driven curves; sketch blocks (make / insert / list / delete); dimension tolerances and fits. **Left:** sketch picture, style / fit splines, sketch dimension chains, spline relations |
-| G part | partly | Derived configurations (a child follows its parent), display states (saved appearances), requirements in place of sensors, sheet-metal gauge tables. **Left:** Instant3D beyond the depth handle, freeze bar, and the sheet-metal (lofted bend, unfold / fold, tab and slot, convert to sheet metal, vents), weldment, surface and mesh items listed |
+| G part | partly | Derived configurations (a child follows its parent), display states (saved appearances), requirements in place of sensors, sheet-metal gauge tables. **Left:** Instant3D beyond the depth handle, freeze bar, and the sheet-metal (lofted bend, unfold / fold, tab and slot, convert to sheet metal), weldment, surface and mesh items listed |
 | G assembly | partly | Assembly configurations (component suppression and mate values per configuration) and display states, with dialogs. **Left:** flexible subassemblies, lightweight components, belt / chain, collision and physics while dragging, physics-based motion, mate controller, layout sketches, exploded line sketch |
 | G drawings | partly | Ordinate / baseline / chain dimensions; tolerance display. **Left:** the rest of the list |
 | H1 C++ port decision | decided | Parked (2026-11-23): the owner's reason for the port was macOS support, which the Python application already has through `packaging/build.py`. Recorded in `PLAN.md`. Hot loops go to compiled extensions case by case if the benchmarks call for it |
@@ -356,8 +356,9 @@ Checked against the command registry; none of these has a command today.
   extrude depth handle (drag faces, on-model dimension edit for every feature); equations with `$PRP`
   file-property links, units and suppress-by-equation (check which of these the evaluator already takes;
   it has functions and an if-expression); freeze bar.
-- Sheet metal: lofted bend, swept flange, unfold / fold, tab and slot, convert solid to sheet metal, rip,
-  vent, cross break, gauge and bend tables, normal cut, flat-pattern bend notes and bounding box.
+- Sheet metal (rip, vent and flat-pattern bend lines, notes and bounding box done 2026-11-24): lofted bend,
+  swept flange, unfold / fold, tab and slot, convert solid to sheet metal, cross break, bend tables, normal
+  cut, bend lines for miter flanges.
 - Weldments: trim / extend as a command, custom profile library from sketches, cut-list properties per
   body, weld table.
 - Surfaces: mid-surface, face curves, surface from mesh.

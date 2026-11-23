@@ -381,3 +381,85 @@ def test_more_surface_tools():
     assert S.flatten_surface(faces=[cyl])["info"]["surface_area"] == pytest.approx(PI * 10 * 20, rel=1e-6)
     rim = [x["id"] for x in S.get_topology()["edges"] if x["type"] == "circle" and x["point"][1] > 19]
     assert S.filled_surface_edges(rim, "tangent")["info"]["surface_area"] == pytest.approx(PI * 25, rel=1e-4)
+
+
+def test_rip_and_vent():
+    # Rip along the outer corner of an L angle (walls t, height H): the slot of width g centred on the corner's
+    # bisecting plane removes sqrt(2) t g H (the band |x - y| <= g / sqrt(2) inside the L has area 2 t g / sqrt(2))
+    t, H, g = 2.0, 30.0, 0.5
+    S.new_part("L")
+    sk = S.create_sketch("Front")["sketch"]
+    S.sketch_rectangle(sk, [0, 0], [40, t])
+    S.sketch_rectangle(sk, [0, t], [t, 40])
+    S.extrude(sk, depth=H)
+    v0 = vol()
+    assert v0 == pytest.approx((80 * t - t * t) * H)
+    corner = [e["id"] for e in S.get_topology()["edges"] if e["type"] == "line"
+              and abs(e["point"][0]) < 1e-6 and abs(e["point"][1]) < 1e-6]
+    assert len(corner) == 1
+    S.rip(corner, gap=g)
+    assert v0 - vol() == pytest.approx(2 ** 0.5 * t * g * H, rel=1e-9)
+    for bad in ({"edges": corner, "gap": 0}, {"edges": []}):
+        with pytest.raises(S.CommandError):
+            S.rip(**bad)
+
+    # Vent: a 60 x 30 opening in a 2 mm sheet with two 3 mm ribs along x
+    def sheet():
+        S.new_part()
+        sk = S.create_sketch("Top")["sketch"]
+        S.sketch_rectangle(sk, [-60, -40], [60, 40])
+        S.base_flange(sk, thickness=2)
+        S.reference_plane("Top", offset=2)
+        return vol(), S.create_sketch("Plane1")["sketch"]
+    v1, vs = sheet()
+    S.sketch_rectangle(vs, [-30, -15], [30, 15])
+    S.vent(vs, ribs=2, rib_width=3)
+    assert v1 - vol() == pytest.approx(2 * (60 * 30 - 2 * 3 * 60), rel=1e-9)
+    # a round vent (R 20) with one 4 mm rib through the centre at 30 deg: circle minus a chord strip of half-width h
+    v1, vs = sheet()
+    S.sketch_circle(vs, [0, 0], 20)
+    S.vent(vs, ribs=1, rib_width=4, rib_angle=30)
+    R, h = 20.0, 2.0
+    strip = 2 * (h * (R * R - h * h) ** 0.5 + R * R * math.asin(h / R))
+    assert v1 - vol() == pytest.approx(2 * (PI * R * R - strip), rel=1e-6)
+
+
+def test_flat_pattern_dxf_bend_notes(tmp_path):
+    ezdxf = pytest.importorskip("ezdxf")
+    S.new_part("Bracket")
+    sk = S.create_sketch("Top")["sketch"]
+    S.sketch_rectangle(sk, [0, 0], [100, 50])
+    S.base_flange(sk, thickness=2, bend_radius=3, k_factor=0.5)
+    edge = [e["id"] for e in S.get_topology()["edges"] if e["type"] == "line" and abs(e["point"][0] - 100) < 1e-6
+            and abs(e["point"][1] - 2) < 1e-6][0]
+    S.edge_flange(edge, length=30, angle=90)
+    r = S.export_flat_pattern_dxf(str(tmp_path / "bracket"))
+    BA = PI / 2 * (3 + 0.5 * 2)
+    msp = ezdxf.readfile(r["path"]).modelspace()
+    (bend,) = [e for e in msp if e.dxf.layer == "BEND"]
+    (box,) = [e for e in msp if e.dxf.layer == "BBOX"]
+    xs, ys = zip(*[(q[0], q[1]) for q in box.get_points()])
+    assert sorted([max(xs) - min(xs), max(ys) - min(ys)]) == pytest.approx(sorted([100 + BA + 30, 50]))
+    a, b = bend.dxf.start, bend.dxf.end
+    assert math.dist(a, b) == pytest.approx(50)  # across the whole width
+    # the bend centreline lies half the allowance into the bend zone: 30 + BA/2 from the flange end
+    along = 0 if abs(a[0] - b[0]) < 1e-9 else 1  # the coordinate that varies across the flat (not along the line)
+    lo, hi = (min(xs), max(xs)) if along == 0 else (min(ys), max(ys))
+    assert sorted([a[along] - lo, hi - a[along]]) == pytest.approx(sorted([30 + BA / 2, 100 + BA / 2]))
+    texts = sorted(e.dxf.text for e in msp.query("TEXT"))
+    assert texts == sorted(["UP 90° R3", f"{max(ys) - min(ys):.2f} x {max(xs) - min(xs):.2f}"]) or \
+        texts == sorted(["UP 90° R3", f"{max(xs) - min(xs):.2f} x {max(ys) - min(ys):.2f}"])
+    assert S.sheet_metal_info()["flattened"] is False  # put back in its formed state
+
+    # a jog: two bend lines `distance` apart in the flat, bending opposite ways
+    S.new_part("Jog")
+    sk = S.create_sketch("Top")["sketch"]
+    S.sketch_rectangle(sk, [0, 0], [100, 50])
+    S.base_flange(sk, thickness=2, bend_radius=2, k_factor=0.5)
+    S.reference_plane("Top", offset=2)
+    bl = S.create_sketch("Plane1")["sketch"]
+    S.sketch_line(bl, [40, -10], [40, 60])
+    S.jog(bl, distance=15, angle=90)
+    notes = [n for n in S.export_flat_pattern_dxf(str(tmp_path / "jog"))["notes"] if "start" in n]
+    assert sorted(n["text"] for n in notes) == ["DOWN 90° R2", "UP 90° R2"]
+    assert abs(notes[0]["start"][0] - notes[1]["start"][0]) == pytest.approx(15)
