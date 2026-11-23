@@ -950,23 +950,26 @@ const MIXIN = {
     const r = await this.api("/api/command", { name: "get_settings", args: {} });
     if (!r.ok) return this.toast(r.error, "err");
     const { settings, about, file } = r.result;
-    const rows = Object.entries(about).map(([k, a]) => {
+    const shown = Object.entries(about).filter(([, a]) => !(a.default && typeof a.default === "object")); // (shortcuts: Customize Keyboard)
+    const rows = shown.map(([k, a]) => {
       const v = settings[k];
       let input;
       if (typeof a.default === "boolean") input = `<input id="op_${k}" type="checkbox" ${v ? "checked" : ""}>`;
-      else if (a.choices) input = `<select id="op_${k}">${a.choices.map((c) => `<option${c === v ? " selected" : ""}>${escapeHtml(c)}</option>`).join("")}</select>`;
+      else if (a.kind === "color") input = `<input id="op_${k}" type="color" value="${escapeHtml(v)}">`;
+      else if (a.choices) input = `<select id="op_${k}">${a.choices.map((c) => `<option value="${escapeHtml(c)}"${c === v ? " selected" : ""}>${escapeHtml(c)}${a.choice_docs?.[c] ? ` (${escapeHtml(a.choice_docs[c])})` : ""}</option>`).join("")}</select>`;
       else if (typeof a.default === "number") input = `<input id="op_${k}" type="number" min="${a.min ?? ""}" max="${a.max ?? ""}" value="${v}" style="width:90px">`;
       else input = `<input id="op_${k}" value="${escapeHtml(String(v))}" style="width:180px">`;
       return `<div class="field"><label>${escapeHtml(a.doc)}</label>${input}</div>`;
     }).join("");
-    this.modal("User Settings", `${rows}<p class="muted">Saved in ${escapeHtml(file)}. Autosave and MCP toolsets apply from the next start.</p>`, async () => {
+    this.modal("User Settings", `${rows}<p class="muted">Saved in ${escapeHtml(file)}. Autosave and MCP toolsets apply from the next start. Keyboard shortcuts: Tools &gt; Customize Keyboard.</p>`, async () => {
       const values = {};
-      for (const [k, a] of Object.entries(about)) {
+      for (const [k, a] of shown) {
         const e = document.getElementById(`op_${k}`);
         values[k] = typeof a.default === "boolean" ? e.checked : typeof a.default === "number" ? parseFloat(e.value) : e.value;
       }
       const s = await this.api("/api/command", { name: "set_settings", args: { values } });
       if (!s.ok) { this.toast(s.error, "err"); throw new Error(s.error); }
+      this.applyUserSettings(s.result.settings);
       this.toast("Settings saved.");
     }, "properties");
   },

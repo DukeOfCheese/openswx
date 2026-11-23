@@ -5,6 +5,17 @@ const COL = {
   body: 0xc4cad3, hover: 0xf08a00, sel: 0x2f7be0, edge: 0x101010, preview: 0xffcf33,
   sketchUnder: 0x1d4fd6, sketchFull: 0x111111, sketchOver: 0xd0312d, sketchDangling: 0x8a6516, construction: 0x6b7cab, plane: 0x6f9ee0,
 };
+// a face's highlight: the highlight / selection colour lightened half way to white (it is shaded on top)
+const tint = (c) => [16, 8, 0].reduce((t, sh) => t | (Math.round((((c >> sh) & 255) + 255) / 2) << sh), 0);
+
+// mouse presets (User Settings > mouse_preset; settings.py describes them): button 1 is the middle, 2 the right
+// one; each returns rotate / pan / zoom or null (the press goes to the tools). Alt + left drag always rotates.
+export const MOUSE = {
+  solidworks: (b, e) => b === 1 ? (e.ctrlKey ? "pan" : e.shiftKey ? "zoom" : "rotate") : b === 2 && e.ctrlKey ? "pan" : null,
+  onshape: (b, e) => b === 1 ? "pan" : b === 2 ? (e.ctrlKey ? "pan" : "rotate") : null,
+  fusion: (b, e) => b === 1 ? (e.shiftKey ? "rotate" : "pan") : null,
+  blender: (b, e) => b === 1 ? (e.shiftKey ? "pan" : e.ctrlKey ? "zoom" : "rotate") : null,
+};
 const VIEWS = {
   front: [[0, 0, 1], [0, 1, 0]], back: [[0, 0, -1], [0, 1, 0]], top: [[0, 1, 0], [0, 0, -1]],
   bottom: [[0, -1, 0], [0, 0, 1]], right: [[1, 0, 0], [0, 1, 0]], left: [[-1, 0, 0], [0, 1, 0]],
@@ -37,6 +48,7 @@ export class Viewport {
     this.hover = null; this.selection = [];
     this.shownPlanes = new Set(); this.planesOff = false; this.activeSketch = null; this.hiddenSketches = new Set();
     this.hiddenComponents = new Set(); this.viewHistory = [];
+    this.mouse = { preset: "solidworks", zoomReverse: false };
     this.hoverFaces = new Set(); this.selFaces = new Set(); // a feature's faces, hovered / selected in the FeatureManager
     this.listeners = {}; this.frameHooks = [];
     this.bbox = new THREE.Box3(new THREE.Vector3(-50, -50, -50), new THREE.Vector3(50, 50, 50));
@@ -65,7 +77,7 @@ export class Viewport {
       const base = hex ? parseInt(hex.slice(1), 16) : COL.body;
       const mat = new THREE.MeshPhongMaterial({ color: base, specular: 0x2a2a2a, shininess: 38, side: THREE.DoubleSide,
         polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
-      const m = new THREE.Mesh(geo, mat); m.userData = { kind: "face", id: f.id, type: f.type, base };
+      const m = new THREE.Mesh(geo, mat); m.userData = { kind: "face", id: f.id, type: f.type, base, own: !!hex };
       this.groups.body.add(m); this.faces.set(f.id, m);
     }
     for (const f of mesh.surfaces || []) { // surface bodies: light, double-sided, not pickable
@@ -400,7 +412,7 @@ export class Viewport {
       const a = m.userData.analysis; // analysis colouring wins over the appearance colour
       const base = this.style === "hlr" ? 0xffffff : Array.isArray(a) ? 0xffffff : a ?? m.userData.base ?? COL.body;
       if (!m.material.color) continue; // matcap (zebra) material
-      m.material.color.setHex(isSel("face", id) || this.selFaces.has(id) ? 0x8fb8f2 : isHov("face", id) || this.hoverFaces.has(id) ? 0xf6c27a : base);
+      m.material.color.setHex(isSel("face", id) || this.selFaces.has(id) ? tint(COL.sel) : isHov("face", id) || this.hoverFaces.has(id) ? tint(COL.hover) : base);
     }
     for (const [id, l] of this.edges) l.material.color.setHex(isSel("edge", id) ? COL.sel : isHov("edge", id) ? COL.hover : COL.edge);
     for (const o of this.sketchEnts) {
@@ -693,6 +705,14 @@ export class Viewport {
     return best;
   }
 
+  // User Settings: body, edge, highlight and selection colours ("#rrggbb"; missing ones are left as they are)
+  setColors({ body, edge, hover, sel } = {}) {
+    const hex = (c) => (typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c) ? parseInt(c.slice(1), 16) : null);
+    for (const [k, v] of Object.entries({ body, edge, hover, sel })) if (hex(v) !== null) COL[k] = hex(v);
+    for (const m of this.faces.values()) if (!m.userData.own) m.userData.base = COL.body; // (faces with no appearance of their own)
+    if (this.faces.size) { this.applyStyle(this.style); this._applyHighlights(); }
+  }
+
   // ------------------------------------------------------------------ input
   _bindInput() {
     const c = this.canvas;
@@ -700,8 +720,7 @@ export class Viewport {
     c.addEventListener("contextmenu", (e) => e.preventDefault());
     c.addEventListener("pointerdown", (e) => {
       try { c.setPointerCapture(e.pointerId); } catch { /* (a pointer that has already gone) */ }
-      const mode = e.button === 1 ? (e.ctrlKey ? "pan" : e.shiftKey ? "zoom" : "rotate")
-        : e.button === 0 && e.altKey ? "rotate" : e.button === 2 && e.ctrlKey ? "pan" : null;
+      const mode = e.button === 0 ? (e.altKey ? "rotate" : null) : (MOUSE[this.mouse.preset] || MOUSE.solidworks)(e.button, e);
       drag = { x: e.clientX, y: e.clientY, mode, button: e.button, moved: false, sx: e.offsetX, sy: e.offsetY };
       if (e.button === 1) e.preventDefault();
       if (!mode) this.emit("down", { x: e.offsetX, y: e.offsetY, button: e.button, event: e });
@@ -719,7 +738,8 @@ export class Viewport {
     });
     c.addEventListener("pointerup", (e) => {
       const d = drag; drag = null;
-      if (d && d.button === 1 && d.mode === "rotate" && !d.moved) { // middle click: set (or clear) the rotation centre
+      if (d && d.button === 2 && d.mode && !d.moved) { this.emit("rightclick", { x: e.offsetX, y: e.offsetY, event: e }); return; } // (right drag moves the view; a right click is still one)
+      if (d && d.button === 1 && d.mode && !d.moved) { // middle click: set (or clear) the rotation centre
         const pk = this.pick(e.offsetX, e.offsetY, { kinds: ["vertex", "face"] });
         this.setPivot(pk?.point || null);
         return;
@@ -732,7 +752,9 @@ export class Viewport {
     c.addEventListener("wheel", (e) => {
       e.preventDefault();
       // SOLIDWORKS default: rolling the wheel forward (away from you) zooms out.
-      this.zoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.offsetX, e.offsetY);
+      // (User Settings > mouse_zoom_reverse turns it round)
+      const out = (e.deltaY < 0) !== this.mouse.zoomReverse;
+      this.zoomAt(out ? 1.12 : 1 / 1.12, e.offsetX, e.offsetY);
     }, { passive: false });
     c.addEventListener("pointerleave", () => this.emit("leave"));
   }

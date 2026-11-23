@@ -6,6 +6,7 @@ import { Sketcher } from "./sketcher.js";
 import { DrawingEditor } from "./drawing.js";
 import { MORE_FEATURE_TO_SPEC, MORE_SPECS, MORE_TYPE_ICON, installMore, menuTree, renderMenu } from "./more.js";
 import { installMfg } from "./mfg.js";
+import { DEFAULT_KEYS, SHORTCUTS, comboOf, conflicts, effectiveKeys, keyTable } from "./keys.js";
 
 const $ = (s) => document.querySelector(s);
 const TYPE_ICON = { sketch: "sketch_item", extrude: "extrude", cut_extrude: "cut_extrude", revolve: "revolve", cut_revolve: "cut_revolve",
@@ -57,6 +58,7 @@ class App {
     this.bindViewport(); this.bindKeys(); this.bindSearch(); this.bindFileInput();
     this.renderCommandManager(); this.renderConfirm();
     this.connect();
+    this.loadUserSettings();
     this.checkRecovery();
     // leaving with unsaved changes asks first (the desktop window has its own check on close)
     window.addEventListener("beforeunload", (e) => { if (!this.desk && (this.docs || []).some((d) => d.dirty)) { e.preventDefault(); e.returnValue = ""; } });
@@ -310,7 +312,7 @@ class App {
           ["Assembly > Defeature...", "", () => this.defeatureDialog()]] : [["Defeature...", "", () => this.defeatureDialog()]]),
         ["Design Library...", "", () => this.designLibraryDialog()], ["PDM Vault...", "", () => this.pdmDialog()],
         ["Macro > Record / Stop", "", () => this.macroRecord()], ["Macro > Stop and Save...", "", () => this.macroStop()], ["Macro > Run...", "", () => this.macroRun()], "-",
-        ["Equations...", "", () => this.equationsDialog()], ["Dimension Tolerances...", "", () => this.toleranceDialog()], ["Requirements...", "", () => this.requirementsDialog()], ["Design Review", "", () => this.reviewDialog()], ["Export Script (.py)...", "", () => this.exportScript()], ["Hand-off Pack...", "", () => this.handoffPack()], "-", ["Assembly > Display States...", "", () => this.displayStatesDialog()], ["Assembly > Configurations...", "", () => this.asmConfigDialog()], ["User Settings...", "", () => this.userSettingsDialog()], ["Design Table...", "", () => this.designTableDialog()], ["Material...", "", () => this.materialDialog()],
+        ["Equations...", "", () => this.equationsDialog()], ["Dimension Tolerances...", "", () => this.toleranceDialog()], ["Requirements...", "", () => this.requirementsDialog()], ["Design Review", "", () => this.reviewDialog()], ["Export Script (.py)...", "", () => this.exportScript()], ["Hand-off Pack...", "", () => this.handoffPack()], "-", ["Assembly > Display States...", "", () => this.displayStatesDialog()], ["Assembly > Configurations...", "", () => this.asmConfigDialog()], ["User Settings...", "", () => this.userSettingsDialog()], ["Customize Keyboard...", "", () => this.customizeKeyboardDialog()], ["Design Table...", "", () => this.designTableDialog()], ["Material...", "", () => this.materialDialog()],
         ["Appearance...", "", () => this.appearanceDialog()], ["Properties...", "", () => this.propertiesDialog()], ["Options...", "", () => this.optionsDialog()]],
       Window: () => [...(this.docs?.documents || []).map((d) => [`${d.name === this.model.name ? "✓ " : ""}${d.name}`.replace(/ > /g, " › "), "", () => this.switchDocument(d.name)]),
         "-", ["Next Document", "Ctrl+Tab", () => this.nextDocument()], ["Close", "Ctrl+W", () => this.run("close_document").then(() => this.vp.zoomFit())]],
@@ -320,7 +322,7 @@ class App {
     for (const [name, items] of Object.entries(M)) {
       const root = el("div", "menu-root", name), drop = el("div", "menu-drop");
       // "A > B" labels become cascading submenus that open on hover
-      const fill = () => renderMenu(drop, menuTree(typeof items === "function" ? items() : items), (fn) => { this.closeMenus(); fn(); });
+      const fill = () => renderMenu(drop, menuTree((typeof items === "function" ? items() : items).map((it) => Array.isArray(it) ? [it[0], this.menuKeyLabel(it[1]), it[2]] : it)), (fn) => { this.closeMenus(); fn(); });
       fill(); root.append(drop);
       root.onclick = (e) => { e.stopPropagation(); const open = root.classList.contains("open"); this.closeMenus(); if (!open) { fill(); root.classList.add("open"); bar.classList.add("open"); } };
       root.onmouseenter = () => { if (bar.querySelector(".menu-root.open") && !root.classList.contains("open")) { this.closeMenus(); fill(); root.classList.add("open"); bar.classList.add("open"); } };
@@ -2151,13 +2153,24 @@ class App {
   buildTaskPane() {
     const keys = { agent: "agent", props: "mass", help: "keyboard" };
     document.querySelectorAll(".tp-tab").forEach((b) => { b.innerHTML = icon(keys[b.dataset.pane]); b.onclick = () => this.showTask(b.dataset.pane); });
+    this.renderHelpPane();
+  }
+
+  // Task Pane > Shortcuts: the mouse and keys in use (User Settings, Tools > Customize Keyboard)
+  renderHelpPane() {
+    const mouse = { solidworks: [["Rotate", "Middle drag / Alt+Left drag"], ["Pan", "Ctrl+Middle drag"], ["Zoom", "Wheel / Shift+Middle drag"]],
+      onshape: [["Rotate", "Right drag / Alt+Left drag"], ["Pan", "Middle drag / Ctrl+Right drag"], ["Zoom", "Wheel"]],
+      fusion: [["Rotate", "Shift+Middle drag / Alt+Left drag"], ["Pan", "Middle drag"], ["Zoom", "Wheel"]],
+      blender: [["Rotate", "Middle drag / Alt+Left drag"], ["Pan", "Shift+Middle drag"], ["Zoom", "Wheel / Ctrl+Middle drag"]] }[this.vp.mouse?.preset] || [];
+    const keys = this.keys || DEFAULT_KEYS;
+    const rows = [...mouse, ...SHORTCUTS.filter(([id]) => keys[id]).map(([id, label]) => [label, keys[id]]),
+      ["Smart Dimension", "D (in sketch)"], ["Line / Rectangle / Circle", "L / R / C (in sketch)"], ["Repeat last command", "Enter"],
+      ["Mouse gestures", this.vp.mouse?.preset === "onshape" ? "(off: the right button turns the view)" : "Right drag"],
+      ["Box select (window / crossing)", "Left-drag right / left"], ["Select Other", "Right-click"],
+      ["Hide / show component", "Tab / Shift+Tab (assembly)"], ["Turn / pan the view", "Arrows / Ctrl+Arrows"], ["Cancel", "Esc"], ["Delete", "Del"]];
     $("#tp-help").innerHTML = `<div class="tp-h">${icon("keyboard")} Shortcuts</div><div class="kv">
-      ${[["Rotate", "Middle drag / Alt+Left drag"], ["Pan", "Ctrl+Middle drag"], ["Zoom", "Wheel / Shift+Middle"], ["View orientation", "Space"], ["Front/Back/Left/Right", "Ctrl+1..4"],
-        ["Top/Bottom/Iso", "Ctrl+5..7"], ["Normal To", "Ctrl+8"], ["Zoom to fit", "F"], ["Rebuild", "Ctrl+B / Ctrl+Q"], ["Undo / Redo", "Ctrl+Z / Ctrl+Y"], ["Save", "Ctrl+S"],
-        ["Smart Dimension", "D (in sketch)"], ["Line / Rectangle / Circle", "L / R / C (in sketch)"], ["Shortcut bar", "S"], ["Repeat last command", "Enter"],
-        ["Mouse gestures", "Right-drag"], ["Box select (window / crossing)", "Left-drag right / left"], ["Select Other", "Right-click"],
-        ["Selection filter", "F5; X faces, E edges, V vertices"], ["Zoom out / in", "Z / Shift+Z"], ["Previous view", "Ctrl+Shift+Z"],
-        ["Hide / show component", "Tab / Shift+Tab (assembly)"], ["Next document / Close", "Ctrl+Tab / Ctrl+W"], ["Cancel", "Esc"], ["Delete", "Del"]].map(([a, b]) => `<div>${a}</div><div>${b}</div>`).join("")}</div>`;
+      ${rows.map(([a, b]) => `<div>${escapeHtml(a)}</div><div>${escapeHtml(b)}</div>`).join("")}</div>
+      <p class="muted" style="margin-top:8px">Change them in Tools &gt; Customize Keyboard and Tools &gt; User Settings.</p>`;
   }
 
   showTask(p) {
@@ -2659,22 +2672,31 @@ class App {
 
   // ================================================================== keyboard / search
   bindKeys() {
+    this.keys = effectiveKeys({}); this.keyMap = keyTable(this.keys);
+    const views = { view_front: "front", view_back: "back", view_left: "left", view_right: "right", view_top: "top", view_bottom: "bottom", view_isometric: "isometric" };
+    const filters = { filter_faces: "face", filter_edges: "edge", filter_vertices: "vertex" };
+    // what each action in keys.js does (the keys themselves come from User Settings > shortcuts)
+    this.keyActions = {
+      ...Object.fromEntries(Object.entries(views).map(([id, v]) => [id, () => this.vp.setView(v)])),
+      ...Object.fromEntries(Object.entries(filters).map(([id, f]) => [id, () => { if (this.sk.active) return false; this.toggleFilter(f); }])),
+      normal_to: () => this.normalTo(), undo: () => this.run("undo").catch(() => {}), redo: () => this.run("redo").catch(() => {}),
+      rebuild: () => this.run("rebuild"), force_rebuild: () => this.run("rebuild"), save: () => this.save(), new_part: () => this.newPart(),
+      open: () => this.openFile(), previous_view: () => this.vp.previousView(), next_document: () => this.nextDocument(),
+      close: () => this.run("close_document").then(() => this.vp.zoomFit()).catch(() => {}),
+      filter_toolbar: () => this.huFilter?.click(), shortcut_bar: () => this.shortcutBar(), zoom_fit: () => this.vp.zoomFit(),
+      zoom_out: () => this.vp.zoomAt(1.25, this.vp.w / 2, this.vp.h / 2), zoom_in: () => this.vp.zoomAt(1 / 1.25, this.vp.w / 2, this.vp.h / 2),
+      view_orientation: () => this.orientationMenu(),
+      rename: () => { const f = this.selection.find((x) => x.kind === "feature"); if (f) this.renameFeature(f.id); },
+      command_search: () => { const i = $("#cmdsearch"); i?.focus(); i?.select(); },
+      focus_tree: () => this.focusTree(), open_menu: () => this.menuKeyOpen(0),
+    };
+    this.bindTreeKeys();
     document.addEventListener("keydown", (e) => {
+      if (this.menuKey(e)) return; // (an open menu takes the arrows, Enter and Escape)
       if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
       if (!$("#modal").classList.contains("hidden")) return;
       const k = e.key.toLowerCase(), C = e.ctrlKey || e.metaKey;
-      const views = { 1: "front", 2: "back", 3: "left", 4: "right", 5: "top", 6: "bottom", 7: "isometric" };
-      if (C && views[k]) { e.preventDefault(); return this.vp.setView(views[k]); }
-      if (C && k === "8") { e.preventDefault(); return this.normalTo(); }
-      if (C && k === "z") { e.preventDefault(); return this.run("undo").catch(() => {}); }
-      if (C && k === "y") { e.preventDefault(); return this.run("redo").catch(() => {}); }
-      if (C && (k === "b" || k === "q")) { e.preventDefault(); return this.run("rebuild"); }
-      if (C && k === "s") { e.preventDefault(); return this.save(); }
-      if (C && k === "n") { e.preventDefault(); return this.newPart(); }
-      if (C && k === "o") { e.preventDefault(); return this.openFile(); }
-      if (C && e.shiftKey && k === "z") { e.preventDefault(); return this.vp.previousView(); }
-      if (C && k === "w") { e.preventDefault(); return this.run("close_document").then(() => this.vp.zoomFit()).catch(() => {}); }
-      if (C && e.key === "Tab") { e.preventDefault(); return this.nextDocument(); }
+      // keys with a fixed meaning that depends on what is going on: these come before the customisable ones
       if (e.key === "Escape") {
         $("#sbar")?.remove(); this.hideFeatureDims();
         if (this.placing) return this.cancelPlacing();
@@ -2684,31 +2706,158 @@ class App {
       if (e.key === "Enter" && this.sk.active && !this.pm.active && this.sk.key(e)) return;
       if (e.key === "Delete") return this.dwg.isOpen() ? undefined : this.deleteSelection(); // (the drawing editor deletes its own selection)
       if (e.key === "Enter" && this.pm.active) return this.pmOK();
-      if (e.key === "Enter" && this.lastCommand) return this.lastCommand.fn(); // SOLIDWORKS: Enter repeats the last command
-      if (e.key === "F5") { e.preventDefault(); return this.huFilter?.click(); }
-      if (e.key === "Tab" && this.model.kind === "assembly") { // Tab hides the component under the cursor, Shift+Tab shows all
+      if (e.key === "Enter" && !C && !e.shiftKey && this.lastCommand) return this.lastCommand.fn(); // SOLIDWORKS: Enter repeats the last command
+      if (e.key === "Tab" && !C && this.model?.kind === "assembly") { // Tab hides the component under the cursor, Shift+Tab shows all
         e.preventDefault();
         if (e.shiftKey) return this.showAllComponents();
         const pk = this.vp.pick(this.lastMouse.x, this.lastMouse.y, { kinds: ["face"] });
         if (pk) this.toggleComponents([pk.id.split("/")[0]]);
         return;
       }
-      if (k === "s" && !C) return this.shortcutBar();
-      if (k === "z" && !C) { const f = e.shiftKey ? 1 / 1.25 : 1.25; return this.vp.zoomAt(f, this.vp.w / 2, this.vp.h / 2); } // Z out, Shift+Z in
-      if (!this.sk.active && !C && ["x", "e", "v"].includes(k)) return this.toggleFilter({ x: "face", e: "edge", v: "vertex" }[k]);
-      if (k === "f" && !C) return this.vp.zoomFit();
-      if (e.key === " ") { e.preventDefault(); return this.orientationMenu(); }
-      if (e.key === "F2") { const f = this.selection.find((s) => s.kind === "feature"); if (f) this.renameFeature(f.id); return; }
-      if (e.key.startsWith("Arrow")) {
+      const action = this.keyMap.get(comboOf(e));
+      if (action && this.keyActions[action]) {
+        e.preventDefault();
+        if (this.keyActions[action]() !== false) return; // (false: not for now, e.g. a selection filter while sketching)
+      }
+      if (e.key.startsWith("Arrow") && !e.altKey) { // arrows turn the view, Ctrl + arrows pan it
         const a = 15 * Math.PI / 180, d = { ArrowLeft: [-a, 0], ArrowRight: [a, 0], ArrowUp: [0, -a], ArrowDown: [0, a] }[e.key];
         if (C) this.vp.panBy(-d[0] * 300, -d[1] * 300); else this.vp.rotateBy(...d);
         return;
       }
-      if (this.sk.active && !C) {
+      if (this.sk.active && !C && !e.altKey) {
         const map = { l: "line", r: "rectangle", c: "circle", a: "arc", d: "smart_dim", p: "point" };
         if (map[k]) this.setSketchTool(map[k]);
       }
     });
+  }
+
+  // User Settings that the window applies itself: view colours, the mouse and the keyboard
+  async loadUserSettings() {
+    const r = await this.api("/api/command", { name: "get_settings", args: {} }).catch(() => null);
+    if (r?.ok) this.applyUserSettings(r.result.settings);
+  }
+
+  applyUserSettings(s) {
+    if (!s) return;
+    this.graphics.style.background = `linear-gradient(${s.view_background_top}, ${s.view_background_bottom})`;
+    this.vp.setColors({ body: s.view_body_color, edge: s.view_edge_color, hover: s.view_highlight_color, sel: s.view_selection_color });
+    this.vp.mouse = { preset: s.mouse_preset || "solidworks", zoomReverse: !!s.mouse_zoom_reverse };
+    this.keys = effectiveKeys(s.shortcuts); this.keyMap = keyTable(this.keys);
+    this.renderHelpPane();
+  }
+
+  // menus show the keys in use: a label that is an action's default keys shows that action's keys now
+  menuKeyLabel(label) {
+    if (!label || !this.keys) return label;
+    const id = Object.keys(DEFAULT_KEYS).find((a) => DEFAULT_KEYS[a] === label);
+    return id ? this.keys[id] : label;
+  }
+
+  // ------------------------------------------------------------------ keyboard navigation
+  // FeatureManager tree: Alt+T (by default) moves the focus to it; Up / Down move, Left / Right fold and unfold,
+  // Enter selects, F2 renames, Shift+F10 or the context-menu key opens the row's menu, Escape goes back to the view
+  focusTree() {
+    const rows = [...document.querySelectorAll("#tree .t-row")];
+    if (!rows.length) return;
+    (rows.find((r) => r.classList.contains("selected")) || rows[0]).focus();
+  }
+
+  bindTreeKeys() {
+    const tree = $("#tree");
+    tree.addEventListener("keydown", (e) => {
+      const row = e.target.closest?.(".t-row"); if (!row) return;
+      const rows = [...tree.querySelectorAll(".t-row")], i = rows.indexOf(row);
+      const go = (j) => { const r = rows[Math.max(0, Math.min(rows.length - 1, j))]; r?.focus(); r?.scrollIntoView({ block: "nearest" }); };
+      const fire = (type) => { const b = row.getBoundingClientRect(); row.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX: b.left + 20, clientY: b.top + b.height / 2 })); };
+      const k = e.key;
+      if (k === "ArrowDown") go(i + 1); else if (k === "ArrowUp") go(i - 1);
+      else if (k === "Home") go(0); else if (k === "End") go(rows.length - 1);
+      else if (k === "ArrowRight" || k === "ArrowLeft") {
+        const tw = row.querySelector(".tw"), open = tw?.textContent === "▾";
+        if (tw?.textContent && open === (k === "ArrowLeft")) {
+          const label = row.querySelector(".lbl")?.textContent; tw.click();
+          requestAnimationFrame(() => [...tree.querySelectorAll(".t-row")].find((r) => r.querySelector(".lbl")?.textContent === label)?.focus());
+        }
+      } else if (k === "Enter" || k === " ") fire("click");
+      else if (k === "F2") { const f = row.dataset.feature; if (f) this.renameFeature(f); }
+      else if (k === "ContextMenu" || (k === "F10" && e.shiftKey)) fire("contextmenu");
+      else if (k === "Escape") row.blur();
+      else return;
+      e.preventDefault(); e.stopPropagation();
+    });
+    // rows are rebuilt on every change: make them focusable as they appear
+    new MutationObserver(() => tree.querySelectorAll(".t-row:not([tabindex])").forEach((r) => { r.tabIndex = -1; })).observe(tree, { childList: true, subtree: true });
+  }
+
+  // Menu bar: F10 (by default) opens the first menu; Left / Right change menu, Up / Down move, Right / Enter
+  // open a submenu, Enter runs the item, Escape closes. menuKey returns true when it used the key.
+  menuKeyOpen(n) {
+    const roots = [...document.querySelectorAll("#menubar .menu-root")];
+    if (!roots.length) return;
+    const root = roots[(n + roots.length) % roots.length];
+    this.closeMenus(); root.click(); // (opens it, filled afresh)
+    this.menuKbd = { root };
+    this.menuKeyMark(root.querySelector(":scope > .menu-drop > .menu-item"));
+  }
+
+  menuKeyMark(item) {
+    document.querySelectorAll("#menubar .kfocus").forEach((x) => x.classList.remove("kfocus"));
+    if (item) { item.classList.add("kfocus"); item.scrollIntoView({ block: "nearest" }); }
+  }
+
+  menuKey(e) {
+    const st = this.menuKbd;
+    if (!st || !st.root.classList.contains("open")) { this.menuKbd = null; return false; }
+    const cur = st.root.querySelector(".kfocus");
+    const list = cur ? cur.parentElement : st.root.querySelector(":scope > .menu-drop");
+    const items = [...list.children].filter((x) => x.classList.contains("menu-item") && !x.classList.contains("disabled"));
+    const i = items.indexOf(cur), k = e.key;
+    const into = (row) => { row.classList.add("kopen"); this.menuKeyMark(row.querySelector(":scope > .menu-sub > .menu-item")); };
+    if (k === "ArrowDown" || k === "ArrowUp") this.menuKeyMark(items[(i + (k === "ArrowDown" ? 1 : -1) + items.length) % items.length]);
+    else if (k === "ArrowRight" && cur?.classList.contains("has-sub")) into(cur);
+    else if (k === "ArrowLeft" && list.classList.contains("menu-sub")) { const up = list.parentElement; up.classList.remove("kopen"); this.menuKeyMark(up); }
+    else if (k === "ArrowLeft" || k === "ArrowRight") { const roots = [...document.querySelectorAll("#menubar .menu-root")]; this.menuKeyOpen(roots.indexOf(st.root) + (k === "ArrowRight" ? 1 : -1)); }
+    else if (k === "Enter" || k === " ") { if (cur?.classList.contains("has-sub")) into(cur); else { this.menuKbd = null; cur?.click(); } }
+    else if (k === "Escape" || k === "F10" || k === "Tab") { this.menuKbd = null; this.closeMenus(); }
+    else return false;
+    e.preventDefault(); e.stopPropagation();
+    return true;
+  }
+
+  // Tools > Customize Keyboard: every action with its keys; click a box and press the new keys
+  customizeKeyboardDialog() {
+    const keys = { ...this.keys };
+    const groups = [...new Set(SHORTCUTS.map((x) => x[3]))];
+    const body = groups.map((g) => `<tr><th colspan="3" style="text-align:left;padding-top:8px">${escapeHtml(g)}</th></tr>` + SHORTCUTS.filter((x) => x[3] === g).map(([id, label]) =>
+      `<tr><td>${escapeHtml(label)}</td><td><input class="kb-in" data-id="${id}" readonly value="${escapeHtml(keys[id])}" placeholder="(none)" style="width:130px"></td>
+       <td><button class="btn kb-clr" data-id="${id}" title="No shortcut">Clear</button> <button class="btn kb-def" data-id="${id}" title="${escapeHtml(DEFAULT_KEYS[id] || "none")}">Default</button></td></tr>`).join("")).join("");
+    this.modal("Customize Keyboard", `<p class="muted">Click a box and press the keys. Some keys are fixed: Escape, Enter, Delete, Tab (assemblies), the arrows, and the sketch tools' letters while sketching.</p>
+      <div id="kb-warn" style="color:var(--cancel)"></div>
+      <div style="max-height:52vh;overflow:auto"><table class="dw-bom" style="width:100%">${body}</table></div>
+      <p><button class="btn kb-reset">Reset all to defaults</button></p>`, async () => {
+      const bad = conflicts(keys);
+      if (bad.length) { const m = `Two actions share ${bad.map(([k]) => k).join(", ")}: change one first.`; this.toast(m, "err"); throw new Error(m); }
+      const shortcuts = Object.fromEntries(Object.entries(keys).filter(([id, k]) => k !== DEFAULT_KEYS[id]));
+      const r = await this.api("/api/command", { name: "set_settings", args: { values: { shortcuts } } });
+      if (!r.ok) { this.toast(r.error, "err"); throw new Error(r.error); }
+      this.applyUserSettings(r.result.settings); this.toast("Keyboard shortcuts saved.");
+    }, "options");
+    const warn = () => {
+      const label = (id) => SHORTCUTS.find((x) => x[0] === id)?.[1] || id;
+      $("#kb-warn").textContent = conflicts(keys).map(([k, ids]) => `${k} is used by ${ids.map(label).join(" and ")}.`).join(" ");
+    };
+    const set = (id, k) => { keys[id] = k; document.querySelector(`.kb-in[data-id="${id}"]`).value = k; warn(); };
+    document.querySelectorAll(".kb-in").forEach((inp) => {
+      inp.onkeydown = (e) => {
+        if (e.key === "Tab") return; // (moves on through the dialog)
+        e.preventDefault(); e.stopPropagation();
+        const c = comboOf(e); if (c) set(inp.dataset.id, c);
+      };
+    });
+    document.querySelectorAll(".kb-clr").forEach((b) => { b.onclick = () => set(b.dataset.id, ""); });
+    document.querySelectorAll(".kb-def").forEach((b) => { b.onclick = () => set(b.dataset.id, DEFAULT_KEYS[b.dataset.id]); });
+    document.querySelector(".kb-reset").onclick = () => { for (const id of Object.keys(keys)) set(id, DEFAULT_KEYS[id]); };
+    warn();
   }
 
   orientationMenu() {

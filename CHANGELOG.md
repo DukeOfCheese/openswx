@@ -6,6 +6,19 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Added
+
+- Tools > Customize Keyboard: change or clear the keys of 31 actions (views, zoom, undo, save, selection filters and
+  more); clashes are flagged before saving, and the menus and the Task Pane show the keys in use.
+- User Settings: graphics area background, body, edge, highlight and selection colours; a mouse preset
+  (SOLIDWORKS-style, Onshape-style, Fusion-style or Blender-style buttons for rotate, pan and zoom); reversing the wheel.
+- Keyboard navigation: Alt+T moves to the FeatureManager tree (arrows, Enter, F2, Shift+F10); F10 opens the menu
+  bar (arrows, Enter, Escape).
+
+### Fixed
+
+- Ctrl+Shift+Z (Previous View) ran Undo.
+
 ## 0.2.0 (2026-11-23)
 
 Simulation on curvature-based tetrahedra for every study, Claude Desktop working in the open window, about 100
