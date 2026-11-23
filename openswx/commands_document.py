@@ -467,6 +467,14 @@ def edit_feature(name: str, params: dict) -> dict:
 def redefine_feature(name: str, command_name: str, args: dict) -> dict:
     """Re-define a feature using the creation command's arguments (used by the UI's Edit Feature).
     The command runs on a scratch copy to translate selections into parameters."""
+    meta = COMMANDS.get(command_name)
+    linked = (meta is not None and meta["mutates"] and meta["category"] in _S.FEATURE_CATEGORIES
+              and command_name in _S.FILE_ARGS)  # (Insert Part, Mirror Part: a feature that names a file)
+    if not (_S.feature_command(command_name) or (linked and not getattr(_TL, "preview", False))):
+        raise DocumentError(f"{command_name!r} cannot redefine a feature (only commands that make one can"
+                            f"{'; and a preview never reads files' if linked else ''})")
+    if linked and getattr(_TL, "origin", "agent") == "agent":
+        _S._check_workspace(command_name, args)  # (as if called itself: an agent stays in its workspace)
     doc = APP.doc
     target = doc.find(name)
     scratch = PartDocument(doc.name)

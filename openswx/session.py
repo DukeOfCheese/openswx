@@ -337,8 +337,52 @@ def call(name: str, args: dict | None = None, origin: str | None = None) -> Any:
             _TL.origin = prev if prev is not None else "agent"
 
 
-def preview(name: str, args: dict | None = None) -> dict:
-    """Run a mutating command on a throw-away copy of the active document and return its mesh."""
+# What a preview may run: commands that make or change a model feature, nothing else. A preview runs whatever it
+# is given on a copy of the document, and what it is given can come from someone else (a collaborator's draft):
+# no command that reads or writes files, runs code, or opens, saves or closes documents.
+FEATURE_CATEGORIES = ("features", "surfaces", "sheet_metal", "weldments", "mold", "bodies")
+PREVIEW_EXTRA = ("edit_feature", "redefine_feature", "add_mate", "redefine_mate", "insert_component", "edit_sketch_plane",
+                 "sketch_offset", "sketch_mirror", "sketch_linear_pattern", "sketch_circular_pattern",
+                 "sketch_convert_entities", "sketch_transform")  # (the other panels the UI previews)
+
+
+def feature_command(name: str) -> bool:
+    """Does `name` make or change a model feature (and nothing else: no files)? What redefine_feature may run."""
+    meta = COMMANDS.get(name)
+    return (meta is not None and meta["mutates"] and meta["category"] in FEATURE_CATEGORIES and name not in FILE_ARGS
+            and not name.startswith("collab_"))
+
+
+def preview_refusal(name: str, args) -> str | None:
+    """Why `name` with `args` may not run as a preview (None: it may)."""
+    if not isinstance(name, str) or not isinstance(args, dict):
+        return "a preview needs a command name and its arguments"
+    if not (feature_command(name) or (name in PREVIEW_EXTRA and name in COMMANDS)):
+        return f"{name!r} cannot be previewed (only commands that make or change a feature can)"
+    if name == "insert_component" and args.get("source") not in APP.documents:
+        return "a component preview takes an open document, not a file"
+    if name == "redefine_feature" and not feature_command(str(args.get("command_name"))):
+        return f"{args.get('command_name')!r} cannot be previewed (only commands that make or change a feature can)"
+    return None
+
+
+def preview(name: str, args: dict | None = None, wait: bool = True) -> dict:
+    """Run a command that makes or changes a feature (see preview_refusal) on a throw-away copy of the active
+    document and return its mesh. wait=False: give up at once ({"ok": False, "busy": True}) when another command
+    is running, instead of waiting for it."""
+    args = {} if args is None else args
+    why = preview_refusal(name, args)
+    if why:
+        return {"ok": False, "error": why, "refused": True}
+    if not APP.lock.acquire(blocking=wait, timeout=30 if wait else -1):
+        return {"ok": False, "busy": True, "error": "openswx is busy with another command"}
+    try:
+        return _preview_locked(name, args)
+    finally:
+        APP.lock.release()
+
+
+def _preview_locked(name: str, args: dict) -> dict:
     with APP.lock:
         key = APP.active
         real = APP.active_doc

@@ -89,7 +89,7 @@ export const MORE_SPECS = {
   tooling_split: moldSpec("tooling_split", "Tooling Split", "cut_extrude", [num("margin", "Block margin", 10, 1),
     { key: "keep_part", type: "check", label: "Keep the part body", value: true }], (v) => ({ margin: v.margin, keep_part: !!v.keep_part })),
   insert_part: {
-    title: "Insert Part", icon: "import", command: "insert_part",
+    title: "Insert Part", icon: "import", command: "insert_part", noPreview: true, // (previews never read files)
     groups: [{ title: "Part", fields: [txt("path", "File (.oswprt, .step, .x_t, .sldprt)", "", { browse: ["openswx / STEP / Parasolid / SOLIDWORKS part (*.oswprt;*.step;*.stp;*.x_t;*.x_b;*.sldprt)"] })] },
       { title: "Locate Part", fields: [txt("position", "Position x, y, z", "0, 0, 0"), txt("rotation", "Rotation x, y, z (°)", "0, 0, 0")] },
       { title: "Options", fields: [{ key: "op", type: "select", value: "add", options: [["add", "Add (merge)"], ["cut", "Cut from the body"]] },
@@ -99,7 +99,7 @@ export const MORE_SPECS = {
     message: "Pick a part file to bring in as a body (it updates when the file changes).",
   },
   mirror_part: {
-    title: "Mirror Part", icon: "mirror", command: "mirror_part",
+    title: "Mirror Part", icon: "mirror", command: "mirror_part", noPreview: true, // (previews never read files)
     groups: [{ title: "Part", fields: [txt("path", "File to mirror", "", { browse: ["openswx / STEP / Parasolid / SOLIDWORKS part (*.oswprt;*.step;*.stp;*.x_t;*.x_b;*.sldprt)"] }),
       { key: "plane", type: "select", value: "Right", options: [["Right", "Right Plane (YZ)"], ["Front", "Front Plane (XY)"], ["Top", "Top Plane (XZ)"]] },
       txt("position", "Position x, y, z", "0, 0, 0")] }],

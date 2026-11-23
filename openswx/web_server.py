@@ -90,7 +90,7 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
     async def run_preview(req: Request):
         body = await req.json()
         try:
-            return await asyncio.to_thread(S.preview, body["name"], body.get("args") or {})
+            return await asyncio.to_thread(S.preview, body.get("name"), body.get("args") or {}, not body.get("if_idle"))
         except TypeError as exc:
             return {"ok": False, "error": f"bad arguments: {exc}"}
 
