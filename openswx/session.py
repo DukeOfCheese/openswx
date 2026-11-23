@@ -280,7 +280,7 @@ def _journal(name: str, arguments) -> None:
         if doc is not None and getattr(doc, "journal", None) == [] and getattr(doc, "features", None):
             doc.journal = [{"command": "import_file", "args": {"path": str(arguments.get("path"))}}]
         return
-    if name in NO_JOURNAL or name.startswith(("pdm_", "macro_")) or name == "run_macro":
+    if name in NO_JOURNAL or name.startswith(("pdm_", "macro_", "collab_")) or name == "run_macro":
         return
     doc = APP.documents.get(APP.active)
     if doc is None or getattr(doc, "journal", None) is None:
@@ -1322,6 +1322,7 @@ from .commands_asm import *  # noqa: E402,F401,F403
 from .commands_blocks import *  # noqa: E402,F401,F403
 from .commands_simreport import *  # noqa: E402,F401,F403
 from .commands_std import *  # noqa: E402,F401,F403
+from .collab.commands_collab import *  # noqa: E402,F401,F403  (live collaboration: needs the collab extra to run)
 
 from . import plugins as _plugins  # noqa: E402
 

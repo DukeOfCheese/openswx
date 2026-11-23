@@ -91,6 +91,8 @@ TOOLSETS = {
     "manufacturing": ("CAM toolpaths and G-code, plastics fill analysis", ("cam", "plastics")),
     "ecosystem": ("PDM vault, rendering scenes and decals, Composer steps, eDrawings export, macro recording",
                   ("pdm", "render", "composer", "file", "tools")),
+    "collab": ("Live collaboration: sign in to an openswx-collab server, share or open cloud documents, locks, "
+               "history, named versions, presence", ("collab",)),
 }
 # commands that remove or overwrite something the user may not get back
 DESTRUCTIVE = {"close_document", "delete_custom_material", "discard_recovered", "delete_library_item",

@@ -432,7 +432,8 @@ def measure_items(items: list[str | Vec3]) -> dict:
 # ====================================================================== tree editing
 @command(category="edit")
 def undo() -> dict:
-    """Undo the last change to the active document."""
+    """Undo the last change to the active document. In a cloud document (live collaboration) this takes back
+    your own last change only, and is refused when someone has changed the same thing since."""
     alt = _S.redirected("undo", APP.active_doc) if _S.COMMAND_HOOKS else None
     if alt is not None:
         return alt
