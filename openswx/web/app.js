@@ -2679,8 +2679,9 @@ class App {
       <pre class="code">${escapeHtml(JSON.stringify(desktop, null, 1))}</pre>
       <p><b>Claude Code</b> (and clients that reach this computer over HTTP):</p>
       <pre class="code" id="mcp-cc">claude mcp add --transport http openswx ${escapeHtml(location.origin)}/mcp --header "Authorization: Bearer <span id="mcp-tok">••••••••</span>"</pre>
-      <p>${info.token ? `<button class="btn" id="mcp-show">Show token</button> <button class="btn" id="mcp-copy">Copy command</button> ` : ""}The token is your
-      openswx secret (keep it to yourself): requests without it are refused. In a terminal, <code>${escapeHtml(info.token_command || "openswx token")}</code> prints it.</p>
+      ${info.token ? `<div style="display:flex;gap:8px;margin:6px 0 10px"><button class="btn" id="mcp-show">Show token</button><button class="btn" id="mcp-copy">Copy command</button></div>` : ""}
+      <p>The token is your openswx secret (keep it to yourself): requests without it are refused. In a terminal,
+      <code>${escapeHtml(info.token_command || "openswx token")}</code> prints it.</p>
       <p><b>Claude on the web (claude.ai)</b> connects to MCP servers from Anthropic's servers, which cannot reach an app on
       this computer: use Claude Desktop or Claude Code.</p>`, null, "agent");
     const tok = $("#mcp-tok"), show = $("#mcp-show"), copy = $("#mcp-copy");
