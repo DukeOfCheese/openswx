@@ -488,7 +488,8 @@ def test_unfold_cut_fold():
     assert vol() == pytest.approx((100 + BA + L) * w * t, rel=1e-12)
     S.fold()
     assert vol() == pytest.approx(folded, rel=1e-12)
-    assert S.get_mass_properties()["bounding_box"] == pytest.approx(bb)
+    bb1 = S.get_mass_properties()["bounding_box"]
+    assert bb1["min"] + bb1["max"] == pytest.approx(bb["min"] + bb["max"], abs=1e-9)
 
     def cut_and_fold(draw):
         ef = _bracket()
@@ -547,4 +548,5 @@ def test_bend_wraps_existing_cuts_and_jog_unfold():
     assert vol() == pytest.approx(100 * 50 * 2, rel=1e-12)
     S.fold([jog])
     assert vol() == pytest.approx(v0, rel=1e-9)
-    assert S.get_mass_properties()["bounding_box"] == pytest.approx(bb, abs=1e-6)
+    bb1 = S.get_mass_properties()["bounding_box"]
+    assert bb1["min"] + bb1["max"] == pytest.approx(bb["min"] + bb["max"], abs=1e-6)
