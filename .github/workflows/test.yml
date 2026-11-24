@@ -10,6 +10,10 @@ concurrency:
   group: test-${{ github.ref }}
   cancel-in-progress: true
 
+# least privilege: read the code; a job that needs more says so itself
+permissions:
+  contents: read
+
 jobs:
   test:
     strategy:

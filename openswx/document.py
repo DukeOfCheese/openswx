@@ -722,6 +722,15 @@ class PartDocument:
         state: dict[str, dict] = {}
         active = self.features if self.rollback is None else self.features[: self.rollback]
         cfg = self._effective_config(self.active_config)
+        # sheet metal Unfold: the bends it lists (those before it) are built flat from the start; its Fold bends
+        # them back, wrapping onto the bends whatever was cut in between
+        seen: set[str] = set()
+        for f in active:
+            if f["type"] == "unfold" and not cfg.get("suppressed", {}).get(f["name"], f["suppressed"]):
+                for b in f["params"].get("bends") or []:
+                    if b in seen and b not in ctx.unfold:
+                        ctx.unfold[b] = f["name"]
+            seen.add(f["name"])
         try:
             ev = Evaluator(self.variables)
         except EquationError as exc:
@@ -732,7 +741,7 @@ class PartDocument:
         cache = self.__dict__.setdefault("_rb_cache", {})
         if len(cache) > 600:
             cache.clear()
-        chain = hashlib.sha1(repr(ctx.flat).encode())
+        chain = hashlib.sha1(repr((ctx.flat, sorted(ctx.unfold.items()))).encode())
         reuse = True
         bodies: list[tuple[str, object]] = []  # (feature, body after it): which feature made each face
         for f in self.features:

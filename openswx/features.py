@@ -68,6 +68,7 @@ class Ctx:
     points: dict = field(default_factory=dict)  # reference point name -> Vector
     csys: dict = field(default_factory=dict)  # coordinate system name -> Plane (x_dir, z_dir, origin)
     curves: dict = field(default_factory=dict)  # 3D sketch / helix name -> list[Edge]
+    unfold: dict = field(default_factory=dict)  # sheet metal: bend feature -> the Unfold that lays it flat
 
 
 # ---------------------------------------------------------------------- reference resolution
@@ -701,7 +702,7 @@ def build_edge_flange(ctx: Ctx, p: dict, name: str) -> None:
         n = -n
         a0 = a0 + n * (-t)  # bend from the opposite face: the corner on that face becomes the inner corner
     BA = phi * (r + k * t)
-    if ctx.flat:
+    if ctx.flat or name in ctx.unfold:
         # flat strip in the sheet plane, pointing away from the side face (box y axis = n x x_dir must be +s)
         x_dir, origin = (e_dir, a0) if n.cross(e_dir).dot(s) > 0 else (-e_dir, a1)
         tool = Solid.make_box(e_len, BA + L, t, Plane(origin=origin - n * t, x_dir=x_dir, z_dir=n))
@@ -721,10 +722,12 @@ def build_edge_flange(ctx: Ctx, p: dict, name: str) -> None:
         tool = extrude(prof, amount=e_len, dir=e_dir)
     apply_op(ctx, "add", tool)
     bend = {"feature": name, "angle": math.degrees(phi), "radius": r, "allowance": BA, "length": L}
-    if ctx.flat:
+    if ctx.flat or name in ctx.unfold:
         y = n.cross(x_dir).normalized()
         c0 = origin + y * (BA / 2)
         bend |= {"flat_line": [list(c0), list(c0 + x_dir * e_len)], "toward": list(n)}
+        if not ctx.flat:  # unfolded: what a Fold needs to bend it back (the line on the face, mid-zone)
+            _keep_unfolded(ctx, name, a0 + s * (BA / 2), e_dir, n, s, phi, r, 1.0)
     ctx.sheet["bends"].append(bend)
     ctx.tools[name] = [("add", tool)]
 
@@ -800,11 +803,91 @@ def _bend(ctx: Ctx, a: Vector, u: Vector, n: Vector, m: Vector, phi: float, r: f
     us = [Vector(v.X, v.Y, v.Z).dot(u) for v in body.vertices()]
     prof = prof.moved(Location(u * (min(us) - prof.center().dot(u))))
     arc = extrude(prof, amount=max(us) - min(us), dir=u)
+    for tool in _bend_zone_cuts(ctx, body, a, u, n, m, phi, r, up, BA, C, min(us), max(us)):
+        arc = arc.cut(tool)  # holes and notches cut while the sheet was flat, wrapped onto the bend
     B = B.moved(Location(m * (-BA))).rotate(ax, deg)  # shift back to the bend start, rotate about the axis
     ctx.body = A.fuse(arc).fuse(B).clean()
     pt = lambda q: C + _rot(q - m * BA - C, ax, deg)  # noqa: E731
     vv = lambda v: _rot(v, ax, deg)  # noqa: E731
     return BA, arc, pt, vv
+
+
+def _bend_zone_cuts(ctx: Ctx, body, a, u, n, m, phi, r, up, BA, C, u0, u1) -> list:
+    """Material missing from the flat bend zone (holes or notches cut while the sheet was flat), as cutting
+    tools wrapped onto the bend: a point of the zone `s` along m from its start, `v` along u and `d` into
+    the sheet from the inside face lands at angle s / BA * phi, radius r + d about the bend axis. The cut
+    walls run radially, so for K = 0.5 the bent part keeps the flat part's volume."""
+    t = ctx.sheet["thickness"]
+    top = a.dot(n)  # the sheet spans [top - t, top] along n
+    start = a - m * (BA / 2)
+    corner = start + n * (top - t - start.dot(n)) + u * (u0 - start.dot(u))
+    zone = Solid.make_box(BA, u1 - u0, t, Plane(origin=corner, x_dir=m, z_dir=n)) if n.cross(m).dot(u) > 0 else \
+        Solid.make_box(BA, u1 - u0, t, Plane(origin=corner + u * (u1 - u0), x_dir=m, z_dir=n))
+    try:
+        missing = zone.cut(body)
+    except Exception:  # noqa: BLE001 - a failed boolean: bend as before
+        return []
+    if missing is None or not missing.solids() or missing.volume < 1e-9 * max(zone.volume, 1e-9):
+        return []
+    from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_MakeFace, BRepBuilderAPI_MakeWire
+    from OCP.BRepLib import BRepLib
+    from OCP.Geom import Geom_CylindricalSurface
+    from OCP.Geom2d import Geom2d_Line, Geom2d_TrimmedCurve
+    from OCP.Geom2dAPI import Geom2dAPI_Interpolate
+    from OCP.collections import HArray1_gp_Pnt2d
+    from OCP.gp import gp_Ax3, gp_Dir, gp_Dir2d, gp_Pnt, gp_Pnt2d
+    from build123d import Face as _F
+    inner_level = top if up > 0 else top - t  # the inside face of the bend
+    eps = 0.05 * t
+    r0 = max(r - eps, 0.5 * r)  # the tool starts a little inside the bend's inner face and ends past its outer one
+    # the bend's cylinder: angle 0 along -up n (the zone's start), increasing towards m; v along `ax`
+    xd = n * (-up)
+    ax = xd.cross(m).normalized()
+    surf = Geom_CylindricalSurface(gp_Ax3(gp_Pnt(C.X, C.Y, C.Z), gp_Dir(ax.X, ax.Y, ax.Z), gp_Dir(xd.X, xd.Y, xd.Z)), r0)
+    uv = lambda q: gp_Pnt2d((q - start).dot(m) / BA * phi, (q - C).dot(ax))  # noqa: E731
+
+    tools = []
+    for f in missing.faces():
+        if f.geom_type.name.lower() != "plane" or abs(abs(f.normal_at(f.center()).dot(n)) - 1) > 1e-9 \
+                or abs(f.center().dot(n) - inner_level) > 1e-6:
+            continue  # one footprint per cut: its face on the inside face of the bend
+        occ_wires = []
+        for w in [f.outer_wire()] + list(f.inner_wires()):
+            mk = BRepBuilderAPI_MakeWire()
+            for e in w.edges():
+                if e.geom_type.name.lower() == "line":  # a straight line in the flat stays straight in (angle, v)
+                    a2, b2 = uv(e.position_at(0)), uv(e.position_at(1))
+                    ln = math.hypot(b2.X() - a2.X(), b2.Y() - a2.Y())
+                    if ln < 1e-12:
+                        continue
+                    seg = Geom2d_TrimmedCurve(Geom2d_Line(a2, gp_Dir2d(b2.X() - a2.X(), b2.Y() - a2.Y())), 0.0, ln)
+                    mk.Add(BRepBuilderAPI_MakeEdge(seg, surf).Edge())
+                else:
+                    pts = [uv(e.position_at(i / 96)) for i in range(97)]
+                    closed = (e.position_at(0) - e.position_at(1)).length < 1e-9
+                    arr = HArray1_gp_Pnt2d(1, len(pts) - (1 if closed else 0))
+                    for i, q in enumerate(pts[: arr.Length()], 1):
+                        arr.SetValue(i, q)
+                    it = Geom2dAPI_Interpolate(arr, closed, 1e-9)
+                    it.Perform()
+                    mk.Add(BRepBuilderAPI_MakeEdge(it.Curve(), surf).Edge())
+            if not mk.IsDone():
+                raise FeatureError("a cut across the bend could not be wrapped onto it")
+            occ_wires.append(mk.Wire())
+        mf = BRepBuilderAPI_MakeFace(surf, occ_wires[0], True)
+        for iw in occ_wires[1:]:
+            mf.Add(iw)
+        face = mf.Face()
+        BRepLib.BuildCurves3d_s(face)
+        face = _F(face)
+        c = face.center()
+        outward = face.normal_at(c).dot(c - C - ax * (c - C).dot(ax)) > 0
+        depth = (r + t + eps) - r0
+        try:
+            tools.append(Solid.thicken(face, depth if outward else -depth))
+        except Exception as exc:  # noqa: BLE001
+            raise FeatureError(f"a cut across the bend could not be wrapped onto it: {exc}") from exc
+    return tools
 
 
 def _bend_line(ctx: Ctx, p: dict):
@@ -821,6 +904,14 @@ def _bend_line(ctx: Ctx, p: dict):
     if (fixed - a).dot(m) > 0:
         m = -m  # m points from the fixed side towards the moving side
     return a, u, n, m
+
+
+def _keep_unfolded(ctx: Ctx, key: str, a, u, n, m, phi: float, r: float, up: float) -> None:
+    """A bend an Unfold has laid flat: its line (through `a` on the face with normal `n`, along `u`, the
+    moving side towards `m`), angle and radius, kept until a Fold bends it back (sheet_more.build_fold)."""
+    pend = dict(ctx.sheet.get("unfolded", {}))
+    pend[key] = {"a": list(a), "u": list(u), "n": list(n), "m": list(m), "phi": phi, "r": r, "up": up}
+    ctx.sheet["unfolded"] = pend
 
 
 def _flat_bend_line(ctx: Ctx, a: Vector, u: Vector) -> list:
@@ -841,7 +932,9 @@ def build_sketched_bend(ctx: Ctx, p: dict, name: str) -> None:
     if not 0 < phi < math.pi:
         raise FeatureError("bend angle must be between 0 and 180 degrees")
     a, u, n, m = _bend_line(ctx, p)
-    if ctx.flat:  # the flat pattern keeps the sheet flat: only the bend line is noted
+    if ctx.flat or name in ctx.unfold:  # the flat pattern keeps the sheet flat: only the bend line is noted
+        if not ctx.flat:
+            _keep_unfolded(ctx, name, a, u, n, m, phi, r, -1.0 if p.get("flip") else 1.0)
         BA = phi * (r + ctx.sheet["k"] * ctx.sheet["thickness"])
         ctx.sheet["bends"].append({"feature": name, "angle": math.degrees(phi), "radius": r, "allowance": BA, "sketched": True,
                                    "flat_line": _flat_bend_line(ctx, a, u), "toward": list(n * (-1 if p.get("flip") else 1))})
@@ -1264,7 +1357,10 @@ def build_jog(ctx: Ctx, p: dict, name: str) -> None:
         raise FeatureError(f"jog distance must exceed the bend allowance ({BA:.3f} mm)")
     a, u, n, m = _bend_line(ctx, p)
     up = -1.0 if p.get("flip") else 1.0
-    if ctx.flat:  # two bend lines, D apart, bending opposite ways
+    if ctx.flat or name in ctx.unfold:  # two bend lines, D apart, bending opposite ways
+        if not ctx.flat:
+            _keep_unfolded(ctx, name, a, u, n, m, phi, r, up)
+            _keep_unfolded(ctx, name + "#2", a + m * D, u, n, m, phi, r, -up)
         common = {"feature": name, "angle": math.degrees(phi), "radius": r, "allowance": BA, "jog": True}
         ctx.sheet["bends"] += [common | {"flat_line": _flat_bend_line(ctx, a, u), "toward": list(n * up)},
                                common | {"flat_line": _flat_bend_line(ctx, a + m * D, u), "toward": list(n * -up)}]

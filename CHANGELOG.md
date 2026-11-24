@@ -20,6 +20,8 @@ formats or commands; files are migrated automatically and the change is listed h
 - User Settings: graphics area background, body, edge, highlight and selection colours; a mouse preset
   (SOLIDWORKS-style, Onshape-style, Fusion-style or Blender-style buttons for rotate, pan and zoom); reversing the wheel.
 - Sheet Metal > Rip: open a slot along the corner edges of a hollow part so it can be unfolded.
+- Sheet Metal > Unfold and Fold: lay chosen bends flat, cut across them, and fold them back; the cuts are
+  wrapped onto the bends. A cut made before a Sketched Bend across its line is wrapped the same way.
 - Sheet Metal > Vent: an opening cut through the sheet from a sketched outline, with ribs left across it.
 - The flat-pattern DXF has each bend's centreline (layer BEND), a note such as "UP 90° R2" (layer NOTES) and
   the bounding box with its size (layer BBOX).

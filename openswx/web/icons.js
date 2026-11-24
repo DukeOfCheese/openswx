@@ -11,6 +11,9 @@ const arrowUp = (x, y, c = sk) => `<path d="M${x} ${y}v-9m-3 3l3 -3l3 3" stroke=
 export const ICONS = {
   // sheet metal Rip: two walls of a corner pulled apart by a red slot
   rip: S(`<path d="M6 5v19h4" stroke="${solidDark}" stroke-width="4"/><path d="M6 5v19h4" stroke="${solid}" stroke-width="2.2"/><path d="M15 27h12" stroke="${solidDark}" stroke-width="4"/><path d="M15 27h12" stroke="${solid}" stroke-width="2.2"/><path d="M9 30l5-8" stroke="${cut}" stroke-width="2"/>`),
+  // sheet metal Unfold / Fold: a bent flange with an arrow opening it out / closing it
+  unfold: S(`<path d="M4 24h12" stroke="${solidDark}" stroke-width="4"/><path d="M4 24h12" stroke="${solid}" stroke-width="2.2"/><path d="M16 24h12" stroke="${solidDark}" stroke-width="4" stroke-dasharray="3 2"/><path d="M16 22V8" stroke="${ink}" stroke-width="1.4" stroke-dasharray="2 2"/><path d="M18 9a14 14 0 0 1 9 11" stroke="${grn}" stroke-width="2"/><path d="M24 19l3 2 1-4" stroke="${grn}" stroke-width="2"/>`),
+  fold: S(`<path d="M4 24h12" stroke="${solidDark}" stroke-width="4"/><path d="M4 24h12" stroke="${solid}" stroke-width="2.2"/><path d="M16 24V8" stroke="${solidDark}" stroke-width="4"/><path d="M16 24V8" stroke="${solid}" stroke-width="2.2"/><path d="M27 21a14 14 0 0 0-8-11" stroke="${grn}" stroke-width="2"/><path d="M22 9l-3 1 1 4" stroke="${grn}" stroke-width="2"/>`),
   // sheet metal Vent: a plate with a row of slots
   vent: S(`<rect x="4" y="5" width="24" height="22" rx="2" fill="${solid}" stroke="${solidDark}"/><path d="M9 10h14M9 14h14M9 18h14M9 22h14" stroke="${cut}" stroke-width="2.2"/>`),
   new: S(`<path d="M8 3h11l6 6v20H8z" fill="#fff" stroke="${ink}"/><path d="M19 3v6h6" stroke="${ink}"/><path d="M16 14v10M11 19h10" stroke="${grn}" stroke-width="2.4"/>`),

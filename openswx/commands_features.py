@@ -22,7 +22,7 @@ __all__ = ["export_flat_pattern_dxf", "set_feature_visibility", "extrude", "cut_
            "forming_tool_extruded_flange", "forming_tool_rib", "corner_relief_auto", "revolved_surface",
            "swept_surface", "lofted_surface", "boundary_surface", "planar_surface", "filled_surface",
            "offset_surface", "knit_surface", "trim_surface", "end_cap", "gusset", "base_flange", "edge_flange",
-           "flatten", "sheet_metal_info", "rip", "vent", "fillet", "chamfer", "shell", "hole", "linear_pattern", "circular_pattern",
+           "flatten", "sheet_metal_info", "rip", "vent", "unfold", "fold", "fillet", "chamfer", "shell", "hole", "linear_pattern", "circular_pattern",
            "mirror", "reference_plane", "reference_axis", "reference_point", "coordinate_system", "helix"]
 
 
@@ -739,6 +739,22 @@ def vent(sketch: str, ribs: int = 0, rib_width: float = 2.0, rib_angle: float = 
     `depth` (mm) is only needed on a part without a Base Flange; otherwise the sheet thickness is used."""
     return _feat("vent", {"sketch": sketch, "ribs": ribs, "rib_width": rib_width, "rib_angle": rib_angle,
                           "rib_spacing": rib_spacing, "depth": depth})
+
+
+@command(category="sheet_metal")
+def unfold(bends: list[str]) -> dict:
+    """Sheet Metal > Unfold: lay the listed bends flat (bend feature names made before this, e.g.
+    ["Edge-Flange1", "Sketched Bend1"]; edge flanges, hems, sketched bends and jogs). Features added after it
+    work on the flat sheet, typically a cut across a bend, until a Fold bends them back. Returns the feature."""
+    return _feat("unfold", {"bends": list(bends)})
+
+
+@command(category="sheet_metal")
+def fold(bends: list[str] | None = None) -> dict:
+    """Sheet Metal > Fold: bend back bends laid flat by an earlier Unfold (default: all of them). Holes and
+    notches cut across a bend while it was flat are wrapped onto the bend (their walls run radially), so
+    with K-factor 0.5 the folded part keeps the flat part's volume. Returns the feature."""
+    return _feat("fold", {"bends": list(bends) if bends else []})
 
 
 @command(mutates=False, category="sheet_metal")
