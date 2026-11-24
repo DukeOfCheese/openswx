@@ -10,7 +10,7 @@
 
 #define AppName "openswx"
 #ifndef AppVersion
-  #define AppVersion "0.4.0"
+  #define AppVersion "0.4.1"
 #endif
 #define SourceDir "..\dist\openswx"
 #define LauncherDir "..\build-new\launcher"

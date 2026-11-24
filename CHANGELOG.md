@@ -6,6 +6,12 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+## 0.4.1 (2026-11-24)
+
+Faster throughout: pictures for agents about 15x quicker, the 3D view refreshes once per change from a cached
+mesh, big cuts and sketches with many profiles several times faster, and frequency studies about twice as fast.
+Home's Cloud tab and live collaboration are lighter on the app.
+
 ### Changed
 
 - Home's Cloud tab shows what it last loaded straight away when you come back to it, then checks the server
