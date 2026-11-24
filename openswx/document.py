@@ -759,8 +759,9 @@ class PartDocument:
         # incremental: the state after each feature is kept under a hash of everything up to it, so a rebuild
         # after an edit picks up from the first feature that changed (the history before it is not rebuilt)
         cache = self.__dict__.setdefault("_rb_cache", {})
-        if len(cache) > 600:
-            cache.clear()
+        if len(cache) > 600:  # (the oldest half goes, instead of all of it)
+            for k in list(cache)[:300]:
+                cache.pop(k, None)
         chain = hashlib.sha1(repr((ctx.flat, sorted(ctx.unfold.items()))).encode())
         reuse = True
         bodies: list[tuple[str, object]] = []  # (feature, body after it): which feature made each face

@@ -6,6 +6,25 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Changed
+
+- Home's Cloud tab shows what it last loaded straight away when you come back to it, then checks the server
+  behind it and redraws only what changed. Who is in each part refreshes every 10 seconds while the tab is open.
+  When the server cannot be reached, the last lists stay up with an "Offline" note.
+- Live collaboration is lighter:
+  - Commands that only talk to the server (projects, the team, history) no longer hold openswx up while they wait.
+  - Requests to the server reuse one connection.
+  - Opening a project's parts takes one request instead of a listing of every organisation.
+  - Your pointer reaches the others even while a rebuild is running.
+- Feature previews (yours, and others' drafts in a cloud part) reuse the part's rebuild cache: they start from the
+  feature being changed, not from scratch. On a 26-feature part a preview takes about a quarter of the time.
+
+### Fixed
+
+- A cloud part was checked for unsaved changes after every command, although it is never unsaved.
+- The large imported bodies kept for a cloud part had no limit; at most 256 MB is kept now (anything older is
+  fetched again when needed).
+
 ## 0.4.0 (2026-11-24)
 
 Live collaboration: edit a part with your team at the same time through an openswx-collab server, with cloud parts

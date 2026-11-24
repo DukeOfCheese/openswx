@@ -253,7 +253,7 @@ const MIXIN = {
     if (pj === cl.sentP && dj === cl.sentD) return; // (nothing changed: nothing is sent)
     const args = JSON.parse(pj);
     if (dj !== cl.sentD) { if (draft) args.draft = draft; else args.clear_draft = true; }
-    const r = await this.api("/api/command", { name: "collab_presence", args });
+    const r = await this.api("/api/collab/presence", { args }); // (not through the command lock: never waits on a rebuild)
     if (r.ok) { cl.sentP = pj; cl.sentD = dj; }
   },
 
