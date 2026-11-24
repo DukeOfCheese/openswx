@@ -26,7 +26,8 @@ def server(tmp_path_factory):
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     env = dict(os.environ, OPENSWX_HOME=str(tmp_path_factory.mktemp("home")), OPENSWX_TOKEN=TOKEN,
-               OPENSWX_AUTOSAVE="off", OPENSWX_LOG="off", OPENSWX_PLUGINS="off")
+               OPENSWX_AUTOSAVE="off", OPENSWX_LOG="off", OPENSWX_PLUGINS="off",
+               OPENSWX_SHOW_HOME="0")  # (Home has its own tests: test_ui_home.py)
     proc = subprocess.Popen([sys.executable, "-m", "openswx", "serve", "--port", str(port)], cwd=ROOT, env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     base = f"http://127.0.0.1:{port}"
@@ -150,6 +151,116 @@ def test_assembly_dialogs(page):
     assert "No display states yet" in page.evaluate("T.text()")
     page.evaluate("T.close()")
 
+
+def test_keyboard_shortcuts_can_be_changed(page):
+    """Tools > Customize Keyboard: a new key for Zoom to Fit works at once, the old one no longer does, and
+    the menus show the keys in use."""
+    page.evaluate("async () => { T.close(); await T.run('new_part', {name: 'Keys'}); await window.app.refresh(); window.app.customizeKeyboardDialog(); }")
+    page.wait_for_function("T.open()")
+    assert "Zoom to fit" in page.evaluate("T.text()")
+    page.click('.kb-in[data-id="zoom_fit"]')
+    page.keyboard.press("Shift+F")
+    assert page.input_value('.kb-in[data-id="zoom_fit"]') == "Shift+F"
+    page.click('.kb-in[data-id="undo"]')
+    page.keyboard.press("Shift+F")  # the same keys twice: a warning, and OK refuses
+    assert "Shift+F is used by" in page.inner_text("#kb-warn")
+    page.click('.kb-def[data-id="undo"]')
+    assert page.inner_text("#kb-warn") == ""
+    page.evaluate("T.ok()")
+    page.wait_for_function("!T.open()")
+    saved = page.evaluate("async () => (await T.run('get_settings')).result.settings.shortcuts")
+    assert saved == {"zoom_fit": "Shift+F"}
+    page.evaluate("""() => { window.__fits = 0; const f = window.app.vp.zoomFit.bind(window.app.vp);
+        window.app.vp.zoomFit = (...a) => { window.__fits++; return f(...a); }; document.activeElement?.blur(); }""")
+    page.keyboard.press("f")
+    assert page.evaluate("window.__fits") == 0
+    page.keyboard.press("Shift+F")
+    assert page.evaluate("window.__fits") == 1
+    assert page.evaluate("window.app.menuKeyLabel('Ctrl+S')") == "Ctrl+S"
+    page.evaluate("async () => { await T.run('set_settings', {values: {shortcuts: {save: 'Ctrl+Alt+S'}}}); await window.app.loadUserSettings(); }")
+    assert page.evaluate("window.app.menuKeyLabel('Ctrl+S')") == "Ctrl+Alt+S"
+    page.evaluate("async () => { await T.run('set_settings', {reset: true}); await window.app.loadUserSettings(); }")
+
+
+def test_view_colours_and_mouse_settings_apply(page):
+    page.evaluate("""async () => {
+        await T.run('create_sketch', {plane: 'Top'});
+        await T.run('sketch_rectangle', {sketch: 'Sketch1', corner1: [0, 0], corner2: [30, 20]});
+        await T.run('extrude', {sketch: 'Sketch1', depth: 5});
+        await window.app.refresh();
+        await T.run('set_settings', {values: {view_body_color: '#aa2200', view_background_top: '#101820',
+                                              mouse_preset: 'onshape', mouse_zoom_reverse: true}});
+        await window.app.loadUserSettings(); }""")
+    got = page.evaluate("""() => {
+        const vp = window.app.vp, faces = [...vp.faces.values()].filter((m) => !m.userData.own);
+        return {bg: document.querySelector('#graphics').style.background, mouse: vp.mouse,
+                faces: faces.length, colours: [...new Set(faces.map((m) => m.material.color.getHex()))]}; }""")
+    assert "rgb(16, 24, 32)" in got["bg"]
+    assert got["mouse"] == {"preset": "onshape", "zoomReverse": True}
+    assert got["faces"] > 0 and got["colours"] == [0xAA2200]
+    # onshape: a right drag turns the view; a right click without moving is still a right click
+    turned = page.evaluate("""() => {
+        const vp = window.app.vp, c = document.querySelector('#view'), b = c.getBoundingClientRect();
+        let clicks = 0; vp.on('rightclick', () => clicks++);
+        const ev = (type, x, buttons) => c.dispatchEvent(new PointerEvent(type, {bubbles: true, button: 2, buttons, pointerId: 1,
+            clientX: b.left + x, clientY: b.top + 100}));
+        const q0 = vp.camera.quaternion.clone();
+        ev('pointerdown', 100, 2); ev('pointermove', 160, 2); ev('pointerup', 160, 0);
+        const moved = !vp.camera.quaternion.equals(q0);
+        ev('pointerdown', 100, 2); ev('pointerup', 100, 0);
+        return {moved, clicks}; }""")
+    assert turned == {"moved": True, "clicks": 1}
+    page.evaluate("async () => { await T.run('set_settings', {reset: true}); await window.app.loadUserSettings(); }")
+    assert page.evaluate("window.app.vp.mouse") == {"preset": "solidworks", "zoomReverse": False}
+    assert page.evaluate("document.querySelector('#graphics').style.background") == ""  # back to the theme's own
+
+
+def test_keyboard_navigation(page):
+    """Alt+T goes to the FeatureManager tree and the arrows move through it; F10 opens the menu bar, the arrows
+    move through it and Escape closes it."""
+    page.evaluate("document.activeElement?.blur()")
+    page.keyboard.press("Alt+T")
+    first = page.evaluate("document.activeElement.classList.contains('t-row') && document.activeElement.innerText")
+    assert first
+    page.keyboard.press("ArrowDown")
+    second = page.evaluate("document.activeElement.innerText")
+    assert second and second != first
+    page.keyboard.press("Escape")
+    page.keyboard.press("F10")
+    assert page.evaluate("document.querySelector('#menubar .menu-root.open').firstChild.textContent") == "File"
+    page.keyboard.press("ArrowRight")
+    assert page.evaluate("document.querySelector('#menubar .menu-root.open').firstChild.textContent") == "Edit"
+    page.keyboard.press("ArrowDown")
+    assert page.evaluate("document.querySelector('#menubar .kfocus').innerText").startswith("Redo")
+    page.keyboard.press("Escape")
+    assert page.evaluate("document.querySelector('#menubar .menu-root.open')") is None
+
+
+def test_macos_desktop_menus_go_to_the_menu_bar(page):
+    """In the macOS desktop app the page hands its menus to the shell (window.pywebview.api.set_native_menu) and
+    hides its own menu bar once they are in the system menu bar; each item runs by id."""
+    got = page.evaluate("""async () => {
+        const real = Object.getOwnPropertyDescriptor(Navigator.prototype, 'platform');
+        Object.defineProperty(navigator, 'platform', {get: () => 'MacIntel', configurable: true});
+        let sent = null;
+        window.pywebview = {api: {set_native_menu: async (m) => { sent = m; return true; }}};
+        window.app.nativeMenuJson = null;
+        await window.app.syncNativeMenu();
+        const hidden = getComputedStyle(document.querySelector('#menubar')).display === 'none';
+        const help = sent.find((m) => m.title === 'Help').items.find((i) => i.title === 'Keyboard Shortcuts');
+        window.app.menuInvoke(help.id);
+        const shown = !document.querySelector('#tp-help').classList.contains('hidden');
+        window.app.showTask('help');  // (close it again)
+        // the shell could not: the window keeps its own menu bar
+        window.pywebview.api.set_native_menu = async () => false;
+        window.app.nativeMenuJson = null;
+        await window.app.syncNativeMenu();
+        const back = getComputedStyle(document.querySelector('#menubar')).display !== 'none';
+        delete window.pywebview; delete navigator.platform;
+        return {titles: sent.map((m) => m.title), hidden, shown, back, hasSub: JSON.stringify(sent).includes('"items"')};
+    }""")
+    assert got["titles"] == ["File", "Edit", "View", "Insert", "Tools", "Collaborate", "Window", "Help"]
+    assert got["hidden"] and got["shown"] and got["back"] and got["hasSub"]
 
 def test_no_script_errors(page):
     assert page.errors == []

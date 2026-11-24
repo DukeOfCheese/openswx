@@ -12,7 +12,7 @@ from .session import (  # noqa: F401
     command, json, mass_properties, math, re,
 )
 
-__all__ = ["new_part", "open_part", "save_part", "save_drawing_document", "list_documents", "activate_document",
+__all__ = ["new_part", "open_part", "save_part", "recent_files", "clear_recent_files", "save_drawing_document", "list_documents", "activate_document",
            "close_document", "import_file", "export_file", "get_model", "get_feature", "get_topology",
            "get_mass_properties", "list_end_conditions", "get_mesh", "get_activity", "measure", "save_named_view",
            "delete_named_view", "face_features", "measure_items", "undo", "redo", "rebuild", "edit_feature",
@@ -45,6 +45,15 @@ def open_part(path: str, history: bool = True) -> dict:
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(path)
+    APP.drop_throwaway()  # (an untouched Part1 made on demand gives way to the opened document)
+    res = _open(p, history)
+    if not set(res) <= {"solidworks_file", "geometry"}:  # (a document was opened, not only the container read)
+        from . import recent
+        recent.add(p)
+    return res
+
+
+def _open(p: Path, history: bool) -> dict:
     ext = p.suffix.lower()
     if ext == ".oswprt":
         doc = PartDocument.open(str(p))
@@ -179,7 +188,28 @@ def save_part(path: str | None = None) -> dict:
     if APP.active != d.name:
         APP.documents[d.name] = APP.documents.pop(APP.active)
         APP.active = d.name
+    from . import recent
+    recent.add(saved)
     return {"saved": saved}
+
+
+@command(mutates=False, category="document")
+def recent_files() -> dict:
+    """Recently opened or saved documents, newest first (at most 15): path, name, folder, kind, when, and
+    whether the file still exists. Open one with open_part."""
+    from . import recent
+    return {"recent": recent.entries()}
+
+
+@command(mutates=False, category="document", mcp=False)
+def clear_recent_files(path: str | None = None) -> dict:
+    """Forget one recent file (path) or the whole list (no path). The files themselves are not touched."""
+    from . import recent
+    if path is None:
+        recent.clear()
+    else:
+        recent.remove(path)
+    return {"recent": recent.entries()}
 
 
 @command(category="document")
@@ -284,6 +314,8 @@ def get_model() -> dict:
     """Summary of the active document. Parts: FeatureManager tree (with status/errors), rollback, bodies,
     volume, configurations. Assemblies (kind='assembly'): components with positions/DOF and mates."""
     out = APP.active_doc.summary()
+    if APP.is_throwaway(APP.active_doc):  # (the untouched part made on demand: the window may show Home over it)
+        out["throwaway"] = True
     if getattr(APP.active_doc, "drawing_path", None):
         out["drawing_document"] = APP.active_doc.drawing_path
     if getattr(APP.active_doc, "show_drawing", False):  # once, after a SOLIDWORKS drawing was opened
@@ -403,7 +435,7 @@ def face_features() -> dict:
 
 @command(mutates=False, category="query")
 def measure_items(items: list[str | Vec3]) -> dict:
-    """Measure, as SOLIDWORKS' Measure tool: one item gives its size (face area, radius/diameter, edge length,
+    """Measure: one item gives its size (face area, radius/diameter, edge length,
     vertex XYZ); two give the minimum distance, the centre distance of circles/cylinders, dX/dY/dZ and the
     angle between planar faces or straight edges. Items: Face#/Edge# ids (Component/Face# in an assembly) or
     [x, y, z] vertices."""
@@ -502,7 +534,8 @@ def redefine_feature(name: str, command_name: str, args: dict) -> dict:
 
 @command(category="edit")
 def delete_feature(name: str, delete_absorbed_sketch: bool = True) -> dict:
-    """Delete a feature (and its absorbed sketch, as SOLIDWORKS offers)."""
+    """Delete a feature by name (e.g. 'Boss-Extrude1'). delete_absorbed_sketch=True (default) also deletes the
+    sketch it absorbed (the sketch that defines it); False keeps the sketch. Returns what was removed."""
     removed = APP.doc.delete_feature(name, delete_absorbed_sketch)
     return {"removed": removed, "model": APP.doc.summary()}
 
@@ -744,7 +777,7 @@ def set_units(units: Literal["mm", "cm", "m", "in", "ft"]) -> dict:
 @command(mutates=False, category="query")
 def parent_child(name: str) -> dict:
     """Parent/Child relationships of a feature: the features it references (parents) and the features that
-    reference it (children), as in the SOLIDWORKS Parent/Child dialog."""
+    reference it (children)."""
     doc = APP.doc
     feat = doc.find(name)
     names = {f["name"] for f in doc.features}

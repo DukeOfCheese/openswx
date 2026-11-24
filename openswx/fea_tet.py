@@ -39,14 +39,34 @@ def available() -> bool:
 
 
 # ------------------------------------------------------------------------------------------------ meshing
+# netgen-occt's libraries in dependency order (as netgen's own loader takes them)
+_OCCT_ORDER = ["TKernel", "TKMath", "TKDE", "TKG2d", "TKG3d", "TKGeomBase", "TKBRep", "TKGeomAlgo", "TKTopAlgo",
+               "TKShHealing", "TKService", "TKMesh", "TKHLR", "TKV3d", "TKCDF", "TKLCAF", "TKPrim", "TKBO", "TKCAF",
+               "TKVCAF", "TKXCAF", "TKDESTL", "TKXSBase", "TKDESTEP", "TKBool", "TKDEIGES", "TKFillet", "TKOffset"]
+
+
+def _preload_occt(folder: str) -> None:
+    """macOS desktop build: load Netgen's OpenCASCADE libraries from `folder` before netgen itself, so the
+    dynamic loader finds them (by install name) when netgen's extension asks for them."""
+    import ctypes
+    import glob
+    for name in _OCCT_ORDER:
+        hits = sorted(glob.glob(os.path.join(folder, f"lib{name}*.dylib")), key=len)
+        if hits:
+            ctypes.CDLL(hits[0], mode=ctypes.RTLD_GLOBAL)
+
+
 def _mesh_worker(step_path: str, maxh: float, out_path: str, conn, curvature: float = 4.0) -> None:
     try:
         import sys
         if getattr(sys, "frozen", False):  # desktop build: Netgen's OpenCASCADE sits in its own folder
             occt = os.path.join(getattr(sys, "_MEIPASS", ""), "netgen_occt")
-            if os.path.isdir(occt):
+            if os.path.isdir(occt) and sys.platform == "darwin":
+                _preload_occt(occt)
+            if os.path.isdir(occt) and os.name == "nt":
                 os.add_dll_directory(occt)
                 os.environ["PATH"] = occt + os.pathsep + os.environ.get("PATH", "")
+            if os.path.isdir(occt):
                 # netgen loads its OpenCASCADE from the paths in netgen-occt's metadata, which point outside the
                 # bundle; without that metadata it relies on the library path set above
                 import importlib.metadata as md
@@ -247,8 +267,21 @@ def _sym_lu(A):
 class Model:
     """A meshed body with per-element material factors and the face lookups the studies need."""
 
-    def __init__(self, body, element_size=None, target_elements=12000, regions=None):
-        m = mesh_body(body, element_size, target_elements)
+    def __init__(self, body, element_size=None, target_elements=12000, regions=None, separate: bool = False):
+        solids = body.solids() if separate else []
+        self.solids = solids if len(solids) > 1 else []
+        if len(solids) > 1:  # each body meshed on its own: touching faces keep their own nodes (contact, bolts)
+            h = float(element_size) if element_size else (float(body.volume) * 2.0 / (target_elements * 0.1179)) ** (1 / 3)
+            parts = [mesh_body(s, h) for s in solids]
+            off = np.cumsum([0] + [len(p["points"]) for p in parts[:-1]])
+            m = {"points": np.vstack([p["points"] for p in parts]),
+                 "tets": np.vstack([p["tets"] + o for p, o in zip(parts, off)]),
+                 "tris": np.vstack([p["tris"] + o for p, o in zip(parts, off) if len(p["tris"])]),
+                 "domains": np.concatenate([np.full(len(p["tets"]), k + 1) for k, p in enumerate(parts)]), "h": h}
+            if len(m["tets"]) > MAX_ELEMENTS:
+                raise ValueError(f"{len(m['tets'])} elements is too many; increase element_size")
+        else:
+            m = mesh_body(body, element_size, target_elements)
         self.P, self.T, self.tris, self.h, self.dom = m["points"], m["tets"], m["tris"], m["h"], m["domains"]
         self.nn, self.ne = len(self.P), len(self.T)
         self.X = self.P[self.T]
@@ -282,6 +315,14 @@ class Model:
         hi = np.array([fb.max.X, fb.max.Y, fb.max.Z]) + self.tol
         c = self.boundary[np.all((self.P[self.boundary] >= lo) & (self.P[self.boundary] <= hi), axis=1)]
         out = np.array([int(i) for i in c if face.distance_to(Vector(*self.P[i])) <= self.tol], int)
+        if self.solids:  # bodies meshed apart: only the nodes of the body the face belongs to (touching faces
+            # of two bodies lie in one place, and each has its own nodes there)
+            k = next((n for n, sol in enumerate(self.solids) if any(face.is_same(f) for f in sol.faces())), None)
+            if k is not None:
+                if not hasattr(self, "_node_dom"):
+                    self._node_dom = np.zeros(self.nn, int)
+                    self._node_dom[self.T.ravel()] = np.repeat(self.dom, self.T.shape[1])
+                out = out[self._node_dom[out] == k + 1]
         if len(out) == 0:
             raise ValueError("no mesh nodes found on a boundary face; reduce element_size")
         return out
@@ -347,37 +388,116 @@ class Model:
         return {"kind": "tet", "coords": self.P, "tets": self.T, **kw}
 
 
+def _across(model: Model, face_b, ax: np.ndarray):
+    """A function point -> (nodes, weights): the place on face b straight across from the point along `ax`,
+    as the 6-node shape functions of the face-b triangle it falls in (None when no triangle of face b lies
+    across, e.g. a hole face seen along its own axis)."""
+    tr = model.face_tris(face_b)
+    e1 = np.cross(ax, [1.0, 0.0, 0.0] if abs(ax[0]) < 0.9 else [0.0, 1.0, 0.0])
+    e1 /= np.linalg.norm(e1)
+    e2 = np.cross(ax, e1)
+    q = model.P[tr[:, :3]] @ np.stack([e1, e2], 1)  # (T, 3, 2) corners projected across the axis
+    a, b, c = q[:, 0], q[:, 1], q[:, 2]
+    den = (b[:, 1] - c[:, 1]) * (a[:, 0] - c[:, 0]) + (c[:, 0] - b[:, 0]) * (a[:, 1] - c[:, 1])
+    ok = np.abs(den) > 1e-12 * max(1.0, float(np.abs(q).max()) ** 2)
+    if not ok.any():
+        return None
+
+    def at(point):
+        x = np.array([point @ e1, point @ e2])
+        with np.errstate(divide="ignore", invalid="ignore"):
+            l1 = ((b[:, 1] - c[:, 1]) * (x[0] - c[:, 0]) + (c[:, 0] - b[:, 0]) * (x[1] - c[:, 1])) / den
+            l2 = ((c[:, 1] - a[:, 1]) * (x[0] - c[:, 0]) + (a[:, 0] - c[:, 0]) * (x[1] - c[:, 1])) / den
+            l3 = 1 - l1 - l2
+            inside = ok & (l1 >= -1e-9) & (l2 >= -1e-9) & (l3 >= -1e-9)
+        if not inside.any():
+            return None
+        t = int(np.nonzero(inside)[0][0])
+        # Netgen's triangle: corners 0-2 (L0 = l1, L1 = l2, L2 = l3), then the edges (1,2) (0,2) (0,1)
+        return tr[t], tri_shape_values(np.array([[l2[t], l3[t]]]))[0]
+    return at
+
+
 def _connector_matrix(model: Model, connectors: list, F: np.ndarray):
-    """Spring / bolt connectors between faces: each node of face a tied to its nearest node of face b (measured
-    across the axis) by a share of the stiffness (kn along the axis, kt across it); bolt preloads as equal and
-    opposite clamping forces."""
+    """Spring / bolt connectors between faces: each mid-side node of face a, with its area share of the stiffness
+    (kn along the axis, kt across it - the consistent split for quadratic elements, as for loads), is tied to the
+    point of face b straight across it (interpolated over face b's elements), or to the nearest node of face b
+    when nothing lies straight across (a hole face seen along its axis). Bolt preloads: equal and opposite
+    clamping forces."""
     from scipy.sparse import coo_matrix
     rows, cols, vals = [], [], []
     for con in connectors:
-        na, nb = model.nodes_on(con["a"]), model.nodes_on(con["b"])
+        (na, wa), (nb, wb) = model.face_shares(con["a"]), model.face_shares(con["b"])
         ax = np.asarray(con.get("axis") if con.get("axis") is not None else [1.0, 0.0, 0.0], float)
         ax = ax / np.linalg.norm(ax)
         Pp = np.eye(3) - np.outer(ax, ax)
         cb = model.P[nb]
-        kc = (con["kn"] * np.outer(ax, ax) + con["kt"] * Pp) / len(na)
+        k_axis = con["kn"] * np.outer(ax, ax) + con["kt"] * Pp
+        across = _across(model, con["b"], ax)
+        for i, share in zip(na, wa):
+            kc = k_axis * share
+            hit = across(model.P[i]) if across else None
+            if hit is None:
+                dvec = cb - model.P[i]
+                j = nb[int(np.argmin(np.linalg.norm(dvec @ Pp, axis=1) + 1e-6 * np.linalg.norm(dvec, axis=1)))]
+                hit = (np.array([j]), np.array([1.0]))
+            nodes = np.concatenate([[i], hit[0]])
+            coef = np.concatenate([[-1.0], hit[1]])  # relative displacement = sum(N u_b) - u_a
+            for r_, cr in zip(nodes, coef):
+                for c_, cc in zip(nodes, coef):
+                    blk = cr * cc * kc
+                    for d1 in range(3):
+                        for d2 in range(3):
+                            rows.append(3 * r_ + d1)
+                            cols.append(3 * c_ + d2)
+                            vals.append(blk[d1, d2])
+        if con.get("preload"):
+            sgn = np.sign(np.dot(model.P[nb].mean(0) - model.P[na].mean(0), ax)) or 1.0
+            for c, share in zip(na, wa):
+                F[3 * c: 3 * c + 3] += ax * sgn * con["preload"] * share
+            for c, share in zip(nb, wb):
+                F[3 * c: 3 * c + 3] -= ax * sgn * con["preload"] * share
+    n = 3 * model.nn
+    return coo_matrix((vals, (rows, cols)), shape=(n, n)).tocsc()
+
+
+def _solve_contact(model: Model, K, F, free, contacts: list, E: float, max_iter: int = 30):
+    """Frictionless no-penetration contact by node pairs (each node of face a with its nearest node of face b
+    across the contact normal): penalty springs active only while the pair is closed, weak springs otherwise so
+    a separated body does not drift. Returns the stiffness with the final springs, and the displacements."""
+    from .fea import _pair_matrix
+    pairs = []
+    for con in contacts:
+        ax = np.asarray(con["axis"], float)
+        ax = ax / np.linalg.norm(ax)
+        Pp = np.eye(3) - np.outer(ax, ax)
+        na, nb = model.nodes_on(con["a"]), model.nodes_on(con["b"])
+        cb = model.P[nb]
         for i in na:
             dvec = cb - model.P[i]
             j = nb[int(np.argmin(np.linalg.norm(dvec @ Pp, axis=1) + 1e-6 * np.linalg.norm(dvec, axis=1)))]
-            for (r_, c_, sg) in ((i, i, 1), (j, j, 1), (i, j, -1), (j, i, -1)):
-                for d1 in range(3):
-                    for d2 in range(3):
-                        rows.append(3 * r_ + d1)
-                        cols.append(3 * c_ + d2)
-                        vals.append(sg * kc[d1, d2])
-        if con.get("preload"):
-            sgn = np.sign(np.dot(model.P[nb].mean(0) - model.P[na].mean(0), ax)) or 1.0
-            F_a = ax * sgn * con["preload"] / len(na)
-            for c in na:
-                F[3 * c: 3 * c + 3] += F_a
-            for c in nb:
-                F[3 * c: 3 * c + 3] -= ax * sgn * con["preload"] / len(nb)
-    n = 3 * model.nn
-    return coo_matrix((vals, (rows, cols)), shape=(n, n)).tocsc()
+            pairs.append((int(i), int(j), ax, float(np.dot(model.P[j] - model.P[i], ax))))
+    nn, h = model.nn, model.h
+    k_pen = 10 * E * h / max(1, len(pairs) ** 0.5)
+    k_soft = 1e-7 * E * h
+    active = np.zeros(len(pairs), bool)
+    U = np.zeros(3 * nn)
+    for _ in range(max_iter):
+        Kt = (K + _pair_matrix(pairs, np.where(active, k_pen, k_soft), nn)).tocsc()
+        Fc = F.copy()
+        for (i, j, ax, g), act in zip(pairs, active):
+            if act:  # the spring closes at the actual gap, not at zero
+                Fc[3 * i: 3 * i + 3] += k_pen * g * ax
+                Fc[3 * j: 3 * j + 3] -= k_pen * g * ax
+        U = np.zeros(3 * nn)
+        U[free] = _sym_lu(Kt[free][:, free]).solve(Fc[free])
+        Uv = U.reshape(-1, 3)
+        new = np.array([g + np.dot(Uv[j] - Uv[i], ax) for (i, j, ax, g) in pairs]) <= 1e-9
+        if np.array_equal(new, active):
+            break
+        active = new
+    model.contact_closed = int(active.sum())
+    return (K + _pair_matrix(pairs, np.where(active, k_pen, k_soft), nn)).tocsc(), U
 
 
 # ------------------------------------------------------------------------------------------------ studies
@@ -385,9 +505,10 @@ def solve_static(body, material: dict, fixtures: list, loads: list, element_size
                  target_elements: int = 12000, regions: list | None = None, connectors: list | None = None,
                  _keep: bool = False) -> dict:
     """fixtures: Faces (fixed). loads: (Face, total force vector [N]). regions: [(solid, E factor[, density
-    factor])] for bonded bodies of different materials. connectors: springs / bolts as in fea.solve_static
-    (contact is not supported here). Same result keys as fea.solve_static, with the mesh in `_grid` (kind "tet":
-    nodal von Mises `vm` and displacements `U` at `coords`)."""
+    factor])] for bonded bodies of different materials. connectors: springs / bolts / frictionless contact as
+    in fea.solve_static; with connectors the bodies are meshed apart (they touch only through the connectors).
+    Same result keys as fea.solve_static, with the mesh in `_grid` (kind "tet": nodal von Mises `vm` and
+    displacements `U` at `coords`)."""
     E, nu = material.get("elastic_modulus"), material.get("poisson")
     if not E or nu is None:
         raise ValueError("assign a library material (with elastic modulus and Poisson ratio) first")
@@ -395,20 +516,23 @@ def solve_static(body, material: dict, fixtures: list, loads: list, element_size
         raise ValueError("add at least one fixture (fixed face)")
     if not loads:
         raise ValueError("add at least one load")
-    if any(c.get("contact") for c in connectors or []):
-        raise ValueError("contact needs the voxel mesh")
-    model = Model(body, element_size, target_elements, regions)
+    contacts = [c for c in connectors or [] if c.get("contact")]
+    springs = [c for c in connectors or [] if not c.get("contact")]
+    model = Model(body, element_size, target_elements, regions, separate=bool(connectors))
     K = model.stiffness(E, nu)
     F = np.zeros(3 * model.nn)
     for face, force in loads:
         nodes, w = model.face_shares(face)
         F.reshape(-1, 3)[nodes] += np.outer(w, np.asarray(force, float))
-    if connectors:
-        K = K + _connector_matrix(model, connectors, F)
+    if springs:
+        K = K + _connector_matrix(model, springs, F)
     fdofs = model.fixed_dofs(fixtures)
     free = np.setdiff1d(np.arange(3 * model.nn), fdofs)
-    U = np.zeros(3 * model.nn)
-    U[free] = _sym_lu(K[free][:, free]).solve(F[free])
+    if contacts:
+        K, U = _solve_contact(model, K, F, free, contacts, E)
+    else:
+        U = np.zeros(3 * model.nn)
+        U[free] = _sym_lu(K[free][:, free]).solve(F[free])
     if not np.all(np.isfinite(U)):
         raise ValueError("the model is not fully restrained (rigid-body motion): add fixtures")
     reaction = (K @ U - F)[fdofs].reshape(-1, 3).sum(axis=0)
@@ -421,6 +545,8 @@ def solve_static(body, material: dict, fixtures: list, loads: list, element_size
            "factor_of_safety": float(ys / vm.max()) if ys and vm.max() > 0 else None,
            "yield_strength": ys, "reaction": reaction.tolist(), "applied": F.reshape(-1, 3).sum(axis=0).tolist(),
            "_grid": model.grid(vm=vm, U=U.reshape(-1, 3), sig=sig)}
+    if contacts:
+        out["contact_pairs_closed"] = getattr(model, "contact_closed", 0)
     if _keep:
         out["_model"] = (model, K, free, U)
     return out
@@ -632,3 +758,152 @@ def map_to_mesh(g: dict, mesh: dict, key: str = "vm") -> dict:
         if "U" in g:
             out_u[f["id"]] = np.round(np.asarray(g["U"])[idx], 7).tolist()
     return {"stress": out_s, "displacement": out_u}
+
+
+# ------------------------------------------------------------------------------------------------ nonlinear, dynamics
+def _element_stiffness(model: Model, E: float, nu: float) -> np.ndarray:
+    """Element stiffness matrices (E, 30, 30) at unit material factor; sets model.edofs."""
+    G, det = _gradients(model.X, GAUSS)
+    B = _B(G)
+    Ke = np.einsum("eq,eqki,kl,eqlj->eij", det / 24.0, B, _D(E, nu), B, optimize=True)
+    model.edofs = (3 * model.T[:, :, None] + np.arange(3)).reshape(-1, 30).astype(np.int64)
+    model.volume = float((det / 24.0).sum())
+    return Ke
+
+
+def _element_von_mises(model: Model, U: np.ndarray, E: float, nu: float) -> np.ndarray:
+    """von Mises stress at each element's centroid for unit material factor (E x equivalent strain)."""
+    Gc, _ = _gradients(model.X, np.array([[0.25, 0.25, 0.25]]))
+    s = np.einsum("kl,elj,ej->ek", _D(E, nu), _B(Gc[:, 0]), U[model.edofs], optimize=True)
+    sx, sy, sz, txy, tyz, tzx = s.T
+    return np.sqrt(0.5 * ((sx - sy) ** 2 + (sy - sz) ** 2 + (sz - sx) ** 2) + 3 * (txy ** 2 + tyz ** 2 + tzx ** 2))
+
+
+def _to_nodes(model: Model, per_element: np.ndarray) -> np.ndarray:
+    """Element values averaged at the corner nodes (mid-side nodes: the mean of their corners), for plots."""
+    corner = model.T[:, :4].ravel()
+    acc = np.zeros(model.nn)
+    np.add.at(acc, corner, np.repeat(per_element, 4))
+    out = acc / np.maximum(np.bincount(corner, minlength=model.nn), 1)
+    for k, (i, j) in enumerate(TET_EDGES):
+        out[model.T[:, 4 + k]] = 0.5 * (out[model.T[:, i]] + out[model.T[:, j]])
+    return out
+
+
+def _load_vector(model: Model, loads: list) -> np.ndarray:
+    F = np.zeros(3 * model.nn)
+    for face, force in loads:
+        nodes, w = model.face_shares(face)
+        F.reshape(-1, 3)[nodes] += np.outer(w, np.asarray(force, float))
+    return F
+
+
+def solve_nonlinear(body, material: dict, fixtures: list, loads: list, steps: int = 10, hardening: float = 0.05,
+                    element_size: float | None = None, target_elements: int = 12000) -> dict:
+    """Elastic-plastic static study on tetrahedra: bilinear material (yield strength, then a tangent modulus
+    `hardening` x E), the load in `steps` increments, each solved by secant iterations per element (deformation
+    theory, small displacements). Same result keys as fea_more.solve_nonlinear."""
+    E, nu = material.get("elastic_modulus"), material.get("poisson")
+    if not E or nu is None:
+        raise ValueError("assign a library material (with elastic modulus and Poisson ratio) first")
+    sy = float(material.get("yield_strength") or 0)
+    if sy <= 0:
+        raise ValueError("the material needs a yield strength for a nonlinear study")
+    if not fixtures or not loads:
+        raise ValueError("add fixtures and loads first")
+    Et = max(1e-6, float(hardening)) * E
+    model = Model(body, element_size, target_elements)
+    Ke = _element_stiffness(model, E, nu)
+    fdofs = model.fixed_dofs(fixtures)
+    free = np.setdiff1d(np.arange(3 * model.nn), fdofs)
+    F = _load_vector(model, loads)
+    s = np.ones(model.ne)
+    curve, U, vm_unit, iters = [], np.zeros(3 * model.nn), np.zeros(model.ne), 0
+    for k in range(1, int(steps) + 1):
+        Fk = F * k / steps
+        for _ in range(60):
+            iters += 1
+            K = _assemble(Ke * s[:, None, None], model.edofs, 3 * model.nn)
+            U = np.zeros(3 * model.nn)
+            U[free] = _sym_lu(K[free][:, free]).solve(Fk[free])
+            vm_unit = _element_von_mises(model, U, E, nu)
+            eps = vm_unit / E
+            sig = np.where(vm_unit <= sy, vm_unit, sy + Et * (eps - sy / E))
+            s_new = np.where(vm_unit > 1e-12, sig / np.maximum(vm_unit, 1e-30), 1.0)
+            done = np.abs(s_new - s).max() < 1e-4
+            s = 0.5 * s + 0.5 * s_new
+            if done:
+                break
+        curve.append({"load_factor": k / steps, "max_displacement": float(np.linalg.norm(U.reshape(-1, 3), axis=1).max())})
+    stress = vm_unit * s
+    plastic = np.maximum(0.0, vm_unit / E - stress / E)
+    disp = np.linalg.norm(U.reshape(-1, 3), axis=1)
+    return {"element_size": model.h, "elements": int(model.ne), "mesh": "tetrahedral (quadratic, curvature-based)",
+            "max_displacement": float(disp.max()), "max_von_mises": float(stress.max()), "yield_strength": sy,
+            "plastic_elements": int((vm_unit > sy).sum()), "max_plastic_strain": float(plastic.max()),
+            "iterations": iters, "curve": curve,
+            "_grid": model.grid(vm=_to_nodes(model, stress), U=U.reshape(-1, 3))}
+
+
+def modal_basis(body, material: dict, fixtures: list, modes: int, element_size=None, target_elements: int = 8000):
+    """(m, free, w^2, phi) for the modal superposition studies of fea_more: m is a small adapter (kind "tet",
+    nn, h and a loads function); phi holds mass-normalised mode shapes on the free DOFs (consistent mass)."""
+    from scipy.sparse.linalg import eigsh
+    E, nu = material.get("elastic_modulus"), material.get("poisson")
+    rho = float(material.get("density") or 0)
+    if not E or nu is None:
+        raise ValueError("assign a library material (with elastic modulus and Poisson ratio) first")
+    if rho <= 0:
+        raise ValueError("the material needs a density for a dynamic study")
+    model = Model(body, element_size, target_elements)
+    K = model.stiffness(E, nu)
+    M = model.mass(rho * 1e-12)
+    fdofs = model.fixed_dofs(fixtures)
+    free = np.setdiff1d(np.arange(3 * model.nn), fdofs)
+    A = K[free][:, free]
+    k = max(1, min(int(modes), len(free) - 2))
+    vals, vecs = eigsh((A + A.T) * 0.5, k=k, M=M[free][:, free], sigma=0.0, which="LM")  # M-orthonormal
+    order = np.argsort(vals)
+    m = {"kind": "tet", "nn": model.nn, "h": model.h, "loads": lambda loads: _load_vector(model, loads)}
+    return m, free, np.clip(vals[order], 0, None), vecs[:, order]
+
+
+def solve_drop(body, material: dict, impact_faces: list, height: float, direction, element_size: float | None = None,
+               target_elements: int = 12000) -> dict:
+    """Drop test (energy method) on tetrahedra, as fea_more.solve_drop: the kinetic energy m g h taken up as
+    strain energy under an inertial load of G times the weight of the part (consistent mass), the landing faces
+    held; G and the stress and deflection at that instant follow."""
+    import math
+
+    from .fea_more import G_MM
+    E, nu = material.get("elastic_modulus"), material.get("poisson")
+    rho = float(material.get("density") or 0)
+    if not E or nu is None:
+        raise ValueError("assign a library material (with elastic modulus and Poisson ratio) first")
+    if rho <= 0:
+        raise ValueError("the material needs a density for a drop test")
+    if height <= 0:
+        raise ValueError("the drop height must be positive")
+    d = np.asarray(direction, float)
+    d = d / np.linalg.norm(d)
+    model = Model(body, element_size, target_elements)
+    K = model.stiffness(E, nu)
+    M = model.mass(rho * 1e-12)
+    fdofs = model.fixed_dofs(impact_faces)
+    free = np.setdiff1d(np.arange(3 * model.nn), fdofs)
+    dd = np.tile(d, model.nn)
+    F = M @ (G_MM * dd)  # the weight of the part as consistent nodal inertial forces
+    U = np.zeros(3 * model.nn)
+    U[free] = _sym_lu(K[free][:, free]).solve(F[free])
+    Ug = 0.5 * float(U @ F)  # strain energy under 1 g (N mm)
+    total = float(dd @ (M @ dd))  # tonne
+    Gs = math.sqrt(total * G_MM * height / Ug) if Ug > 0 else float("inf")
+    _sig, vm = model.stresses(U, E, nu)
+    vm = vm * Gs
+    disp = np.linalg.norm(U.reshape(-1, 3), axis=1) * Gs
+    ys = material.get("yield_strength") or material.get("tensile_strength") or 0.0
+    return {"element_size": model.h, "mesh": "tetrahedral (quadratic, curvature-based)", "mass_kg": total * 1000,
+            "impact_velocity_m_s": math.sqrt(2 * G_MM * height) / 1000, "peak_acceleration_g": Gs,
+            "max_von_mises": float(vm.max()), "max_displacement": float(disp.max()),
+            "factor_of_safety": float(ys / vm.max()) if ys and vm.max() > 0 else None,
+            "_grid": model.grid(vm=vm, U=U.reshape(-1, 3) * Gs)}

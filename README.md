@@ -10,7 +10,7 @@ parts in it while you watch.**
 ![platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![status: alpha](https://img.shields.io/badge/status-alpha-orange)
 
-https://github.com/user-attachments/assets/2c19c47d-aeae-4146-8f85-38fad6df28fa
+https://github.com/user-attachments/assets/442086e2-4e71-4d49-8bb5-408b3b027d70
 
 <sub>30 s ([4K original](https://github.com/DukeOfCheese/openswx/blob/main/docs/media/demo.mp4)). Recorded in
 openswx: every feature is built by a real MCP tool call, the same calls Claude makes through Claude Code or any
@@ -64,7 +64,7 @@ here without retraining. Underneath, it is a different program, built on differe
 - **Rendering**: real-time PBR, or path traced for soft shadows and reflections.
 - **Review**: design review, requirements checked like tests, tolerance stack-up, design studies, document
   compare.
-- **Agents**: <!-- counts -->446 commands, 427 of them MCP tools ([full list](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md))<!-- /counts -->,
+- **Agents**: <!-- counts -->452 commands, 432 of them MCP tools ([full list](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md))<!-- /counts -->,
   over stdio or streamable HTTP, shown live in the UI's Agent activity pane.
 - **Files**: native `.oswprt` / `.oswasm` / `.oswdrw` (versioned JSON). Reads SOLIDWORKS `.sldprt` / `.sldasm` /
   `.slddrw` (2015 and later) natively; clean-room Parasolid reader (`.x_t`, `.x_b`) and writer (`.x_t`); STEP and
@@ -220,12 +220,12 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
 
 **Not the same yet (see [Status](#status-and-limitations))**
 
-- Simulation: static, frequency, buckling, steady and transient thermal studies, including bonded assemblies, mesh with
-  curvature-based quadratic tetrahedra when the optional mesher is installed (`pip install openswx[mesh]`; included
-  in the Windows installer, not yet in the macOS one): peak stresses at holes and fillets within a few percent of closed-form
-  results. Contact, springs and bolts between separate bodies, nonlinear and drop studies
-  use the finite-cell voxel mesh, whose stresses at curved boundaries are approximate. Flow is
-  lattice-Boltzmann with a large-eddy turbulence model, without wall functions.
+- Simulation: every structural and thermal study (static, frequency, buckling, thermal, nonlinear, drop,
+  harmonic and step response; bonded assemblies, contact, springs and bolts) meshes with curvature-based
+  quadratic tetrahedra when the optional mesher is installed (`pip install openswx[mesh]`; included in the
+  Windows and macOS installers): peak stresses at holes and fillets within a few percent of
+  closed-form results. Without it the finite-cell voxel mesh is used, whose stresses at curved boundaries are
+  approximate. Flow is lattice-Boltzmann with a large-eddy turbulence model, without wall functions.
 - CAM is 3-axis: roughing, flat floors and drilling, and 3D finishing with ball, bull-nose or flat mills; no
   4- or 5-axis.
 - DWG needs the free ODA File Converter installed. Models are shared as a self-contained HTML viewer

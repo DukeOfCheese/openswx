@@ -102,7 +102,7 @@ def sketch_three_point_arc(sketch: str, start: Vec2 | str, end: Vec2 | str, mid:
 
 @command(category="sketch")
 def sketch_polygon(sketch: str, center: Vec2, radius: float, sides: int = 6, angle: float = 90.0) -> dict:
-    """Add a regular polygon inscribed in a construction circle (like the SOLIDWORKS Polygon tool)."""
+    """Add a regular polygon inscribed in a construction circle (polygon tool)."""
     return _sk(sketch, lambda sk: {"entities": sk.add_polygon(center, radius, sides, angle)})
 
 
@@ -152,7 +152,7 @@ def sketch_move_dimension(sketch: str, dimension: str, position: Vec2) -> dict:
 def set_dimension(dimension: str, value: float, sketch: str | None = None,
                   configurations: str | list[str] | None = None) -> dict:
     """Change a dimension value, e.g. set_dimension('D1@Sketch1', 42). Rebuilds the model. configurations
-    (as the SOLIDWORKS Modify box): None or 'all' sets it in all configurations (the base value; overrides
+    (as in the Modify box): None or 'all' sets it in all configurations (the base value; overrides
     of it are removed), 'this' only in the active configuration, or a list of configuration names."""
     sk_name, did = _dim_id(dimension)
     sk_name = sk_name or sketch
@@ -339,7 +339,7 @@ def export_sketch_dxf(sketch: str, path: str, include_construction: bool = False
 @command(category="sketch")
 def sketch_mirror(sketch: str, entities: list[str], about: str, copy: bool = True) -> dict:
     """Mirror Entities: copy entities across a sketch line/centerline (`about`), adding symmetric relations.
-    copy=False removes the originals (SOLIDWORKS' Copy option off)."""
+    copy=False removes the originals (the Copy option off)."""
     def f(sk):
         new = sk.mirror_entities(entities, about)
         if not copy:

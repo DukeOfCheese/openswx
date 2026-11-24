@@ -277,7 +277,16 @@ SOLIDWORKS' own mass properties as ground truth):
   halves) get pcurves on the wrong turn from a plain ShapeFix (negative face area); rebuilding them on the
   surface rotated half a turn about its axis gives consistent pcurves.
 - Some parts keep an empty partition (WORLD only) and store their bodies as plain body transmit files in
-  `Config-<n>-FeatureBodies/LocalBodies`.
+  `Config-<n>-FeatureBodies/LocalBodies`, one stream per configuration. Checked against SOLIDWORKS's own body
+  list (2026-11-23): usually one transmit per solid body (disk_experiment: 6 transmits, 6 bodies; cam roller:
+  9 and 9, volumes summing to SOLIDWORKS's). Exception: in the plastics sample `wrench` the active
+  configuration's stream holds a first transmit with two solids (277.5 mm3) that SOLIDWORKS does not list as
+  bodies, then the part (2168.46 mm3, matching SOLIDWORKS); what marks the first as not a body is not known
+  yet. The handle and brush_handle samples hold a transmit the reader cannot parse (an intersection curve whose
+  interpolation fails).
+- A face on a periodic surface that a split line cuts along the seam (part3: half-cylinder strips) can come
+  out of the reader with its pcurves on opposite turns, area zero or negative; rebuilding it on the surface
+  turned half a revolution gives the true face (it must stay within its edges' box).
 - Native reader over the 841 installed SOLIDWORKS 2025 sample parts: 814 read (96.8%), 736 valid solids;
   the rest are surface-only parts, honest failures (geometry that cannot be rebuilt) or timeouts.
 - Feature tree (`Contents/Config-<n>-ResolvedFeatures`; method: pairs of parts built in SOLIDWORKS that

@@ -22,6 +22,7 @@ __all__ = ["new_assembly", "insert_component", "add_mate", "redefine_mate", "edi
 def new_assembly(name: str | None = None) -> dict:
     """Create a new assembly document (File > New > Assembly) and make it active."""
     from .assembly import AssemblyDocument
+    APP.drop_throwaway()
     APP._doc_counter += 1
     name = name or f"Assem{APP._doc_counter}"
     asm = AssemblyDocument(name)
@@ -242,7 +243,7 @@ def motion_export(mate: str, start: float, end: float, path: str, frames: int = 
                   view: Literal["isometric", "front", "top", "right", "trimetric"] = "isometric",
                   width: int = 640, height: int = 480, fps: int = 12) -> dict:
     """Motion study > Save as animation: drive a distance/angle mate from start to end and write the frames
-    as a video (.avi, MJPEG, like SOLIDWORKS) or an animated .gif (fixed camera). The assembly is unchanged."""
+    as a video (.avi, MJPEG) or an animated .gif (fixed camera). The assembly is unchanged."""
     import io
     import numpy as np
     from PIL import Image

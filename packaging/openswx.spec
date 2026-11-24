@@ -29,11 +29,12 @@ for pkg in ("build123d", "OCP", "webview", "uvicorn", "mcp", "ezdxf", "ocpsvg", 
 # adds to its library path before it imports netgen (fea_tet._mesh_worker), where it also hides netgen-occt's
 # metadata from netgen (with it, netgen looks for the libraries at the wheel's own paths, outside the bundle).
 # Checked 2026-11-23: a frozen Windows build meshes and solves a tetrahedral static study.
-# macOS and Linux builds leave Netgen out for now (not yet tried there): their apps report the mesher missing
-# and mesh with voxels.
+# macOS: netgen-occt installs its libraries into <env>/lib (libTK*.dylib); they go to netgen_occt too, and the
+# meshing child loads them before netgen (macOS then reuses them by install name). The release workflow checks
+# both platforms with packaging/smoke_study.py. Linux builds leave Netgen out for now.
 NOT_BUNDLED = []
 _ng = importlib.util.find_spec("netgen")
-if _ng is not None and sys.platform == "win32":
+if _ng is not None and sys.platform in ("win32", "darwin"):
     for pkg in ("netgen", "pyngcore"):
         d, b, h = collect_all(pkg)
         datas += d
@@ -43,16 +44,18 @@ if _ng is not None and sys.platform == "win32":
     for libs in ("netgen_mesher.libs", "pyngcore.libs"):
         if (_site / libs).is_dir():
             binaries += [(str(f), libs) for f in (_site / libs).iterdir() if f.is_file()]
-    _occt = Path(sys.prefix) / "bin"
-    binaries += [(str(f), "netgen_occt") for f in _occt.glob("TK*.dll")]
+    if sys.platform == "win32":
+        binaries += [(str(f), "netgen_occt") for f in (Path(sys.prefix) / "bin").glob("TK*.dll")]
+    else:
+        binaries += [(str(f), "netgen_occt") for f in (Path(sys.prefix) / "lib").glob("libTK*.dylib")]
 else:
     NOT_BUNDLED = ["netgen", "pyngcore"]
 hidden += ["openswx.fea_tet", "openswx.mcp_bridge", "openswx.desktop", "openswx.web_server", "openswx.mcp_server", "openswx.assembly", "openswx.drawing",
            "openswx.sldprt", "openswx.render", "openswx.equations", "openswx.sw_tree", "openswx.sw_sketch",
            "openswx.sw_rebuild", "openswx.drawing_sheets", "openswx.fileassoc", "openswx.sw_drawing",
-           "openswx.advanced", "openswx.commands_more", "openswx.drawing_more", "openswx.fea_more",
+           "openswx.advanced", "openswx.sheet_more", "openswx.commands_more", "openswx.drawing_more", "openswx.fea_more",
            "openswx.analysis_more", "openswx.ecosystem", "openswx.piping", "openswx.cfd", "openswx.cam", "openswx.plastics", "openswx.inspection", "openswx.electrical", "openswx.commands_mfg",
-           "openswx.naming", "openswx.cache", "openswx.security", "openswx.recovery", "openswx.commands_app", "openswx.migrate", "openswx.applog", "openswx.tolerance", "openswx.commands_tol", "openswx.commands_review", "openswx.cli", "openswx.snapshots", "openswx.jobs", "openswx.settings", "openswx.commands_settings", "openswx.plugins", "openswx.isolated", "openswx.commands_asm", "openswx.commands_blocks", "openswx.commands_simreport", "openswx.commands_std", "openswx.fcstd", "openswx.updates", "openswx.api", "openswx.commands_document", "openswx.commands_sketch", "openswx.commands_features", "openswx.commands_assembly", "openswx.commands_drawing", "openswx.commands_simulation",
+           "openswx.naming", "openswx.cache", "openswx.security", "openswx.recovery", "openswx.commands_app", "openswx.migrate", "openswx.applog", "openswx.tolerance", "openswx.commands_tol", "openswx.commands_review", "openswx.cli", "openswx.snapshots", "openswx.jobs", "openswx.settings", "openswx.recent", "openswx.commands_settings", "openswx.plugins", "openswx.isolated", "openswx.commands_asm", "openswx.commands_blocks", "openswx.commands_simreport", "openswx.commands_std", "openswx.fcstd", "openswx.updates", "openswx.api", "openswx.commands_document", "openswx.commands_sketch", "openswx.commands_features", "openswx.commands_assembly", "openswx.commands_drawing", "openswx.commands_simulation",
            "openswx.collab", "openswx.collab.commands_collab", "openswx.collab.client", "openswx.collab.auth", "openswx.collab.backup"]
 
 a = Analysis([str(ROOT / "packaging" / "entry.py")], pathex=[str(ROOT)], datas=datas, binaries=binaries,

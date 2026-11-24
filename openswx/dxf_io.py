@@ -131,8 +131,11 @@ def export_sketch(sk: Sketch, path: str, include_construction: bool = False) -> 
     return path
 
 
-def export_face_outline(face, path: str) -> str:
-    """Flat-pattern style DXF of a planar face: outer and inner loops in the face's own 2D frame."""
+def export_face_outline(face, path: str, bends: list | None = None) -> list:
+    """Flat-pattern style DXF of a planar face: outer and inner loops in the face's own 2D frame. With
+    `bends` (sheet metal bends carrying a flat "flat_line" and the "toward" direction they bend to), also the
+    bend lines (layer BEND, dashed), a note on each ("UP 90° R2", layer NOTES) and the bounding box (layer
+    BBOX, with its size). Returns the notes written."""
     import ezdxf
     from build123d import Plane
     pl = Plane(face)
@@ -161,7 +164,35 @@ def export_face_outline(face, path: str) -> str:
                     msp.add_arc((c.X, c.Y), edge.radius, a0 if ccw else a1, a1 if ccw else a0)
             else:
                 msp.add_lwpolyline([(p.X, p.Y) for p in (loc(edge.position_at(k / 32)) for k in range(33))])
+    notes = []
+    if bends is not None:
+        from build123d import Vector
+        doc.layers.add("BEND", color=1, linetype="DASHED")
+        doc.layers.add("NOTES", color=3)
+        doc.layers.add("BBOX", color=8)
+        h = max(2.5, 0.02 * face.bounding_box().diagonal)
+        for b in bends:
+            a, c = loc(Vector(*b["flat_line"][0])), loc(Vector(*b["flat_line"][1]))
+            msp.add_line((a.X, a.Y), (c.X, c.Y), dxfattribs={"layer": "BEND"})
+            up = Vector(*b["toward"]).dot(pl.z_dir) > 0  # towards the viewer of the DXF
+            text = f"{'UP' if up else 'DOWN'} {b['angle']:g}° R{b['radius']:g}"
+            ang = math.degrees(math.atan2(c.Y - a.Y, c.X - a.X))
+            if ang > 90 or ang <= -90:
+                ang -= 180 if ang > 0 else -180  # keep the text readable (never upside down)
+            m = ((a.X + c.X) / 2, (a.Y + c.Y) / 2)
+            msp.add_text(text, height=h, rotation=ang, dxfattribs={"layer": "NOTES"}).set_placement(
+                m, align=ezdxf.enums.TextEntityAlignment.BOTTOM_CENTER)
+            notes.append({"text": text, "start": [a.X, a.Y], "end": [c.X, c.Y]})
+        pts = [loc(face.outer_wire().position_at(k / 256)) for k in range(257)] + \
+            [loc(v.center()) for v in face.vertices()]
+        x0, x1 = min(q.X for q in pts), max(q.X for q in pts)
+        y0, y1 = min(q.Y for q in pts), max(q.Y for q in pts)
+        msp.add_lwpolyline([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], close=True, dxfattribs={"layer": "BBOX"})
+        msp.add_text(f"{x1 - x0:.2f} x {y1 - y0:.2f}", height=h, dxfattribs={"layer": "NOTES"}).set_placement(
+            (x0, y0 - 1.5 * h), align=ezdxf.enums.TextEntityAlignment.TOP_LEFT)
+        notes.append({"text": "bounding box", "size": [x1 - x0, y1 - y0]})
     doc.saveas(path)
+    return notes
     return path
 
 

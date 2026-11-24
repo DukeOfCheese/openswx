@@ -300,7 +300,7 @@ def test_library_features(tmp_path, monkeypatch):
 def test_nonlinear_dynamic_drop_and_fatigue_studies():
     root, tip = _cantilever()
     S.simulation_add_force(tip, force=[0, -100, 0])
-    lin = S.simulation_run(element_size=2.5, mesh="voxel")  # (the nonlinear study meshes with voxels too)
+    lin = S.simulation_run(element_size=2.5)
     nl = S.nonlinear_run(steps=2, element_size=2.5)  # elastic: the same as the linear study
     assert nl["plastic_elements"] == 0 and nl["max_displacement"] == pytest.approx(lin["max_displacement"], rel=1e-3)
     assert set(S.simulation_results()["stress"])

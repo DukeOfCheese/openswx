@@ -75,7 +75,7 @@ def drawing_settings(sheet: SheetSize | None = None, projection: Literal["third"
 def drawing_move_view(view: str, dx: float, dy: float) -> dict:
     """Move a drawing view by (dx, dy) sheet mm (y down): a view id (drawing with sheets) or front / top /
     right / left / isometric (automatic drawing). Projected views follow their parent and only slide along
-    their projection line, as in SOLIDWORKS."""
+    their projection line."""
     def f(st):
         if st.get("sheets"):
             from .drawing_sheets import find_view

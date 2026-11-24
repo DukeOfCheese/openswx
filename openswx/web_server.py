@@ -5,6 +5,7 @@ import asyncio
 import base64
 import contextlib
 import json
+import logging
 import os
 import re
 import sys
@@ -16,6 +17,8 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 
 from . import session as S
+
+_log = logging.getLogger("openswx.web")
 
 WEB = Path(__file__).parent / "web"
 
@@ -84,8 +87,10 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
             result = await asyncio.to_thread(S.call, body["name"], body.get("args") or {}, "ui")
         except S.CommandError as exc:
             return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
-        except TypeError as exc:
-            return JSONResponse({"ok": False, "error": f"bad arguments: {exc}"}, status_code=400)
+        except TypeError:  # (arguments are checked before the call: this is a fault inside the command)
+            _log.exception("command %s failed", body.get("name"))
+            return JSONResponse({"ok": False, "error": f"{body.get('name')} failed inside openswx (details in the log)"},
+                                status_code=500)
         return {"ok": True, "result": result, "version": S.APP.version}
 
     @app.post("/api/preview")
@@ -93,8 +98,9 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
         body = await req.json()
         try:
             return await asyncio.to_thread(S.preview, body.get("name"), body.get("args") or {}, not body.get("if_idle"))
-        except TypeError as exc:
-            return {"ok": False, "error": f"bad arguments: {exc}"}
+        except TypeError:
+            _log.exception("preview of %s failed", body.get("name"))
+            return {"ok": False, "error": f"no preview for {body.get('name')}"}
 
     @app.get("/api/state")
     def state():
@@ -164,8 +170,7 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
     async def upload(req: Request):
         """Open/import a file sent by the browser: {"filename": ..., "data": base64}."""
         body = await req.json()
-        name = Path(body["filename"]).name
-        tmp = Path(tempfile.mkdtemp(prefix="openswx_")) / name
+        tmp = _temp_path(str(body.get("filename") or ""), "upload")
         tmp.write_bytes(base64.b64decode(body["data"]))
         cmd = "import_file" if body.get("mode") == "import" else "open_part"
         try:
@@ -184,7 +189,7 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
             raise HTTPException(400, "format must be oswprt, step, iges, stl, 3mf, glb, brep or x_t")
         doc = S.APP.active_doc  # assemblies export too
         ext = "igs" if format == "iges" else format
-        tmp = Path(tempfile.mkdtemp(prefix="openswx_")) / f"{doc.name}.{ext}"
+        tmp = _temp_path(f"{doc.name}.{ext}", f"model.{ext}")
         try:
             S.export_file(str(tmp), format)
         except S.CommandError as exc:
@@ -203,7 +208,7 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
     def drawing_export(format: str = "pdf", inline: bool = False):
         import tempfile
         fmt = format.lower() if format.lower() in ("pdf", "dxf", "dwg", "svg") else "pdf"
-        tmp = Path(tempfile.mkdtemp()) / f"{S.APP.active_doc.name}.{fmt}"
+        tmp = _temp_path(f"{S.APP.active_doc.name}.{fmt}", f"drawing.{fmt}")
         try:
             S.call("export_drawing", {"path": str(tmp), "format": fmt}, "ui")
         except S.CommandError as exc:
@@ -216,6 +221,20 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
         return Response(base64.b64decode(res["png_base64"]), media_type="image/png")
 
     return app
+
+
+_SAFE_CHARS = re.compile(r"[^\w .()+-]")  # letters and digits of any script survive
+
+
+def _temp_path(filename: str, fallback: str) -> Path:
+    """A path for `filename` in a new private temporary folder. Only the name's last part is kept and odd
+    characters become "_", so a name sent by a client (or a document name) cannot point anywhere else."""
+    name = _SAFE_CHARS.sub("_", os.path.basename(filename.replace("\\", "/"))).strip(" .") or fallback
+    folder = os.path.realpath(tempfile.mkdtemp(prefix="openswx_"))
+    full = os.path.normpath(os.path.join(folder, name[:180]))
+    if not full.startswith(folder + os.sep):
+        raise HTTPException(400, "bad file name")
+    return Path(full)
 
 
 def run(host: str = "127.0.0.1", port: int = 8765, mount_mcp: bool = True, log_level: str = "warning",

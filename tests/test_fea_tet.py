@@ -152,3 +152,42 @@ def test_transient_cooling_matches_lumped_capacitance():
                                         initial=100.0, duration=60.0, steps=60)
     tau = 2700 * 896 * 1e-6 / (50 * 6e-4)
     assert r["history"][-1]["mean"] == pytest.approx(20 + 80 * math.exp(-60 / tau), abs=0.05)
+
+
+def test_contact_and_springs_between_separate_bodies():
+    """Bodies meshed apart: two stacked blocks in frictionless contact compress like one 40 mm bar; two blocks
+    1 mm apart joined by a 1000 N/mm spring move 100 N / 1000 N/mm further than the bars alone."""
+    from build123d import Compound, Pos
+    lo, hi = Pos(0, 0, 0) * Box(10, 10, 20), Pos(0, 0, 20) * Box(10, 10, 20)
+    body = Compound([lo, hi])
+    base = min(body.faces(), key=lambda f: f.center().Z)
+    top = max(body.faces(), key=lambda f: f.center().Z)
+    a, b = max(lo.faces(), key=lambda f: f.center().Z), min(hi.faces(), key=lambda f: f.center().Z)
+    r = fea_tet.solve_static(body, STEEL, [base], [(top, (0, 0, -1000))],
+                             connectors=[{"a": a, "b": b, "contact": True, "axis": [0, 0, 1]}])
+    assert -r["_grid"]["U"][:, 2].min() == pytest.approx(1000 * 40 / (200000 * 100), rel=0.05)
+    gap = Pos(0, 0, 21) * Box(10, 10, 20)
+    body = Compound([lo, gap])
+    base = min(body.faces(), key=lambda f: f.center().Z)
+    top = max(body.faces(), key=lambda f: f.center().Z)
+    r = fea_tet.solve_static(body, STEEL, [base], [(top, (0, 0, 100))],
+                             connectors=[{"a": a, "b": min(gap.faces(), key=lambda f: f.center().Z), "kn": 1000.0,
+                                          "kt": 1000.0, "axis": [0, 0, 1]}])
+    assert r["_grid"]["U"][:, 2].max() == pytest.approx(0.1 + 100 * 40 / (200000 * 100), rel=0.06)
+
+
+def test_plastic_bar_and_drop_match_closed_forms():
+    """A bar pulled past yield stretches by sy / E + (s - sy) / Et per unit length (bilinear material); a bar
+    dropped onto its end takes up m g h as strain energy under its own inertia: peak deceleration
+    G = sqrt(6 E h / (rho g L^2)) times g (energy method, uniaxial)."""
+    import math
+    steel = dict(STEEL, density=7850.0)
+    bar = Box(100, 10, 10)
+    root, tip = _ends(bar)
+    r = fea_tet.solve_nonlinear(bar, steel, [root], [(tip, (30000, 0, 0))], steps=4, hardening=0.05)
+    strain = 250 / 200000 + (300 - 250) / (0.05 * 200000)
+    assert r["plastic_elements"] > 0 and r["max_displacement"] == pytest.approx(100 * strain, rel=0.05)
+    d = fea_tet.solve_drop(bar, steel, [root], 100.0, (-1, 0, 0))
+    g = 9810.0
+    expect = math.sqrt(6 * 200000 * 100 / (7850e-12 * g * 100 ** 2))
+    assert d["peak_acceleration_g"] == pytest.approx(expect, rel=0.05) and d["mass_kg"] == pytest.approx(0.0785, rel=1e-6)

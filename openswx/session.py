@@ -53,7 +53,21 @@ class Application:
         r = list(self.running.values())
         return min(r, key=lambda e: e[1]) if r else None
 
+    def is_throwaway(self, doc) -> bool:
+        """The part `active_doc` made on demand, still untouched: no features, no unsaved changes, no file."""
+        return (getattr(doc, "_auto", False) and getattr(doc, "kind", "part") == "part" and not doc.features
+                and not doc.dirty and not doc.path)
+
+    def drop_throwaway(self) -> None:
+        """Close the active document if it is still the untouched part made on demand, so opening or creating
+        a document (from the Home page, say) leaves no stray empty Part1 behind."""
+        d = self.documents.get(self.active) if self.active else None
+        if d is not None and self.is_throwaway(d):
+            self.documents.pop(self.active, None)
+            self.active = next(iter(self.documents), None)
+
     def new_document(self, name: str | None = None) -> PartDocument:
+        self.drop_throwaway()
         self._doc_counter += 1
         name = name or f"Part{self._doc_counter}"
         while name in self.documents:
@@ -68,7 +82,7 @@ class Application:
     @property
     def active_doc(self):
         if self.active is None or self.active not in self.documents:
-            self.new_document()
+            self.new_document()._auto = True  # (made on demand: dropped by the next new or opened document while untouched)
         d = self.documents[self.active]
         if getattr(d, "kind", "part") == "assembly":
             d.live_docs = self.documents
@@ -324,9 +338,36 @@ def unlocked():
         APP.lock._acquire_restore(state)
 
 
+def argument_problem(name: str, args: dict) -> str | None:
+    """What is wrong with `args` for command `name` (unknown or missing arguments), in words; None if they
+    fit its signature. Checked before the call so a caller never sees the interpreter's own error text."""
+    import inspect
+    if not isinstance(args, dict):
+        return f"bad arguments for {name}: arguments must be an object of name: value"
+    fn = COMMANDS[name]["fn"]
+    sig = inspect.signature(getattr(fn, "__wrapped__", fn))
+    params = sig.parameters
+    if any(p.kind == p.VAR_KEYWORD for p in params.values()):
+        return None
+    unknown = sorted(k for k in args if k not in params)
+    missing = [p.name for p in params.values() if p.default is p.empty and p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY)
+               and p.name not in args]
+    if not unknown and not missing:
+        return None
+    parts = []
+    if unknown:
+        parts.append(f"unknown argument{'s' if len(unknown) > 1 else ''} {', '.join(unknown)}")
+    if missing:
+        parts.append(f"missing {', '.join(missing)}")
+    return f"bad arguments for {name}: {'; '.join(parts)} (it takes {', '.join(params) or 'no arguments'})"
+
+
 def call(name: str, args: dict | None = None, origin: str | None = None) -> Any:
     if name not in COMMANDS:
         raise CommandError(f"unknown command {name!r}")
+    problem = argument_problem(name, args or {})
+    if problem:
+        raise CommandError(problem)
     prev = getattr(_TL, "origin", None)
     if origin:
         _TL.origin = origin
