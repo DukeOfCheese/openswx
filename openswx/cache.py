@@ -19,7 +19,7 @@ from collections import OrderedDict
 from functools import lru_cache
 from pathlib import Path
 
-LIMIT = 1 << 30
+LIMIT = 1 << 30  # bytes kept before the oldest entries are removed
 _PRUNE_EVERY = 60.0
 _TOUCH_EVERY = 3600.0
 _RACY_NS = 2_000_000_000
@@ -65,7 +65,7 @@ def code_tag() -> str:
             h.update(src.relative_to(here).as_posix().encode())
             h.update(src.read_bytes())
             found = True
-        if not found:
+        if not found:  # (a frozen build has no sources: its executable stands for the code)
             try:
                 st = Path(sys.executable).stat()
                 h.update(f"{st.st_size}:{st.st_mtime_ns}".encode())
@@ -121,7 +121,7 @@ def _touch(p: Path) -> None:
     if last is not None and now - last < _TOUCH_EVERY:
         return
     try:
-        os.utime(p)
+        os.utime(p)  # (recently used: kept longest)
         _TOUCHED[str(p)] = now
     except OSError:
         pass
