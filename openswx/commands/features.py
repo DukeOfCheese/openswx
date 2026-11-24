@@ -1,3 +1,7 @@
+"""Part feature, multibody, surface, sheet-metal and weldment commands (same registry as session.py, which re-exports them).
+
+Moved out of session.py; helpers come from it by name, and other commands through `_S` at call time."""
+
 from __future__ import annotations
 
 from typing import Literal

@@ -1,3 +1,18 @@
+// Live collaboration in the UI (cloud documents shared through an openswx-collab server). Mixed into the App
+// class by installCollab():
+//   * Home's Cloud tab: sign in, the organisations and projects, their parts (who is in each now), new cloud
+//     parts, and the team (members, roles, invitations, who can open a project); New Part's Local / Cloud choice;
+//   * the Collaborate menu, for the open document: move it to the cloud, stop sharing, history and versions,
+//     follow someone;
+//   * the bar over the view while a cloud document is active: connection state, the others as coloured avatars
+//     with their tool (click one to follow their view);
+//   * presence out (pointer, selection as persistent names, tool, camera, drafts), at most ~10 a second and only
+//     when something changed; presence in: the others' pointers, selections, sketch drafts and feature ghosts
+//     (drafts can be switched off in the menu);
+//   * locks taken while a sketch or a feature's panel is open, lock and "broken by" badges in the FeatureManager,
+//     conflict toasts, and the list of changes refused after a reconnect.
+// The state comes from GET /api/collab, fetched when the "collab" revision on the event stream moves.
+
 import * as THREE from "three";
 import { SPECS, el, escapeHtml } from "./propman.js";
 import { icon } from "./icons.js";

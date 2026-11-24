@@ -1,3 +1,10 @@
+"""Clean-room Parasolid XT (.x_t text transmit file) reader -> OpenCASCADE B-rep.
+
+Written from the published "Parasolid XT Format Reference" (UGS, 2006): file layout, node schema, embedded
+schema edit scripts (V14+ writers describe their schema as edits against base schema 13006), geometry
+definitions and topology. No Parasolid code is used. Lengths are converted from metres to millimetres.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

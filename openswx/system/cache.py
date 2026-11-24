@@ -1,4 +1,12 @@
-"""Disk cache for parsed SOLIDWORKS bodies and rebuilt histories, keyed by file content."""
+"""Disk cache for work that depends only on a file's contents: the B-rep read from a SOLIDWORKS part and its
+rebuilt feature history. Opening the same file again (or the same part in another assembly) then takes moments
+instead of a full read or rebuild.
+
+Entries are keyed by the file's bytes (SHA-1), what was asked of it (configuration, kind) and the code that
+produced them (openswx's version plus the reader modules' own bytes, so a changed reader never serves an old
+result). They live in OPENSWX_CACHE, else the user's cache folder (%LOCALAPPDATA%\\openswx\\cache on Windows);
+OPENSWX_CACHE=off turns the cache off. The oldest entries go once the folder passes 1 GB.
+"""
 from __future__ import annotations
 
 import hashlib

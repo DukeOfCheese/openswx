@@ -1,4 +1,8 @@
-"""Application session and the command registry shared by the UI, MCP and tests."""
+"""Application session and the command registry shared by the web UI, the MCP server and tests.
+
+Every command is a plain typed function. Mutating commands run under a lock and bump the
+application version so connected UIs refresh live (SSE).
+"""
 from __future__ import annotations
 
 import contextlib

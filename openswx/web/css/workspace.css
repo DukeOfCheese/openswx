@@ -1,3 +1,5 @@
+/* workspace grid, left pane, FeatureManager tree, PropertyManager */
+/* ---------------- workspace: left pane, graphics and task pane sit on the canvas as trays */
 #workspace {
   display: grid;
   grid-template-columns: 270px minmax(0, 1fr) auto;
@@ -77,6 +79,7 @@
   z-index: 5;
 }
 
+/* FeatureManager tree */
 #tree {
   padding: 4px 0 40px;
   position: relative;
@@ -180,6 +183,7 @@
   border-radius: 1px;
 }
 
+/* PropertyManager: groups are cards on a tinted panel */
 #pm {
   background: var(--pm-bg);
   padding-bottom: 30px;

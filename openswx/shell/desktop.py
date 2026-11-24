@@ -1,3 +1,6 @@
+"""Desktop application: the openswx UI in a native window (Edge WebView2 via pywebview), with the CAD
+engine and the MCP endpoint running in-process. This is what `openswx.exe` starts."""
+
 from __future__ import annotations
 
 import functools

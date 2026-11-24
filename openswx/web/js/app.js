@@ -1,3 +1,6 @@
+// openswx UI controller: the App class core (the command API, refresh loop and sketch loading) and the
+// bootstrap that installs the mixins in ./mixins. Each mixin owns one part of the window.
+
 import { Viewport, decodeMeshBinary } from "./viewport.js";
 import { PropertyManager, UNITS, el, escapeHtml } from "./propman.js";
 import { Sketcher } from "./sketcher.js";

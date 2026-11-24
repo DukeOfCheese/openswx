@@ -1,3 +1,22 @@
+"""Drawing documents: sheets holding views the user places, as in a SOLIDWORKS drawing.
+
+State (kept in the model document's `drawing` dict, saved with it):
+    {"sheets": [sheet, ...], "active": index}
+    sheet = {"name", "size" ("A4".."A1"), "scale", "projection" ("third" | "first"), "views": [view, ...],
+             "notes", "datums", "gdt" (annotations in sheet mm), "revisions": [row, ...], "tables": [table, ...]}
+    view  = {"id", "kind", "x", "y" (sheet mm, centre of the view), "scale" (None: the sheet's),
+             "hidden" ("visible" | "removed"), "dims" (show the model's sketch dimensions), "label", ...kind fields}
+Kinds: "model" (orientation: front / back / top / bottom / left / right / isometric / dimetric / trimetric),
+"projected" (parent, side: left / right / top / bottom; aligned to the parent as in SOLIDWORKS), "section"
+(parent, cut line a-b in the parent's 2D model coordinates, flip), "detail" (parent, centre and radius in the
+parent's 2D model coordinates, magnification), "auxiliary" (parent, direction in the parent's 2D coordinates:
+the view looks square to an inclined edge).
+
+A view's 2D model coordinates are (p . x, p . up) for its direction d (towards the viewer), up and
+x = up x d: the kernel's hidden-line projection is taken with the camera looking at the world origin, which
+gives exactly these coordinates, so cutting lines and detail circles map back to the model.
+"""
+
 from __future__ import annotations
 
 from openswx.drawing import drawing as D

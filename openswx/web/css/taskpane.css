@@ -1,3 +1,5 @@
+/* task pane */
+/* ---------------- task pane */
 #taskpane {
   display: flex;
   background: var(--panel);
@@ -124,7 +126,7 @@
 .copy-wrap pre.code {
   padding-right: 64px;
   white-space: pre-wrap;
-}
+} /* (long lines wrap: none runs under the button) */
 .copy-wrap .copy-btn {
   position: absolute;
   top: 4px;
@@ -157,7 +159,7 @@
   word-break: break-all;
   user-select: text;
 }
-
+/* in dialogs, long commands, JSON and paths wrap instead of scrolling sideways (copying keeps them whole) */
 #modal-box pre.code {
   white-space: pre-wrap;
   overflow-wrap: anywhere;

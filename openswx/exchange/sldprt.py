@@ -1,3 +1,10 @@
+"""Reader for the SOLIDWORKS 2015+ document container (.sldprt/.sldasm/.slddrw).
+
+Implements the format described in docs/re/README.md: ZIP-like local records (method 8, raw deflate)
+with a non-standard signature and nibble-swapped stream names; geometry is Parasolid binary transmit
+data inside zlib streams. Every stream is verified against its CRC-32 and size.
+"""
+
 from __future__ import annotations
 
 import re

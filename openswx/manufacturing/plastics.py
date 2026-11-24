@@ -1,3 +1,21 @@
+"""Plastics: injection-moulding fill analysis (like SOLIDWORKS Plastics' fill results).
+
+The cavity is voxelised and filled from the gate(s) at a constant volume flow rate. In every cell the melt
+moves by Hele-Shaw / Darcy flow with a permeability t^2 / 12 eta, t the local wall thickness: a thin wall
+carries flow exactly like a slit of that gap, so one cell or many across the wall give the same pressure.
+The thickness is measured per cell from the exact B-rep chords along the three axes through its centre
+(1/t^2 = sum 1/chord^2, exact for a flat wall at any angle). The melt is a power-law fluid; eta is evaluated at each cell's wall shear rate
+(lagged one step), which reproduces power-law slit flow exactly. Each step solves the pressure on the
+filled cells with p = 0 on the flow front, moves the front by the fluxes into it and records the time each
+cell fills. Isothermal at the melt temperature: freeze-off is checked afterwards (fill time against the
+freeze time of the thin sections), not simulated.
+
+Results: fill time and pattern, injection pressure (curve and at end of fill), clamp force, cooling time,
+weld lines (cells filled from opposite sides at once), air traps (local last-to-fill points), sink-mark risk
+(sections much thicker than the nominal wall) and short shots (the required pressure over the machine
+limit). Material values are generic grade averages.
+"""
+
 from __future__ import annotations
 
 import math

@@ -1,3 +1,7 @@
+"""Document, query, history, configuration and equation commands (same registry as session.py, which re-exports them).
+
+Moved out of session.py; helpers come from it by name, and other commands through `_S` at call time."""
+
 from __future__ import annotations
 
 import json

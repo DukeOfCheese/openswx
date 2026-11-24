@@ -1,3 +1,6 @@
+"""FreeCAD documents (.FCStd): the visible bodies come in as imported geometry.
+The archives here are made in FreeCAD's documented layout; none was saved by FreeCAD itself."""
+
 import zipfile
 
 import pytest

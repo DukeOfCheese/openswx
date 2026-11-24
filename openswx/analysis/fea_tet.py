@@ -1,3 +1,21 @@
+"""Structural and thermal analysis on a curvature-based tetrahedral mesh (quadratic, 10-node tetrahedra).
+
+The voxel mesh of fea.py stair-steps curved boundaries, so peak stresses there (fillets, holes) are only
+approximate. Here the part is meshed with Netgen (LGPL; the optional `netgen-mesher` package): elements are
+graded to the curvature of the faces and their mid-side nodes lie on the true surfaces, which is what
+stress concentrations need. Meshing runs in a child process (Netgen carries its own OpenCASCADE build, which
+must not share a process with OCP's); everything else here is numpy / scipy.
+
+Studies: linear static (with bonded multi-body assemblies, spring and bolt connectors), frequency
+(consistent mass), linear buckling (geometric stiffness from the static stresses) and steady-state thermal
+(conduction, convection, heat power, fixed temperatures). Several bodies are glued before meshing, so the
+mesh is conforming across their shared faces and each body keeps its own material.
+
+Elements: 10-node tetrahedra; stiffness by the 4-point Gauss rule (exact for straight-sided elements), mass
+and convection by collapsed Gauss-Legendre rules exact for their degree. Stresses are recovered at the corner
+nodes of each element and averaged at the nodes ("nodal" stresses). Units: mm, N, MPa, tonne, W, degC.
+"""
+
 from __future__ import annotations
 
 import importlib.util

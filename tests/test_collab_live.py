@@ -1,3 +1,12 @@
+"""Live collaboration end to end: a real openswx-collab server process and two openswx processes (Ada and Bob,
+tests/collab_peer.py) editing one cloud document. After every step both models must be the same: the same
+document, volume and persistent face names, and the same as the server's copy.
+
+Needs a checkout of openswx-collab with its virtual environment, by default beside this repository
+(../openswx-collab/.venv; OPENSWX_COLLAB_SERVER_REPO points elsewhere). Skipped without it. The tests run in
+order and share the server and the two peers.
+"""
+
 import json
 import os
 import queue

@@ -1,3 +1,9 @@
+"""Equations, global variables and configuration targets (SOLIDWORKS-style naming).
+
+Expressions use the SOLIDWORKS equation syntax: global variables by name or quoted ("width"), dimensions
+quoted as "D1@Sketch1", feature dimensions as "D1@Boss-Extrude1". Trig functions take degrees.
+"""
+
 from __future__ import annotations
 
 import ast

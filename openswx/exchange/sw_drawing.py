@@ -1,3 +1,13 @@
+"""SOLIDWORKS drawings (.slddrw), read natively - what the file says about its sheets and views.
+
+Clean-room notes (format facts observed in the files, no SOLIDWORKS code): the drawing's `Contents/Definition`
+stream holds UTF-16 strings in record order. The referenced models appear as full paths ending .sldprt /
+.sldasm; each view's record starts with its name ("Drawing View1", ...), and a model view's record carries its
+named orientation ("*Front", "*Isometric", ...) before the next view's record; views without one are projected
+from the view before them. Sheet names are in `SheetPreviews/SheetNames`. Numbers are little-endian doubles in
+metres: a view's placement follows its orientation matrix, and the sheet size is stored as (height, width).
+"""
+
 from __future__ import annotations
 
 import math

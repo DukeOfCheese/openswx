@@ -1,3 +1,21 @@
+"""Survey: how many SOLIDWORKS parts of a folder open with an exact, editable feature history.
+
+    python tools/survey.py run CORPUS_DIR -o results.jsonl [--timeout 115] [--limit N] [--smallest-first] [--jobs N] [--parts LIST]
+        open every .sldprt under CORPUS_DIR the way the application does (isolated rebuild, time limit) and
+        append one line per part to results.jsonl. Resumable: parts already in the file are skipped, so it
+        can be run in chunks (--limit) and survives being stopped.
+    python tools/survey.py summary results.jsonl
+    python tools/survey.py compare before.jsonl after.jsonl
+        parts gained and lost between two runs - check this before trusting a change to the rebuild.
+
+The corpus is yours to supply (for example the sample parts of a SOLIDWORKS installation); no SOLIDWORKS
+files are part of this repository, and none should be committed. Result files hold each part's path inside the corpus and its outcome
+only. openswx reads the files natively: SOLIDWORKS is not started.
+
+Outcome of a part: exact (rebuilt history gives the stored body) - with `parametric` true when no feature
+had to be imported from the stored body; inexact; timeout; crash; error (with the reason).
+"""
+
 from __future__ import annotations
 
 import argparse

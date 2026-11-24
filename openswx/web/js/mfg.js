@@ -1,3 +1,7 @@
+// Manufacturing and documentation dialogs: CAM (toolpaths, G-code), Plastics (fill analysis and plots),
+// Inspection (characteristics, results, reports), Electrical (connectors, routes, from-to list, harness,
+// formboard) and Composer (animated instructions). Mixed into the App class by installMfg().
+
 import { escapeHtml } from "./propman.js";
 import { css, kv, lineChart, rgbRamp } from "./more.js";
 

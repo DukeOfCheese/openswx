@@ -1,4 +1,6 @@
-"""More commands: shape, mold, surface, assembly, routing, drawing, study, render, PDM and macro commands."""
+"""More commands (registered with the same @command registry as session.py, which re-exports them): Flex /
+Deform / Freeform, fillet profiles and FilletXpert, mold tools, Insert / Mirror Part, cosmetic threads, the
+remaining surface tools, library features and the Design Library, Hole Series."""
 from __future__ import annotations
 
 from .assembly_tools import *

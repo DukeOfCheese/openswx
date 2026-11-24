@@ -1,3 +1,19 @@
+"""Who may talk to the local server (the web UI's API and MCP over HTTP).
+
+The server runs commands that write files, so a request has to prove it comes from the user's own openswx
+page or from an agent the user connected:
+
+- Host: on a loopback server the Host header must name loopback (stops DNS rebinding).
+- Origin / Sec-Fetch-Site: a request a browser marks as coming from another site, or from another port of
+  this machine, is refused (stops pages in the user's browser from driving openswx).
+- Content type: POSTs to /api/ must be application/json, which a cross-site form cannot send.
+- Token: /api/ and /mcp need the user's token - the cookie the page gets when it is opened through the link
+  openswx prints (/?token=...), or an `Authorization: Bearer` header (agents).
+
+The token is per user and stays the same between runs (so an agent's MCP configuration keeps working):
+`OPENSWX_TOKEN`, else the file `token` in the openswx home folder, created on first use.
+"""
+
 from __future__ import annotations
 
 import hmac

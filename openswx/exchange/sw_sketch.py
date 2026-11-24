@@ -1,3 +1,17 @@
+"""SOLIDWORKS sketches from the `ResolvedFeatures` stream (clean-room format analysis; see docs/re/README.md).
+
+A sketch object (`moProfileFeature_c`, named Sketch<n>) holds its entities as point records followed by the
+segment objects that use them:
+- point record: u32 id, a `FF FF <version> <byte> FF x8 00 00 80 BF ...` header, then `00 00 F0 3F`,
+  8 zero bytes and a 2-byte tag, then x, y as little-endian doubles (metres, sketch coordinates), a u16 kind
+  and a u16 count and, per segment using the point, the segment's class (its definition
+  `FF FF 01 00 <len> <name>` the first time, then a class word) + u16 index + `FF FF FF FF 00 00 00 00`;
+- segment classes: `sgLineHandle` (two end points), `sgArcHandle` (end points; a full circle repeats its one
+  point), `sgSplineHandle`; arc centres and spline through points have their own kinds (see parse_sketch);
+- after the entities, the sketch frame: u32 time stamp, `00 00`, u32 2, a flag byte and, when it is 1, a
+  row-major 3x3 rotation (model = R * sketch), translation (metres) and scale.
+"""
+
 from __future__ import annotations
 
 import math

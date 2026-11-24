@@ -1,3 +1,7 @@
+"""Previews run only commands that make or change a feature. What a preview is given can come from someone else
+(a collaborator's draft is previewed on everyone's screen), so a preview must never read or write files, run code,
+or open, save or close documents - directly or through redefine_feature."""
+
 import pytest
 
 from openswx import session as S

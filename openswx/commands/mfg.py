@@ -1,3 +1,7 @@
+"""Manufacturing and documentation commands (registered with session.py's @command registry, which
+re-exports them): CAM toolpaths and G-code, the plastics fill analysis, Inspection (characteristics, results
+and first-article reports), electrical harness routing and Composer-style animated instructions."""
+
 from __future__ import annotations
 
 import csv

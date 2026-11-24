@@ -1,3 +1,10 @@
+"""Piping library for Routing: standard pipe sizes, butt-weld fittings and weld-neck flanges, and the layout of
+a pipe route through points (straight runs cut to length, an elbow at every corner, optional end flanges).
+
+Dimensions are nominal values in mm after ASME B36.10 (pipe OD / wall, schedules 40 and 80), ASME B16.9
+(long / short radius elbows, equal tees, concentric reducers, caps) and ASME B16.5 class 150 (weld-neck
+flanges). They are for layout and bills of materials; check the standard before manufacture."""
+
 from __future__ import annotations
 
 import math

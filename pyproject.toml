@@ -53,9 +53,8 @@ Source = "https://github.com/DukeOfCheese/openswx"
 [project.scripts]
 openswx = "openswx.__main__:main"
 
-[tool.setuptools]
-packages = ["openswx", "openswx.analysis", "openswx.collab", "openswx.commands", "openswx.core", "openswx.drawing",
-            "openswx.exchange", "openswx.manufacturing", "openswx.server", "openswx.shell", "openswx.system"]
+[tool.setuptools.packages.find]
+include = ["openswx*"]
 
 [tool.setuptools.package-data]
 openswx = ["web/*", "web/css/*", "web/svgs/*", "web/vendor/*", "web/js/*", "web/js/lib/*", "web/js/mixins/*"]

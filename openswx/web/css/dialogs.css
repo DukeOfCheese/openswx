@@ -1,3 +1,5 @@
+/* context menus, modals, toasts, drawing editor, measure, view cube, keyboard focus */
+/* ---------------- menus, modal, toasts */
 #ctxmenu {
   position: fixed;
   background: var(--panel);
@@ -86,7 +88,7 @@
   background: var(--lift);
   box-shadow: var(--lift-shadow);
 }
-
+/* plain buttons some dialogs build without a class look like .btn */
 #modal-box button:not([class]) {
   height: 28px;
   padding: 0 14px;
@@ -176,6 +178,7 @@
   }
 }
 
+/* Modify (dimension) box, like the SOLIDWORKS Modify dialog */
 #modify {
   position: absolute;
   z-index: 40;
@@ -226,6 +229,7 @@
   color: var(--muted);
 }
 
+/* ---------------------------------------------------------------- drawing sheet editor */
 .dw-pane {
   position: fixed;
   inset: 0;
@@ -428,6 +432,7 @@
   box-sizing: border-box;
 }
 
+/* box selection: window (left to right) solid, crossing (right to left) dashed, as SOLIDWORKS */
 .selbox {
   position: absolute;
   z-index: 35;
@@ -439,7 +444,7 @@
   border: 1px dashed #2e9e44;
   background: rgba(46, 158, 68, 0.08);
 }
-
+/* mouse gestures */
 .gesture {
   position: absolute;
   z-index: 45;
@@ -488,7 +493,7 @@
     inset 0 0 0 1px var(--accent-line),
     var(--pop-shadow);
 }
-
+/* S-key shortcut bar */
 .sbar {
   position: absolute;
   z-index: 45;
@@ -519,7 +524,7 @@
   width: 22px;
   height: 22px;
 }
-
+/* Measure panel */
 .measure-panel {
   position: absolute;
   z-index: 38;
@@ -560,7 +565,7 @@
   max-height: 340px;
   overflow: auto;
 }
-
+/* FeatureManager drag-reorder */
 .tree-drop {
   position: absolute;
   left: 6px;
@@ -580,7 +585,7 @@
 .cx-title:hover {
   background: none;
 }
-
+/* Instant3D drag handle */
 .i3d-handle {
   position: absolute;
   width: 14px;
@@ -694,7 +699,7 @@
   background: var(--accent-soft);
   box-shadow: inset 3px 0 0 var(--accent);
 }
-
+/* view cube (turns with the camera; click a face for that view) */
 .vcube {
   position: absolute;
   right: 18px;
@@ -753,6 +758,7 @@
   }
 }
 
+/* keyboard navigation: the FeatureManager row and menu item that have the keyboard */
 .t-row:focus {
   outline: none;
   box-shadow: inset 0 0 0 1px var(--accent);

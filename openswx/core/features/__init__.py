@@ -1,4 +1,8 @@
-"""Feature builders. Each builder consumes a rebuild context and updates the body."""
+"""Feature builders. Each builder consumes a rebuild context and updates the body.
+
+Features that add or remove material record their tool bodies in ctx.tools so that pattern and
+mirror features can re-apply them (SOLIDWORKS "pattern features" semantics).
+"""
 from __future__ import annotations
 
 from ._base import (  # noqa: F401

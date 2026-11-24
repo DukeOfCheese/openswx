@@ -1,7 +1,10 @@
+/* CommandManager trays and tabs */
+/* ---------------- CommandManager: each group is a tray; buttons lift on hover and press in when active */
 #commandmanager {
   background: var(--chrome);
 }
-
+/* one fixed height on every tab, so the tabs and the workspace below never move: groups are a fixed 74px, stacks
+   wrap into columns of three, and the bottom 10px leave room for the (thin) scrollbar when a tab's buttons overflow */
 #cm-buttons {
   display: flex;
   align-items: flex-start;

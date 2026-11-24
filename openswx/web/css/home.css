@@ -1,3 +1,5 @@
+/* Home page */
+/* ---------------- Home page (home.js): over the editor (z 40-90: under modals, context menus and toasts) */
 #home {
   position: fixed;
   inset: 0;

@@ -1,3 +1,7 @@
+"""Standard parts (same registry as session.py, which re-exports them): bearings, O-rings, keys and T-slot
+extrusions made as ordinary openswx parts, for layout, mass and BOMs. Envelope dimensions come from the
+standards named; internal detail (balls, cages, exact slot profiles) is left out."""
+
 from __future__ import annotations
 
 from typing import Literal

@@ -1,3 +1,16 @@
+"""Read the geometry of a FreeCAD document (.FCStd).
+
+A .FCStd file is a zip archive: `Document.xml` lists the objects and, for each with a shape, the name of a
+B-rep file in the archive (OpenCASCADE's own .brp format); `GuiDocument.xml` says which objects are shown.
+FreeCAD keeps the shape of every step of the model, so the bodies to import are the visible ones - the
+results - not all of them. Without a GuiDocument.xml (a file saved without the GUI) the shapes no other
+object is built from are taken.
+
+Only the geometry comes across: FreeCAD's feature history is not rebuilt (the body arrives as an Imported
+feature, like a STEP file). Written from the documented file layout and tested with archives made in that
+layout; it has not been run against files saved by FreeCAD itself.
+"""
+
 from __future__ import annotations
 
 import tempfile

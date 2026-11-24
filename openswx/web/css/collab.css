@@ -1,3 +1,5 @@
+/* live collaboration and its Home tab */
+/* ---------------- live collaboration (collab.js) */
 #collabbar {
   position: absolute;
   top: 28px;
@@ -221,7 +223,7 @@
 .cl-warn {
   color: var(--note-fg);
 }
-
+/* Home's Cloud tab (collab.js) */
 .cl-acct {
   display: flex;
   align-items: center;

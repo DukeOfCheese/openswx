@@ -1,3 +1,5 @@
+// Viewport input: mouse gestures, box/area zoom, component dragging, picking and selection.
+
 import { icon } from "../icons.js";
 import { el, escapeHtml, SPECS } from "../propman.js";
 import { $ } from "../lib/dom.js";

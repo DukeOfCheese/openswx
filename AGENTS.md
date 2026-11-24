@@ -46,10 +46,7 @@ OPENSWX_PLUGINS=off` when you run the program from a script.
   `web/css/` (one file per widget group, imported in order by `style.css`). Icons are one plain SVG per
   pictogram in `web/svgs/`; `openswx/server/web_server.py` inlines them as the `#icons` sprite on the page, so
   `js/icons.js` needs no name list (just drop the file in).
-- A new Python module must be listed in `hiddenimports` in `packaging/openswx.spec`, or the desktop build
-  will not include it.
-- Keep code comments short and only for non-obvious behavior. Do not add banner separators or multi-line
-  file-header blocks.
+- The PyInstaller spec collects every `openswx` submodule automatically, so a new module needs no hiddenimports entry.
 - Vendored JavaScript goes in `openswx/web/vendor/` with its licence file and an entry in `NOTICE`.
 
 ## Checking results

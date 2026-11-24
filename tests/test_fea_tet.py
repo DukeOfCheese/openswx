@@ -1,3 +1,6 @@
+"""Static stress on the curvature-based tetrahedral mesh (fea_tet), checked against closed-form results.
+Needs the optional Netgen mesher (installed with the dev extra); skipped without it."""
+
 import numpy as np
 import pytest
 from build123d import Box, Cylinder

@@ -1,3 +1,7 @@
+"""The UI's mixin files (js/mixins/*.js, plus more.js, mfg.js, home.js and collab.js) add methods to the App
+class: none may silently replace one the class already has (a second "optionsDialog" once took the place of the
+System Options dialog)."""
+
 import re
 from pathlib import Path
 
@@ -19,10 +23,12 @@ def test_mixins_do_not_shadow_app_methods():
 
 
 def test_menu_entries_call_methods_that_exist():
-    defined = set(METHOD.findall((JS / "app.js").read_text(encoding="utf-8")))
-    for path in MIXINS + [JS / n for n in ("drawing.js", "sketcher.js", "propman.js", "viewport.js")]:
+    defined = set()
+    for path in sorted(JS.rglob("*.js")):
         defined |= set(METHOD.findall(path.read_text(encoding="utf-8")))
-    app = (JS / "app.js").read_text(encoding="utf-8")
-    called = set(re.findall(r'"\s*,\s*\(\)\s*=>\s*this\.([A-Za-z_]\w*)\(', app))
+    called = set()
+    for path in sorted(JS.rglob("*.js")):
+        called |= set(re.findall(r'"\s*,\s*\(\)\s*=>\s*this\.([A-Za-z_]\w*)\(', path.read_text(encoding="utf-8")))
+    assert called, "no menu entries found in the UI modules"
     missing = sorted(c for c in called if c not in defined)
     assert not missing, f"menu entries call undefined methods: {missing}"

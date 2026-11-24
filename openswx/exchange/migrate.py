@@ -1,3 +1,14 @@
+"""Versions of the native file formats (.oswprt, .oswasm, .oswdrw) and the steps between them.
+
+A file carries `"format"` and `"version"`. Opening one runs every step from its version to the current one;
+a file written by a newer openswx is refused (reading it with older rules could silently drop what the newer
+version added, and saving would then lose it). Keys this version does not know are kept and written back.
+
+To change a format: bump its number in CURRENT and add a function to STEPS[(format, old_version)] that turns
+an old dictionary into the next version's. Add a file of the old version to tests/data/native/ so it keeps
+opening (tests/test_migrate.py opens every file there).
+"""
+
 from __future__ import annotations
 
 from typing import Callable

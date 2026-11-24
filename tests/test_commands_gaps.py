@@ -1,3 +1,9 @@
+"""Commands that had no test of their own: cut variants, sketch editing tools, delete commands, queries.
+
+Volumes are checked against closed-form values; deletes are followed by a save / open round trip, so a
+command that leaves a broken document fails here.
+"""
+
 import math
 
 import pytest

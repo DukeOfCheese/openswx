@@ -1,3 +1,5 @@
+/* title bar, menu bar, cascading menus */
+/* ---------------- title bar */
 #titlebar {
   display: flex;
   align-items: center;
@@ -31,10 +33,10 @@
 #menubar {
   display: flex;
   gap: 0;
-}
+} /* always shown (File, Edit, View ...) */
 body.native-menu #menubar {
   display: none;
-}
+} /* macOS desktop app: the menus are in the system menu bar */
 .menu-root {
   position: relative;
   padding: 4px 9px;
@@ -84,7 +86,7 @@ body.native-menu #menubar {
   background: var(--chrome-2);
   margin: 4px 6px;
 }
-
+/* cascading submenus: open on hover beside their row (flipped left near the window edge) */
 .menu-item.has-sub {
   position: relative;
 }
@@ -105,7 +107,7 @@ body.native-menu #menubar {
 .menu-item.has-sub:hover {
   background: var(--hover);
 }
-
+/* DimXpert / PMI labels over the model */
 .pmi-label {
   position: absolute;
   transform: translate(-50%, -50%);

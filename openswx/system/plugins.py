@@ -1,3 +1,24 @@
+"""Plugins: installed Python packages that add commands to openswx.
+
+A plugin is a package that declares an entry point in the group `openswx.plugins`:
+
+    [project.entry-points."openswx.plugins"]
+    gears = "openswx_gears"
+
+Its module is imported when openswx starts; it registers commands with the same decorator the built-in ones
+use, and they become REST commands and MCP tools (toolset "plugins") like any other:
+
+    from openswx.session import APP, command
+
+    @command(category="gears")
+    def spur_gear(module: float, teeth: int, width: float) -> dict:
+        '''A spur gear ...'''          # the docstring is the tool description
+        ...
+
+`OPENSWX_PLUGINS=off` starts without plugins. A plugin that fails to import is skipped and reported by
+list_plugins; it cannot stop openswx starting.
+"""
+
 from __future__ import annotations
 
 import os

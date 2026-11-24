@@ -1,3 +1,5 @@
+// Overlays (dimensions, handles, plane labels), the task pane, simulation studies, and the review tools.
+
 import { icon } from "../icons.js";
 import { el, escapeHtml, UNITS } from "../propman.js";
 import { SHORTCUTS, DEFAULT_KEYS } from "../keys.js";

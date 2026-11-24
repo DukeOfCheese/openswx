@@ -1,3 +1,17 @@
+"""Persistent face names (topological naming).
+
+After every feature the faces of the body are named, so a reference made to a face or an edge finds the same
+face again after an earlier feature changes size or position (geometry alone would look in the old place):
+- a face lying on the surface of a face the body had before the feature keeps that face's name (booleans trim
+  faces but leave their surfaces alone);
+- a new face of a sketch-based feature is named after the sketch entity it was swept / revolved from
+  ("Boss-Extrude1:Sketch1.L3"), or as the feature's start / end cap;
+- other new faces (fillets, chamfers, shells, ...) are named after the named faces they meet
+  ("Fillet1:~Boss-Extrude1:Sketch1.L3+Boss-Extrude1:cap+").
+Faces sharing a name (a face split in two) are told apart by "#k" in a fixed spatial order. An edge is named by
+the faces on either side of it.
+"""
+
 from __future__ import annotations
 
 import weakref

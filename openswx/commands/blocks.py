@@ -1,3 +1,6 @@
+"""Sketch blocks (same command registry as session.py, which re-exports them): a named group of sketch
+geometry kept with the part and inserted again anywhere, at any angle and scale."""
+
 from __future__ import annotations
 
 import math

@@ -1,3 +1,5 @@
+// Small helpers shared by app.js and the mixins: labels, hit tests, sketch-plane frames and mass-property HTML.
+
 import { UNITS } from "../propman.js";
 
 export function cap(s) { return s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : s; }

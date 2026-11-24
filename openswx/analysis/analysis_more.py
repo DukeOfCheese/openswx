@@ -1,3 +1,8 @@
+"""Engineering estimates beyond structural FEA: flow around a part (potential flow on a voxel grid: surface
+pressure coefficient and velocity, with a skin-friction drag estimate), manufacturing cost estimates
+(machining, sheet metal, 3D printing, casting), sustainability (embodied carbon, energy and water by life-cycle
+phase) and a DimXpert-style automatic dimension and tolerance scheme (model-based definition)."""
+
 from __future__ import annotations
 
 import math

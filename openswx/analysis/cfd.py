@@ -1,3 +1,17 @@
+"""Navier-Stokes flow on the part's voxel grid with the lattice Boltzmann method (D3Q19, two-relaxation-time
+collision, Smagorinsky large-eddy model when the grid cannot resolve the Reynolds number).
+
+External flow: the part in a free stream (an inlet face upstream, free-stream sides, a zero-gradient outlet);
+drag and lift from the momentum exchanged at the walls, the surface pressure coefficient and a mid-plane slice
+of the speed. Internal flow: fluid through the part's internal passage along one axis (a uniform inlet
+velocity, a fixed-pressure outlet); the pressure drop and the flow rate.
+
+Walls are half-way bounce-back on the voxelised part (stair-stepped). Measured against references: laminar pipe
+flow within 2-3 % of Hagen-Poiseuille (plus the entrance loss) at 10-16 cells across; sphere drag 5-10 % high at
+Re 20-100 (12-20 cells). Above a few hundred the flow is a large-eddy estimate on a coarse grid (regularised
+collision, Smagorinsky model, no wall functions): the boundary layers are not resolved and bluff-body drag can
+be twice the real value, so treat it as indicative there."""
+
 from __future__ import annotations
 
 import math

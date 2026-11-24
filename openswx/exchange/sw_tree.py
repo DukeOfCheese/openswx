@@ -1,3 +1,13 @@
+"""SOLIDWORKS feature tree from a part's `Contents/Config-<n>-ResolvedFeatures` stream (clean-room format
+analysis, see docs/re/README.md and docs/PLAN.md "Feature history from .sldprt").
+
+The stream is an MFC-style archive. A class is introduced once as `FF FF`, schema word, length word, ASCII
+name; later objects of that class start with a class-reference word `0x8000 | index`. Every tree object
+(folder, plane, sketch, feature, dimension) begins with the version word `04 80` followed by its name as a
+Unicode CString (`FF FE FF`, length byte, UTF-16). A dimension's value is a little-endian double (metres,
+or radians for angles) 22 bytes after its name.
+"""
+
 from __future__ import annotations
 
 import re

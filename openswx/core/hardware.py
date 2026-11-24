@@ -1,3 +1,11 @@
+"""Hardware library (Toolbox-style): ISO metric and ANSI inch fasteners and pins generated from standard
+dimension tables.
+
+Geometry is simplified the way CAD fastener libraries usually are: nominal-diameter shank, no modelled
+thread, plain hex/cylindrical heads. Screws point down -Z with the underside of the head on the XY plane
+(countersunk screws: the top of the head); nuts, washers and pins sit on the XY plane centred on the Z axis.
+"""
+
 from __future__ import annotations
 
 import math

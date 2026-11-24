@@ -1,3 +1,9 @@
+// Drawing sheet editor: shows the live drawing SVG, drag views / annotations, add notes, datums and GD&T,
+// sheet settings and PDF / DXF / SVG export. All edits go through drawing_* commands (shared with the MCP).
+// A drawing with sheets (drawing_new) adds the View Layout tools: Model View, Projected, Section, Detail and
+// Auxiliary views placed by clicking on the sheet, sheet tabs, view properties, the revision table and Smart
+// Dimension (picks snap to the view's vertices and circles on the server: drawing_pick).
+
 import { icon } from "./icons.js";
 import { el, escapeHtml } from "./propman.js";
 

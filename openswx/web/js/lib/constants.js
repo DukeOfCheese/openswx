@@ -1,3 +1,6 @@
+// Feature-table lookups shared by the App and its mixins. SPECS and these tables gain the
+// entries that more.js adds for the surface, sheet metal, weldment and analysis features.
+
 import { SPECS } from "../propman.js";
 import { MORE_FEATURE_TO_SPEC, MORE_SPECS, MORE_TYPE_ICON } from "../more.js";
 

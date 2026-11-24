@@ -1,3 +1,11 @@
+"""Benchmarks: how long the things users wait for take. Run before and after a change that should make
+something faster (or might make it slower); keep the JSON with a release to track it over time.
+
+    python tools/bench.py [-o bench.json] [--repeat 3] [--files a.sldprt b.step ...]
+
+Each timing is the best of `--repeat` runs, in seconds. `import` is measured in a fresh interpreter.
+"""
+
 from __future__ import annotations
 
 import argparse

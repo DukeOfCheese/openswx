@@ -1,4 +1,11 @@
-"""Rebuild a SOLIDWORKS part's feature history in openswx, without SOLIDWORKS (docs/PLAN.md, milestone F5)."""
+"""Rebuild a SOLIDWORKS part's feature history in openswx, without SOLIDWORKS (docs/PLAN.md, milestone F5).
+
+The feature tree, dimensions and end conditions come from sw_tree, the sketches from sw_sketch. What the
+stream does not (yet) give away, such as the side an extrusion goes to or the edges a fillet rounds, is
+settled against the exact Parasolid body stored in the same file: each candidate is scored by how well the
+body it produces agrees with the stored one. The rebuilt part is only accepted when its volume and area
+match the stored body.
+"""
 from __future__ import annotations
 
 from openswx.core.document import DocumentError, PartDocument

@@ -1,3 +1,8 @@
+"""Advanced part features: Flex / Deform / Freeform, conic and curvature-continuous fillet profiles, mold tools
+(parting line, parting surface, shut-off surfaces, tooling split), Insert Part / Mirror Part, cosmetic threads and
+the remaining surface tools (ruled, radiate, extend, untrim, flatten). The builders follow features.py: each takes
+(ctx, params, feature name) and changes the rebuild context; BUILDERS / NAME_PREFIX there pick them up."""
+
 from __future__ import annotations
 
 import math

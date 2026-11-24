@@ -1,3 +1,9 @@
+"""Configurations of SOLIDWORKS parts (import_sw_configurations).
+
+No SOLIDWORKS file is in the repository, so this runs against the sample parts of a local SOLIDWORKS
+installation and is skipped where there is none (set OPENSWX_SW_SAMPLES to the folder to point it elsewhere).
+"""
+
 import os
 from pathlib import Path
 

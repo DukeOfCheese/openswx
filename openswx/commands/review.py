@@ -1,3 +1,6 @@
+"""Design review commands (same registry as session.py, which re-exports them): the document as a script,
+comparing two documents, requirements checked like tests, an automatic model review and the hand-off pack."""
+
 from __future__ import annotations
 
 import json

@@ -1,3 +1,13 @@
+"""Autosave and document recovery.
+
+While openswx runs, every document with unsaved changes is written to the recovery folder
+(`<home>/recovery/<session>/`) at most `interval` seconds after it changed. A session that ends normally
+removes its folder; one that crashed or was killed leaves it, and the next start offers those documents back
+(commands list_recovered / recover_document / discard_recovered; the UI asks on start).
+
+`OPENSWX_AUTOSAVE`: seconds between checks (default 60), `off` / `0` to disable.
+"""
+
 from __future__ import annotations
 
 import atexit

@@ -1,3 +1,15 @@
+"""Live collaboration in the browser: a real openswx-collab server, two openswx servers (Ada's and Bob's) and a page
+on each. Ada signs in and shares a part through the Collaborate dialogs, Bob opens it; then what each sees of the
+other: avatars and tools, the pointer and selection on the model, sketch lines being drawn, a feature panel's
+ghost, follow-their-view, lock badges in the FeatureManager, a refused change's toast, undo that follows the
+collaboration state, and the history dialog.
+
+Needs Playwright with Chromium, the collab extra (openswx-collab-protocol, websockets) and a checkout of
+openswx-collab with its virtual environment beside this repository (OPENSWX_COLLAB_SERVER_REPO points elsewhere);
+skipped without any of them. The tests run in order and share the servers and pages. With OPENSWX_COLLAB_SHOTS
+set to a folder, screenshots of Bob's window are saved there.
+"""
+
 import json
 import os
 import socket

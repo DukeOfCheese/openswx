@@ -1,3 +1,6 @@
+"""Ecosystem tools: a file vault with check-in / check-out, versions, revisions and a release workflow (PDM),
+a self-contained HTML viewer with markup for sharing models (eDrawings-style), and macro files."""
+
 from __future__ import annotations
 
 import datetime as _dt

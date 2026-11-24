@@ -1,3 +1,7 @@
+// More commands: PropertyManagers and dialogs for Flex/Deform, fillet profiles, mold tools, Insert Part, the extra
+// surface tools, assembly tools (SmartMates, routing, SpeedPak...), analysis studies, costing, sustainability,
+// DimXpert, rendering, PDM, the Design Library and macros. Mixed into the App class by installMore().
+
 import * as THREE from "three";
 import { el, escapeHtml } from "./propman.js";
 

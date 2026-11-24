@@ -1,9 +1,14 @@
+/* design tokens, light/dark theme, reset */
+/* openswx UI: "soft elevated" style. A tinted canvas, with the ribbon groups, the left pane, the graphics area and
+   the task pane set on it as rounded trays. Every colour is a token here; the dark set follows the OS setting, or
+   data-theme="dark" / "light" on <html> forces one. The graphics area stays light in both themes (sketch geometry
+   is drawn in near-black). */
 :root {
-  --chrome: #eceff3;
-  --chrome-2: #e1e5ea;
-  --border: #d3d9e1;
-  --panel: #ffffff;
-  --panel-2: #f6f8fa;
+  --chrome: #eceff3; /* canvas behind the trays, title bar, ribbon, status bar */
+  --chrome-2: #e1e5ea; /* hairlines inside trays */
+  --border: #d3d9e1; /* control borders */
+  --panel: #ffffff; /* trays, menus, dialogs */
+  --panel-2: #f6f8fa; /* quiet fill inside a tray */
   --text: #1b2029;
   --text-2: #3d4554;
   --muted: #677186;
@@ -11,9 +16,9 @@
   --accent: #1f6fd1;
   --accent-soft: #dceafc;
   --accent-line: #9cc0ef;
-  --accent-ink: #134a94;
-  --hover: #e4e8ee;
-  --lift: #ffffff;
+  --accent-ink: #134a94; /* text on accent-soft */
+  --hover: #e4e8ee; /* row / item hover */
+  --lift: #ffffff; /* hovered tool button */
   --brand: #c8102e;
   --ok: #2e9e44;
   --cancel: #d0312d;
@@ -31,7 +36,7 @@
   --roll-line: #c79a12;
   --view-bg: radial-gradient(120% 90% at 50% 10%, #f8f9fb, #dde3eb);
   --view-label: #3b4b63;
-  --float: rgba(255, 255, 255, 0.94);
+  --float: rgba(255, 255, 255, 0.94); /* toolbars floating over the model */
   --scrim: rgba(23, 32, 48, 0.22);
   --icon-ink: #3b4554;
   --tray-shadow: 0 1px 2px rgba(23, 32, 48, 0.08), 0 1px 6px rgba(23, 32, 48, 0.04);
@@ -123,7 +128,7 @@
   --dlg-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
   color-scheme: dark;
 }
-
+/* web/svgs/ pictograms draw their dark ink in currentColor, so the ink follows the theme */
 svg {
   color: var(--icon-ink);
 }
@@ -165,4 +170,4 @@ textarea {
   grid-template-rows: 30px auto 1fr 22px;
   grid-template-columns: minmax(0, 1fr);
   height: 100vh;
-}
+} /* (the column never grows to fit the ribbon: it scrolls) */

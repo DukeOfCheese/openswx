@@ -1,3 +1,9 @@
+"""Build the difftest cases in a licensed SOLIDWORKS (public COM API) and export each as Parasolid .x_t and
+.x_b, recording SOLIDWORKS' own volume / area as ground truth for the clean-room XT reader.
+
+    python tools/difftest/xt_samples.py OUT_DIR [CASE ...]
+"""
+
 from __future__ import annotations
 
 import json

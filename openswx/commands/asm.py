@@ -1,3 +1,6 @@
+"""Assembly configuration and display-state commands (same registry as session.py, which re-exports them).
+The configurations themselves are added / activated / deleted with the commands parts use."""
+
 from __future__ import annotations
 
 from openswx.session import APP, command

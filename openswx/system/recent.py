@@ -1,3 +1,9 @@
+"""Recent files (the Home page's list), kept in `<home>/recent.json`.
+
+Newest first, at most `LIMIT` entries of {path, kind, opened_at}. Written after a document is opened or
+saved; a file that cannot be read or written never stops the open or save that wanted to record it.
+"""
+
 from __future__ import annotations
 
 import json

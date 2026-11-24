@@ -1,3 +1,5 @@
+// Feature dialogs and the PropertyManager lifecycle, sketch modes and view commands for the selection.
+
 import { icon } from "../icons.js";
 import { el, escapeHtml, SPECS } from "../propman.js";
 import { $ } from "../lib/dom.js";

@@ -1,3 +1,10 @@
+"""Create or update the repository's issue labels from .github/labels.yml, with the GitHub CLI.
+
+    python tools/sync_labels.py [--repo OWNER/NAME] [--dry-run]
+
+Labels already on GitHub that are not in the file are left alone. Needs `gh` signed in with write access.
+"""
+
 from __future__ import annotations
 
 import argparse

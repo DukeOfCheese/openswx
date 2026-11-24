@@ -1,3 +1,5 @@
+// Documents and files (new, open, save, export, import), materials, appearances, options, MCP and About.
+
 import { icon } from "../icons.js";
 import { el, escapeHtml } from "../propman.js";
 import { $ } from "../lib/dom.js";

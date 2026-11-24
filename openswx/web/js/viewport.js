@@ -1,3 +1,5 @@
+// 3D graphics area: orthographic camera, SOLIDWORKS-style navigation, picking, highlighting, previews.
+
 import * as THREE from "three";
 
 // Decode /api/mesh.bin: magic "OSWXMESH", version, header length, compact JSON header in which {"$buf": i}

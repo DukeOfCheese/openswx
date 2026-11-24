@@ -1,3 +1,12 @@
+"""Linear static stress analysis (Simulation > Static) on a voxel hexahedral mesh.
+
+The solid is voxelised on a uniform grid (columns ray-cast through the B-rep), meshed with 8-node
+hexahedra enhanced with Wilson-Taylor incompatible modes (no shear locking in bending), assembled with
+scipy.sparse and solved directly. On a uniform grid every element has the same 24x24 stiffness, so the
+assembly is fully vectorised. Boundary faces are stair-stepped at the voxel size: results converge as
+the element size shrinks (report element_size with any number you rely on).
+"""
+
 from __future__ import annotations
 
 import math

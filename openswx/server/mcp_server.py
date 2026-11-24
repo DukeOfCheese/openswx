@@ -1,3 +1,14 @@
+"""MCP server exposing the openswx commands as tools for agents.
+
+Run standalone over stdio (`python -m openswx mcp`, which also serves the web UI so you can watch the
+agent work) or over streamable HTTP mounted at /mcp by `python -m openswx serve`.
+
+There are several hundred commands, more than an agent should carry in its context, so they come in
+toolsets. A connection starts with `core` (part modelling essentials) and the three tools `list_toolsets`,
+`enable_toolset` and `batch`; `enable_toolset("sheet_metal")` adds that area's tools (clients are told the
+tool list changed). `OPENSWX_TOOLSETS` / `--toolsets` chooses the starting sets, e.g. `core,assembly` or `all`.
+"""
+
 from __future__ import annotations
 
 import base64

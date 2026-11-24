@@ -1,3 +1,20 @@
+"""openswx as a library: a small object API over the commands, for scripts and notebooks.
+
+    from openswx.api import Part
+
+    part = Part("Bracket")
+    part.sketch("Top").rectangle([0, 0], [80, 40]).circle([20, 20], 5).extrude(10)
+    part.sketch(part.face(normal=[0, 1, 0])).circle([60, 20], 8).cut()       # through all, on the top face
+    part.fillet(2, part.edges(type="circle"))
+    print(part.volume, part.mass)
+    part.save("bracket.oswprt"); part.export("bracket.step")
+
+Every method runs the command of the same name on this part (it is made the active document first), so
+anything not wrapped here is one call away: `part.run("draft", ...)`, and the whole
+command set is `openswx.session`. Errors are `openswx.api.Error` (the commands' CommandError). In a notebook a
+Part displays as a picture.
+"""
+
 from __future__ import annotations
 
 import base64

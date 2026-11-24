@@ -1,3 +1,6 @@
+"""The Home page in a real browser (show_home on): shown at start, hidden by every way out, back from
+File > Home, and opening a recent file leaves no stray empty part. Needs Playwright, like test_ui_smoke.py."""
+
 import os
 import socket
 import subprocess

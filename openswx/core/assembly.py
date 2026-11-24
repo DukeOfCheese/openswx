@@ -1,3 +1,10 @@
+"""Assemblies: components (part documents placed with 6-DOF transforms) and mates solved by least squares.
+
+Mate types follow SOLIDWORKS standard mates: coincident, parallel, perpendicular, distance, angle,
+concentric (cylindrical faces / circular edges), with aligned / anti-aligned options for planar mates.
+The first inserted component is fixed, as in SOLIDWORKS.
+"""
+
 from __future__ import annotations
 
 import copy

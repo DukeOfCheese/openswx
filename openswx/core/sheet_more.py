@@ -1,3 +1,9 @@
+"""Sheet metal: Rip, Vent, Unfold and Fold.
+
+Rip opens a gap along the corner edges of a hollow part (the first step of converting a shelled box to sheet
+metal). Vent cuts an opening through the sheet from a sketched outline, leaving straight ribs across it.
+"""
+
 from __future__ import annotations
 
 import math

@@ -1,3 +1,10 @@
+"""UI smoke tests: the real page in a real browser against a real server.
+
+Needs Playwright (`pip install playwright && playwright install chromium`); skipped where it is not
+installed. CI installs it (see .github/workflows/test.yml). The steps are the ones first driven by hand:
+open through the token link, build a part, and open each dialog that is not covered by any other test.
+"""
+
 import os
 import socket
 import subprocess

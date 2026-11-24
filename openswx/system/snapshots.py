@@ -1,3 +1,11 @@
+"""Document snapshots for undo / redo that do not copy what did not change.
+
+A snapshot is the document's dictionary as JSON, with every long string (the B-rep of an imported body, an
+embedded part of an assembly's component) replaced by a reference into one shared, content-addressed store.
+A hundred undo steps of a part with a 20 MB imported body then hold that body once, not a hundred times. A
+blob is dropped from the store when the last snapshot naming it is.
+"""
+
 from __future__ import annotations
 
 import hashlib

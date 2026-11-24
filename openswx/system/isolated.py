@@ -1,3 +1,15 @@
+"""Read foreign geometry in a child process, with a time limit.
+
+The readers for SOLIDWORKS and Parasolid files work on data openswx does not control, and the geometry
+kernel can hang or crash on what they build (a ShapeFix that never returns, a boolean that segfaults); its
+IGES reader crashes on some damaged files (found by the fuzz test in tests/test_print_and_gauges.py). Done
+in the application's own process, a hang would freeze it for good while it holds the command lock; in a child
+it costs that one file: the child is killed and the user is told which file and why.
+
+`OPENSWX_ISOLATE=off` reads in-process (tests; debugging a reader). The child costs about the start-up time
+of the geometry kernel per file (a few seconds), which the disk cache then saves on later opens.
+"""
+
 from __future__ import annotations
 
 import os

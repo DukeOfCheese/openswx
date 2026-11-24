@@ -1,3 +1,5 @@
+// Title bar, menu bar, quick access, CommandManager, the Heads-up View toolbar and the pane tabs.
+
 import { icon } from "../icons.js";
 import { el, escapeHtml, SPECS } from "../propman.js";
 import { menuTree, renderMenu } from "../more.js";
