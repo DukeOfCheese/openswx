@@ -2583,6 +2583,7 @@ class App {
   }
 
   save(as = false) {
+    if (this.collabDoc?.()) return this.collabSave(as); // (a cloud part: kept by the server; Save As writes a local copy)
     if (this.model.path && !as) return this.run("save_part", {}).then(() => this.toast(`Saved ${this.model.path}`));
     if (this.desk) return this.deskCall("save_as");
     const def = this.model.path || `${this.model.name}.oswprt`;

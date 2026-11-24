@@ -453,6 +453,81 @@ def test_a_lock_is_freed_on_its_document_after_switching_away(world):
     a.wait_for_function("window.app.collabDoc()")
 
 
+def test_the_collaborate_menu_has_only_what_belongs_to_the_open_document(world):
+    b = world["b"]
+    items = b.evaluate("window.app.collabMenu().filter((x) => x !== '-').map((x) => x[0])")
+    assert items[:3] == ["Stop Sharing...", "History and Versions...", "Name Version..."]
+    assert "Follow > Ada" in items and "Cloud Files..." in items
+    assert not any(i.startswith(("Sign", "Open Cloud", "Share")) for i in items)  # (those are on Home's Cloud tab)
+
+
+def test_home_s_cloud_tab_shows_the_project_its_parts_and_who_is_in_them(world):
+    b = world["b"]
+    b.evaluate("window.app.homeShow('cloud')")
+    b.wait_for_selector("#home .hm-tab.active[data-tab='cloud']")
+    b.wait_for_selector("#home .cl-proj-b.active:has-text('Rover')")
+    b.wait_for_selector("#home .cl-doc:has-text('Bracket') .cl-dot[title='Ada']")
+    b.wait_for_selector("#home .cl-members td:has-text('Ada')")
+    assert b.locator("#home .cl-acct").inner_text().startswith("Signed in as Bob")
+    assert b.locator("#home #cl-ibtn").count() == 0  # (a member sees the team; owners and admins invite)
+    shot(b, "home-cloud-bob")
+    b.keyboard.press("Escape")
+    b.wait_for_function("!window.app.homeOpen")
+
+
+def test_ada_invites_from_the_team_list_and_withdraws_it(world):
+    a = world["a"]
+    a.evaluate("window.app.homeShow('cloud')")
+    a.wait_for_selector("#home #cl-ibtn")
+    a.fill("#cl-iemail", "carol@example.com")
+    a.click("#cl-ibtn")
+    a.wait_for_function("T.open() && document.querySelector('#cl-ilink')?.value.includes('/invite/')")
+    assert a.input_value("#cl-icode") and a.input_value("#cl-ilink").endswith(a.input_value("#cl-icode"))
+    a.click("#modal-box .mb-foot .btn")  # (Close)
+    a.wait_for_selector("#home .cl-uninv")
+    assert "carol@example.com" in a.inner_text("#home .cl-team")
+    a.click("#home .cl-uninv")
+    a.wait_for_function("!document.querySelector('#home .cl-uninv')")
+
+
+def test_a_new_cloud_part_from_home_opens_at_once_and_bob_sees_ada_in_it(world):
+    a, b = world["a"], world["b"]
+    a.click("#home #cl-newcloud")
+    a.wait_for_function("T.open() && document.querySelector('#cl-cname')")
+    a.fill("#cl-cname", "Plate")
+    a.evaluate("T.ok()")
+    a.wait_for_function("!window.app.homeOpen && window.app.collabDoc()?.document === 'Plate'", timeout=30000)
+    b.evaluate("window.app.homeShow('cloud')")
+    b.wait_for_selector("#home .cl-doc:has-text('Plate') .cl-dot[title='Ada']", timeout=15000)
+    b.keyboard.press("Escape")
+
+
+def test_new_part_asks_local_or_cloud_and_remembers_the_choice(world):
+    a = world["a"]
+    a.evaluate("window.app.newPart()")
+    a.wait_for_function("T.open() && document.querySelector('input[name=cl-where]')")
+    assert a.evaluate("document.querySelector('input[name=cl-where]:checked').value") == "local"
+    a.check("input[name=cl-where][value=cloud]")
+    a.wait_for_selector("#cl-nproj")
+    a.fill("#cl-nname", "Gear")
+    a.evaluate("T.ok()")
+    a.wait_for_function("window.app.collabDoc()?.document === 'Gear'", timeout=30000)
+    a.evaluate("window.app.newPart()")
+    a.wait_for_function("T.open() && document.querySelector('input[name=cl-where]')")
+    assert a.evaluate("document.querySelector('input[name=cl-where]:checked').value") == "cloud"  # (remembered)
+    a.check("input[name=cl-where][value=local]")
+    a.evaluate("T.ok()")
+    a.wait_for_function("!T.open() && window.app.model.name.startsWith('Part') && !window.app.collabDoc()")
+    a.evaluate("async () => { await window.app.switchDocument('Bracket'); }")
+    a.wait_for_function("window.app.collabDoc()?.document === 'Bracket'")
+
+
+def test_save_on_a_cloud_part_says_it_saves_itself(world):
+    a = world["a"]
+    a.evaluate("window.app.save()")
+    a.wait_for_function("document.querySelector('#toasts').innerText.includes('save automatically')")
+
+
 def test_a_crashed_page_s_locks_are_freed(world):
     a, b = world["a"], world["b"]
     a.evaluate("window.app.editFeature('Boss-Extrude1')")

@@ -190,11 +190,11 @@ def command(mutates: bool = True, category: str = "general", mcp: bool = True):
                     for h in list(COMMAND_HOOKS):
                         hooked.append((h, h.before(fn.__name__, bound.arguments)))
                 result = fn(*bound.args, **bound.kwargs)  # (as bound: the workspace check may have resolved paths)
+                if watch is not None:  # (before the hooks: a hook may say the change is kept elsewhere)
+                    _mark_dirty(watch)
                 if hooked is not None:
                     done, hooked = hooked, None
                     _hooks_after(done, True)
-                if watch is not None:
-                    _mark_dirty(watch)
                 if outer is None and not getattr(_TL, "preview", False) and (mutates or time.perf_counter() - t0 > 1.0):
                     _LOG.info("%s (%s) %.3f s", fn.__name__, origin, time.perf_counter() - t0)
                     _LOG.debug("%s args %s", fn.__name__, _short(dict(bound.arguments)))
@@ -445,9 +445,15 @@ def _preview_locked(name: str, args: dict) -> dict:
             APP.documents[key] = real
 
 
+_SECRET_ARGS = {"password", "token", "invite", "code"}  # (never written to a log: passwords, invites, login codes)
+
+
 def _short(args: dict) -> dict:
     out = {}
     for k, v in args.items():
+        if k in _SECRET_ARGS and v is not None:
+            out[k] = "***"
+            continue
         s = repr(v)
         out[k] = v if len(s) < 200 else s[:200] + "..."
     return out

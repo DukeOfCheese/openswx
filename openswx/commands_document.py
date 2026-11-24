@@ -182,8 +182,19 @@ def _open(p: Path, history: bool) -> dict:
 
 @command(category="document")
 def save_part(path: str | None = None) -> dict:
-    """Save the active document (part .oswprt or assembly .oswasm), optionally to a new path (Save As)."""
+    """Save the active document (part .oswprt or assembly .oswasm), optionally to a new path (Save As). A cloud
+    part (live collaboration) is kept by its server and needs no saving: with a path, this writes a local copy of
+    it, and it stays the cloud part."""
     d = APP.active_doc
+    c = getattr(d, "_collab", None)
+    if c is not None and not getattr(c, "closed", True):
+        if not path:
+            raise DocumentError("cloud parts save automatically (every change goes to the server); give a path to "
+                                "save a local copy")
+        saved = d.save_copy(path)
+        from . import recent
+        recent.add(saved)
+        return {"saved": saved, "copy": True}
     saved = d.save(path)
     if APP.active != d.name:
         APP.documents[d.name] = APP.documents.pop(APP.active)

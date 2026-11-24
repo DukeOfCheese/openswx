@@ -1,7 +1,9 @@
 // Live collaboration in the UI (cloud documents shared through an openswx-collab server). Mixed into the App
 // class by installCollab():
-//   * the Collaborate menu's dialogs: sign in, share this part, open a cloud part, stop sharing, history and
-//     versions;
+//   * Home's Cloud tab: sign in, the organisations and projects, their parts (who is in each now), new cloud
+//     parts, and the team (members, roles, invitations, who can open a project); New Part's Local / Cloud choice;
+//   * the Collaborate menu, for the open document: move it to the cloud, stop sharing, history and versions,
+//     follow someone;
 //   * the bar over the view while a cloud document is active: connection state, the others as coloured avatars
 //     with their tool (click one to follow their view);
 //   * presence out (pointer, selection as persistent names, tool, camera, drafts), at most ~10 a second and only
@@ -12,6 +14,7 @@
 // The state comes from GET /api/collab, fetched when the "collab" revision on the event stream moves.
 import * as THREE from "three";
 import { SPECS, el, escapeHtml } from "./propman.js";
+import { icon } from "./icons.js";
 
 const $ = (s) => document.querySelector(s);
 const PRESENCE_MS = 50; // presence out: ~20 a second at most
@@ -575,14 +578,315 @@ const MIXIN = {
       the model shows their version:</p><table class="dw-bom cl-refused"><tr><th>Your change</th><th>Changed first by</th><th>Why</th></tr>${rows}</table>`, null, "warning");
   },
 
-  // ---------------------------------------------------------------- the Collaborate menu
+  // ---------------------------------------------------------------- the Collaborate menu: only what belongs to the open document
+  // (signing in, opening and creating cloud parts, and the team are on Home's Cloud tab)
   collabMenu() {
     const d = this.collabDoc();
-    return [["Sign In...", "", () => this.collabSignInDialog()], ["Sign-in Methods...", "", () => this.collabMethodsDialog()],
-      ["Sign Out", "", () => this.collabSignOut()], "-",
-      ["Share This Part...", "", () => this.collabShareDialog()], ["Open Cloud Part...", "", () => this.collabOpenDialog()],
-      ...(d ? [["Stop Sharing...", "", () => this.collabStopDialog()], "-", ["History and Versions...", "", () => this.collabHistoryDialog()]] : []), "-",
+    const peers = d ? (d.peers || []).filter((p) => !p.you) : [];
+    const label = (s) => String(s || "?").replace(/>/g, "›").slice(0, 60); // (" > " makes a submenu)
+    return [
+      ...(d ? [["Stop Sharing...", "", () => this.collabStopDialog()], "-",
+        ["History and Versions...", "", () => this.collabHistoryDialog()], ["Name Version...", "", () => this.collabNameVersionDialog()],
+        ...peers.map((p) => [`Follow > ${this.cl.follow === p.client_id ? "✓ " : ""}${label(p.name)}`, "",
+          () => this.collabFollow(this.cl.follow === p.client_id ? null : p.client_id)])]
+        : [["Move to Cloud...", "", () => this.collabShareDialog()]]),
+      "-", ["Cloud Files...", "", () => this.homeShow("cloud")],
       [`${this.cl?.previews ? "✓ " : ""}Show Others' Drafts`, "", () => this.collabTogglePreviews()]];
+  },
+
+  collabNameVersionDialog() {
+    const d = this.collabDoc();
+    if (!d) return;
+    this.modal("Name Version", `<div class="field"><label>Name</label><input id="cl-vname" placeholder="e.g. Rev A" maxlength="200"></div>
+      <div class="field"><label>Note</label><input id="cl-vnote" placeholder="Optional" maxlength="2000"></div>
+      <p class="muted">Names the current state of <b>${esc(d.cloud_name || d.document)}</b> for everyone: assemblies can use it, and History can go back to it.</p>`, async () => {
+      const name = $("#cl-vname").value.trim();
+      if (!name) { this.toast("Give the version a name", "err"); throw new Error("no name"); }
+      const v = await this.collabCmd("collab_name_version", { name, note: $("#cl-vnote").value.trim() });
+      if (!v) throw new Error("refused");
+      this.toast(`Version <b>${esc(v.name)}</b> is the state after change ${esc(v.seq)}`);
+    }, "history");
+  },
+
+  // Save on a cloud part: there is nothing to save (the server keeps every change); Save As writes a local copy
+  collabSave(as) {
+    if (!as) return this.toast("Cloud parts save automatically: every change goes to the server. File › Save As saves a local copy.");
+    if (this.desk) return this.deskCall("save_as").then((r) => { if (r?.result?.saved) this.toast(`Saved a local copy: ${esc(r.result.saved)}`); });
+    this.modal("Save a Local Copy", `<div class="field"><label>File path on this computer</label><input id="savepath" value="${esc(`${this.model.name}.oswprt`)}"></div>
+      <p class="muted">The copy is an ordinary local part. This part stays the cloud part, shared with the others.</p>`, async () => {
+      const r = await this.run("save_part", { path: $("#savepath").value });
+      this.toast(`Saved a local copy: ${esc(r.result.saved)}`);
+    }, "save");
+  },
+
+  // Home's Cloud tab, when it is the one shown: draw it again (after signing in or out, say)
+  collabHomeRefresh() {
+    if (this.homeOpen && this.homeTab === "cloud") this.homeRender();
+  },
+
+  // ---------------------------------------------------------------- Home: the Cloud tab
+  async collabHome(panel) {
+    const head = `<h1>Cloud files</h1>`;
+    panel.innerHTML = `${head}<p class="hm-empty">Loading…</p>`;
+    const r = await this.api("/api/command", { name: "collab_status", args: {} }).catch(() => null);
+    if (!r?.ok) { panel.innerHTML = `${head}<p class="hm-empty">${esc(r?.error || "Could not read the collaboration status.")}</p>`; return; }
+    const st = r.result;
+    if (st.available === false) { panel.innerHTML = `${head}<p class="hm-empty">${esc(st.message)}</p>`; return; }
+    if (!st.signed_in) return this.collabHomeSignIn(panel, st);
+    const u = st.user || {};
+    panel.innerHTML = `${head}
+      <div class="cl-acct"><span>Signed in as <b>${esc(u.name || u.email || "you")}</b> <span class="muted">${esc(u.email && u.name ? `${u.email} · ` : "")}${esc(st.server)}</span></span>
+        <span class="hm-fill"></span><button class="btn" id="cl-hmeth">Sign-in Methods…</button><button class="btn" id="cl-hout">Sign Out</button></div>
+      <div class="cl-home"><p class="hm-empty">Loading…</p></div>
+      <h2>Join with an invitation</h2>
+      <div class="cl-accept"><input id="cl-code" placeholder="Invitation code or link" autocomplete="off" spellcheck="false"><button class="btn" id="cl-join">Join</button></div>`;
+    panel.querySelector("#cl-hmeth").onclick = () => this.collabMethodsDialog();
+    panel.querySelector("#cl-hout").onclick = async () => { await this.collabSignOut(); this.collabHomeRefresh(); };
+    panel.querySelector("#cl-join").onclick = async () => {
+      const code = panel.querySelector("#cl-code").value.trim();
+      if (!code) return this.toast("Paste the invitation code or link", "err");
+      const j = await this.collabCmd("collab_accept_invite", { code });
+      if (!j) return;
+      this.toast(`You joined <b>${esc(j.org?.name)}</b> as ${esc(j.role)}`);
+      this.cl.homeOrg = j.org?.id; this.cl.homeProject = null; this.collabHomeRefresh();
+    };
+    const box = panel.querySelector(".cl-home");
+    const pr = await this.api("/api/command", { name: "collab_projects", args: {} }).catch((e) => ({ ok: false, error: String(e) }));
+    if (!panel.isConnected) return;
+    if (!pr.ok) {
+      box.innerHTML = `<p class="hm-empty">${esc(pr.error)}</p><button class="btn" id="cl-retry">Try Again</button>`;
+      box.querySelector("#cl-retry").onclick = () => this.collabHomeRefresh();
+      return;
+    }
+    this.collabHomeOrgs(box, pr.result.orgs || [], u);
+  },
+
+  collabHomeSignIn(panel, st) {
+    panel.innerHTML = `<h1>Cloud files</h1>
+      <p class="muted">Sign in to a collaboration server to open and create parts that your team edits with you, live.</p>
+      <div class="cl-signin">
+        <div class="field"><label>Server</label><input id="cl-srv" value="${esc(st.server || "")}" placeholder="https://collab.example.com"></div>
+        <div id="cl-oauth" class="cl-oauth"></div>
+        <div class="field"><label>Email</label><input id="cl-email" type="email" autocomplete="username" value="${esc(st.user?.email || "")}"></div>
+        <div class="field"><label>Password</label><input id="cl-pw" type="password" autocomplete="current-password"></div>
+        <div><button class="btn primary" id="cl-hsign">Sign In</button></div>
+      </div>`;
+    const go = async () => {
+      const r = await this.run("collab_sign_in", { server: $("#cl-srv").value.trim(), email: $("#cl-email").value.trim(), password: $("#cl-pw").value }).catch(() => null);
+      if (!r) return;
+      this.toast(`Signed in as <b>${esc(r.result.user?.name || r.result.user?.email || "you")}</b> on ${esc(r.result.server)}`);
+      this.collabHomeRefresh();
+    };
+    panel.querySelector("#cl-hsign").onclick = go;
+    panel.querySelector("#cl-pw").onkeydown = (e) => { if (e.key === "Enter") go(); };
+    let timer = null;
+    $("#cl-srv").oninput = () => { clearTimeout(timer); timer = setTimeout(() => this.collabServerOptions($("#cl-srv")?.value.trim()), 400); };
+    if (st.server) this.collabServerOptions(st.server);
+  },
+
+  // organisations and their projects on the left; the picked project's parts, and the team, on the right
+  collabHomeOrgs(box, orgs, me) {
+    const cl = this.cl;
+    const newOrg = `<button class="btn cl-neworg">New Organisation…</button>`;
+    if (!orgs.length) {
+      box.innerHTML = `<p class="hm-empty">Your account is not in any organisation on this server yet. Ask its owner for an invitation (and join below), or start one.</p>${newOrg}`;
+      box.querySelector(".cl-neworg").onclick = () => this.collabNewOrgDialog();
+      return;
+    }
+    const all = orgs.flatMap((o) => (o.projects || []).map((p) => ({ ...p, org: o })));
+    let proj = all.find((p) => p.id === cl.homeProject) || null;
+    let org = orgs.find((o) => o.id === (proj?.org.id || cl.homeOrg)) || orgs[0];
+    if (!proj) proj = all.find((p) => p.org.id === org.id) || null;
+    cl.homeOrg = org.id; cl.homeProject = proj?.id || null;
+    box.innerHTML = `<aside class="cl-orgs">${orgs.map((o) => `
+        <div class="cl-org${o.id === org.id ? " open" : ""}"><button class="cl-org-b" data-o="${esc(o.id)}"><b>${esc(o.name)}</b><span class="muted">${esc(o.role)}</span></button>
+        ${(o.projects || []).map((p) => `<button class="cl-proj-b${p.id === proj?.id ? " active" : ""}" data-p="${esc(p.id)}" title="${esc(p.role || "")}">${icon("folder")}<span>${esc(p.name)}</span></button>`).join("")}
+        <button class="cl-proj-b cl-newproj" data-o="${esc(o.id)}">+ New project…</button></div>`).join("")}
+        ${newOrg}</aside>
+      <div class="cl-main">
+        ${proj ? `<div class="hm-head"><h2>${esc(proj.name)}</h2><span class="muted">${esc(proj.role || "")}</span>
+          ${["owner", "editor"].includes(proj.role) ? `<button class="btn primary" id="cl-newcloud">New Cloud Part…</button>` : ""}</div>
+          <div class="cl-docs"></div>` : `<p class="hm-empty">No projects in ${esc(org.name)} that you can open yet.</p>`}
+        <div class="cl-team"></div>
+      </div>`;
+    for (const b of box.querySelectorAll(".cl-org-b")) b.onclick = () => { cl.homeOrg = b.dataset.o; cl.homeProject = null; this.collabHomeOrgs(box, orgs, me); };
+    for (const b of box.querySelectorAll(".cl-proj-b[data-p]")) b.onclick = () => { cl.homeProject = b.dataset.p; this.collabHomeOrgs(box, orgs, me); };
+    for (const b of box.querySelectorAll(".cl-newproj")) b.onclick = () => this.collabNewProjectDialog(orgs.find((o) => o.id === b.dataset.o));
+    box.querySelector(".cl-neworg").onclick = () => this.collabNewOrgDialog();
+    if (proj) {
+      box.querySelector("#cl-newcloud")?.addEventListener("click", () => this.collabNewCloudPartDialog(proj));
+      this.collabDocTable(box.querySelector(".cl-docs"), proj.id, { open: (id) => this.collabHomeOpen(id),
+        empty: `No parts in ${esc(proj.name)} yet.${["owner", "editor"].includes(proj.role) ? " Make one with New Cloud Part." : ""}` });
+    }
+    this.collabHomeTeam(box.querySelector(".cl-team"), org, proj, me);
+  },
+
+  async collabHomeOpen(id) {
+    const r = await this.run("collab_open", { document_id: id }).catch(() => null);
+    if (!r) return; // (the error is shown; Home stays)
+    this.homeHide(); this.vp.zoomFit(false); this.refreshCollab();
+  },
+
+  // a project's parts: name, who is in it now, last change; pick (one click) and open (double click)
+  async collabDocTable(box, project, { open, pick = null, empty = "No parts in this project yet." }) {
+    box.innerHTML = `<p class="muted">Loading…</p>`;
+    const r = await this.api("/api/command", { name: "collab_documents", args: { project } }).catch((e) => ({ ok: false, error: String(e) }));
+    if (!box.isConnected) return;
+    if (!r.ok) { box.innerHTML = `<p class="hm-empty">${esc(r.error)}</p>`; return; }
+    const docs = (r.result.documents || []).filter((x) => (x.kind || "part") === "part");
+    if (!docs.length) { box.innerHTML = `<p class="hm-empty">${empty}</p>`; return; }
+    const N = (v) => (Number.isFinite(Number(v)) ? Number(v) : "");
+    const people = (x) => {
+      const on = Array.isArray(x.online) ? x.online.slice(0, 8) : [];
+      const more = Math.max(0, N(x.online_count) - on.length);
+      return on.map((p) => `<span class="cl-av cl-dot" style="--c:${colour(p.colour)}" title="${esc(p.name)}">${esc(initials(p.name))}</span>`).join("")
+        + (more ? `<span class="muted">+${more}</span>` : "");
+    };
+    box.innerHTML = `<table class="hm-files cl-doctable"><thead><tr><th>Part</th><th>Here now</th><th>Last changed</th><th>Changes</th><th></th></tr></thead><tbody>${docs.map((x) =>
+      `<tr class="cl-doc hm-file" data-id="${esc(x.id)}"><td><span class="hm-name">${icon("part")}${esc(x.name)}</span></td><td><div class="cl-here">${people(x)}</div></td>
+        <td class="hm-when">${esc(when(x.updated_at))}</td><td>${esc(N(x.seq ?? x.head_seq))}</td><td><button class="btn cl-open">Open</button></td></tr>`).join("")}</tbody></table>`;
+    for (const tr of box.querySelectorAll(".cl-doc")) {
+      tr.onclick = (e) => {
+        if (e.target.closest(".cl-open")) return open(tr.dataset.id);
+        box.querySelectorAll(".cl-doc").forEach((x) => x.classList.toggle("picked", x === tr)); pick?.(tr.dataset.id);
+      };
+      tr.ondblclick = () => open(tr.dataset.id);
+    }
+  },
+
+  // the organisation's people, invitations and the project's roles (owners and admins change them; the others see them)
+  async collabHomeTeam(box, org, proj, me) {
+    box.innerHTML = `<div class="hm-head"><h2>Team · ${esc(org.name)}</h2></div><p class="muted">Loading…</p>`;
+    const [mr, pr] = await Promise.all([
+      this.api("/api/command", { name: "collab_members", args: { org: org.id } }).catch((e) => ({ ok: false, error: String(e) })),
+      proj ? this.api("/api/command", { name: "collab_project_members", args: { project: proj.id } }).catch(() => null) : null]);
+    if (!box.isConnected) return;
+    if (!mr.ok) { box.innerHTML = `<div class="hm-head"><h2>Team · ${esc(org.name)}</h2></div><p class="hm-empty">${esc(mr.error)}</p>`; return; }
+    const { members, invites } = mr.result;
+    const mine = org.role, admin = ["owner", "admin"].includes(mine), owner = mine === "owner";
+    const roleSel = (m) => {
+      const may = admin && (owner || m.role !== "owner");
+      if (!may) return esc(m.role);
+      const opts = (owner ? ["owner", "admin", "member"] : ["admin", "member"]).map((r) => `<option${r === m.role ? " selected" : ""}>${r}</option>`).join("");
+      return `<select class="cl-role" data-u="${esc(m.id)}">${opts}</select>`;
+    };
+    const you = (m) => m.id === me?.id;
+    const rows = members.map((m) => `<tr><td><b>${esc(m.name)}</b>${you(m) ? ' <span class="muted">(you)</span>' : ""}</td><td class="hm-folder">${esc(m.email || "")}</td>
+      <td>${roleSel(m)}</td><td>${you(m) ? `<button class="btn cl-rm" data-u="${esc(m.id)}" data-you="1">Leave</button>`
+        : admin && (owner || m.role !== "owner") ? `<button class="btn cl-rm" data-u="${esc(m.id)}">Remove</button>` : ""}</td></tr>`).join("");
+    const inv = admin ? `<h3>Invitations</h3>${invites.length ? `<table class="hm-files"><tbody>${invites.map((i) => `<tr><td>${esc(i.email || "Anyone with the link")}</td><td>${esc(i.role)}</td>
+        <td class="hm-when">until ${esc(when(i.expires_at))}</td><td><button class="btn cl-uninv" data-i="${esc(i.id)}">Cancel</button></td></tr>`).join("")}</tbody></table>` : `<p class="muted">None waiting.</p>`}
+      <div class="cl-invite"><input id="cl-iemail" type="email" placeholder="Their email (optional)" maxlength="320">
+        <select id="cl-irole"><option value="member">member</option><option value="admin">admin</option></select>
+        ${proj ? `<label class="cl-ip"><input type="checkbox" id="cl-iproj" checked> and ${esc(proj.name)} as <select id="cl-iprole"><option>editor</option><option>viewer</option><option>owner</option></select></label>` : ""}
+        <button class="btn primary" id="cl-ibtn">Invite</button></div>` : "";
+    const pmembers = pr?.ok ? pr.result.members : null, powner = proj?.role === "owner";
+    const inProj = new Set((pmembers || []).map((m) => m.id));
+    const prole = (m) => powner ? `<select class="cl-prole" data-u="${esc(m.id)}">${["owner", "editor", "viewer"].map((r) => `<option${r === m.role ? " selected" : ""}>${r}</option>`).join("")}</select>` : esc(m.role);
+    const proj_ = proj && pmembers ? `<h3>Who can open ${esc(proj.name)}</h3><table class="hm-files"><tbody>${pmembers.map((m) => `<tr><td><b>${esc(m.name)}</b>${you(m) ? ' <span class="muted">(you)</span>' : ""}</td>
+        <td>${prole(m)}</td><td>${powner && !you(m) ? `<button class="btn cl-prm" data-u="${esc(m.id)}">Remove</button>` : ""}</td></tr>`).join("")}</tbody></table>
+      ${powner && members.some((m) => !inProj.has(m.id)) ? `<div class="cl-invite"><select id="cl-padd">${members.filter((m) => !inProj.has(m.id)).map((m) => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join("")}</select>
+        <select id="cl-paddrole"><option>editor</option><option>viewer</option><option>owner</option></select><button class="btn" id="cl-paddb">Add to ${esc(proj.name)}</button></div>` : ""}` : "";
+    box.innerHTML = `<div class="hm-head"><h2>Team · ${esc(org.name)}</h2><span class="muted">you are ${esc(mine)}</span></div>
+      <table class="hm-files cl-members"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead><tbody>${rows}</tbody></table>${inv}${proj_}`;
+    const again = () => this.collabHomeTeam(box, org, proj, me);
+    for (const s of box.querySelectorAll(".cl-role")) s.onchange = async () => { if (await this.collabCmd("collab_set_role", { org: org.id, user: s.dataset.u, role: s.value })) this.toast("Role changed"); again(); };
+    for (const b of box.querySelectorAll(".cl-rm")) {
+      b.onclick = () => {
+        const m = members.find((x) => x.id === b.dataset.u), leaving = !!b.dataset.you;
+        this.modal(leaving ? "Leave Organisation" : "Remove Member", `<p>${leaving ? `Leave <b>${esc(org.name)}</b>? You lose its projects at once.` : `Remove <b>${esc(m?.name)}</b> from <b>${esc(org.name)}</b>? They lose its projects and their open cloud parts at once; their past work stays.`}</p>`, async () => {
+          if (!(await this.collabCmd("collab_remove_member", { org: org.id, user: b.dataset.u }))) throw new Error("refused");
+          if (leaving) { this.cl.homeOrg = null; this.cl.homeProject = null; this.collabHomeRefresh(); } else again();
+        }, "cancel");
+      };
+    }
+    for (const b of box.querySelectorAll(".cl-uninv")) b.onclick = async () => { if (await this.collabCmd("collab_cancel_invite", { org: org.id, invite: b.dataset.i })) again(); };
+    box.querySelector("#cl-ibtn")?.addEventListener("click", async () => {
+      const args = { org: org.id, email: box.querySelector("#cl-iemail").value.trim() || null, role: box.querySelector("#cl-irole").value };
+      if (proj && box.querySelector("#cl-iproj")?.checked) { args.project = proj.id; args.project_role = box.querySelector("#cl-iprole").value; }
+      const r = await this.collabCmd("collab_invite", args);
+      if (!r) return;
+      this.collabInviteShown(r);
+      again();
+    });
+    for (const s of box.querySelectorAll(".cl-prole")) s.onchange = async () => { await this.collabCmd("collab_set_project_role", { project: proj.id, user: s.dataset.u, role: s.value }); again(); };
+    for (const b of box.querySelectorAll(".cl-prm")) b.onclick = async () => { if (await this.collabCmd("collab_remove_project_member", { project: proj.id, user: b.dataset.u })) again(); };
+    box.querySelector("#cl-paddb")?.addEventListener("click", async () => {
+      if (await this.collabCmd("collab_set_project_role", { project: proj.id, user: box.querySelector("#cl-padd").value, role: box.querySelector("#cl-paddrole").value })) again();
+    });
+  },
+
+  // a new invitation: its link and code, shown once, to send to the person
+  collabInviteShown(r) {
+    const copy = (id) => `<button class="btn cl-copy" data-for="${id}">Copy</button>`;
+    this.modal("Invitation", `<p>${r.emailed ? `Emailed to <b>${esc(r.email)}</b>. You can also send them the link yourself:` : `Send ${r.email ? `<b>${esc(r.email)}</b>` : "them"} the link, or the code to paste on Home › Cloud:`}</p>
+      <div class="field"><label>Link</label><input id="cl-ilink" readonly value="${esc(r.url || "")}">${copy("cl-ilink")}</div>
+      <div class="field"><label>Code</label><input id="cl-icode" readonly value="${esc(r.code || "")}">${copy("cl-icode")}</div>
+      <p class="muted">Joins ${esc(r.org)} as ${esc(r.role)}${r.email ? ` (only for ${esc(r.email)})` : ""}, until ${esc(when(r.expires_at))}. They are shown only now.</p>`, null, "open");
+    for (const b of document.querySelectorAll("#modal-box .cl-copy")) {
+      b.onclick = () => { const i = $(`#${b.dataset.for}`); i.select(); navigator.clipboard?.writeText(i.value).then(() => this.toast("Copied"), () => document.execCommand?.("copy")); };
+    }
+  },
+
+  collabNewOrgDialog() {
+    this.modal("New Organisation", `<div class="field"><label>Name</label><input id="cl-oname" maxlength="200"></div>
+      <p class="muted">You become its owner, and invite the others.</p>`, async () => {
+      const name = $("#cl-oname").value.trim();
+      if (!name) { this.toast("Name the organisation", "err"); throw new Error("no name"); }
+      const o = await this.collabCmd("collab_create_org", { name });
+      if (!o) throw new Error("refused");
+      this.cl.homeOrg = o.id; this.cl.homeProject = null; this.collabHomeRefresh();
+    }, "folder");
+  },
+
+  collabNewProjectDialog(org) {
+    if (!org) return;
+    this.modal("New Project", `<div class="field"><label>Name</label><input id="cl-pname2" maxlength="200"></div>
+      <p class="muted">In ${esc(org.name)}. You become its owner; add people to it on the Team list.</p>`, async () => {
+      const name = $("#cl-pname2").value.trim();
+      if (!name) { this.toast("Name the project", "err"); throw new Error("no name"); }
+      const p = await this.collabCmd("collab_create_project", { name, org: org.id });
+      if (!p) throw new Error("refused");
+      this.cl.homeOrg = org.id; this.cl.homeProject = p.id; this.collabHomeRefresh();
+    }, "folder");
+  },
+
+  collabNewCloudPartDialog(proj) {
+    this.modal("New Cloud Part", `<div class="field"><label>Name</label><input id="cl-cname" value="Part" maxlength="200"></div>
+      <p class="muted">Made in <b>${esc(proj.name)}</b> on the server: everyone in the project can open it and edit it with you, whether or not you are online.</p>`, async () => {
+      await this.run("collab_new_part", { project: proj.id, name: $("#cl-cname").value.trim() || "Part" });
+      this.homeHide(); this.vp.setView("trimetric"); this.vp.zoomFit(); this.refreshCollab();
+    }, "part");
+  },
+
+  // ---------------------------------------------------------------- New Part: local or cloud (once a server is set up)
+  async collabChooseNewPart() {
+    const r = await this.api("/api/command", { name: "collab_status", args: {} }).catch(() => null);
+    const st = r?.ok ? r.result : null;
+    if (!st || st.available === false || !st.server) return false; // (collaboration never used here: New Part as ever)
+    const s = await this.api("/api/command", { name: "get_settings", args: {} }).catch(() => null);
+    const last = s?.ok && s.result.settings.new_part_location === "cloud" ? "cloud" : "local";
+    const pr = st.signed_in ? await this.api("/api/command", { name: "collab_projects", args: {} }).catch(() => null) : null;
+    const orgs = pr?.ok ? pr.result.orgs || [] : [];
+    const usable = orgs.map((o) => ({ ...o, projects: (o.projects || []).filter((p) => ["owner", "editor"].includes(p.role)) })).filter((o) => o.projects.length);
+    const where = !st.signed_in ? `<p class="muted">Sign in on Home › Cloud to make cloud parts (choosing Cloud takes you there).</p>`
+      : !pr?.ok ? `<p class="muted">${esc(pr?.error || "The collaboration server cannot be reached")}: cloud parts can be made only while connected.</p>`
+        : !usable.length ? `<p class="muted">You are not an editor in any project yet: make one on Home › Cloud.</p>`
+          : `<div class="field"><label>Project</label><select id="cl-nproj">${this.collabProjectOptions(usable)}</select></div>
+             <div class="field"><label>Name</label><input id="cl-nname" value="Part" maxlength="200"></div>`;
+    this.modal("New Part", `<div class="cl-where">
+        <label><input type="radio" name="cl-where" value="local"${last === "local" ? " checked" : ""}> <b>Local</b> <span class="muted">a file on this computer</span></label>
+        <label><input type="radio" name="cl-where" value="cloud"${last === "cloud" ? " checked" : ""}> <b>Cloud</b> <span class="muted">on ${esc(st.server)}, for the team to open and edit live</span></label></div>
+      <div id="cl-nwhere"${last === "cloud" ? "" : ' class="hidden"'}>${where}</div>`, async () => {
+      const pick = document.querySelector("input[name=cl-where]:checked")?.value || "local";
+      this.api("/api/command", { name: "set_settings", args: { values: { new_part_location: pick } } }).catch(() => {});
+      if (pick === "local") { await this.run("new_part"); this.vp.setView("trimetric"); this.vp.zoomFit(); return; }
+      if (!st.signed_in || !usable.length || !pr?.ok) { setTimeout(() => this.homeShow("cloud")); return; }
+      await this.run("collab_new_part", { project: $("#cl-nproj").value, name: $("#cl-nname").value.trim() || "Part" });
+      this.vp.setView("trimetric"); this.vp.zoomFit(); this.refreshCollab();
+    }, "part");
+    for (const b of document.querySelectorAll("input[name=cl-where]")) b.onchange = () => $("#cl-nwhere").classList.toggle("hidden", b.value !== "cloud" || !b.checked);
+    return true;
   },
 
   async collabCmd(name, args = {}) { // a query: its result, or null after a toast
@@ -604,6 +908,7 @@ const MIXIN = {
       <div class="field"><label>Password</label><input id="cl-pw" type="password" autocomplete="current-password"></div>`, async () => {
       const r = await this.run("collab_sign_in", { server: $("#cl-srv").value.trim(), email: $("#cl-email").value.trim(), password: $("#cl-pw").value });
       this.toast(`Signed in as <b>${esc(r.result.user?.name || r.result.user?.email || "you")}</b> on ${esc(r.result.server)}`);
+      this.collabHomeRefresh();
     }, "open");
     let timer = null;
     const check = () => { clearTimeout(timer); timer = setTimeout(() => this.collabServerOptions($("#cl-srv")?.value.trim()), 400); };
@@ -627,7 +932,7 @@ const MIXIN = {
         $("#modal").classList.add("hidden");
         this.toast(`Finish signing in with ${esc(names[b.dataset.p] || b.dataset.p)} in the browser window that opened`);
         const res = await this.run("collab_sign_in", { server, provider: b.dataset.p }).catch(() => null);
-        if (res) this.toast(`Signed in as <b>${esc(res.result.user?.name || "you")}</b> on ${esc(res.result.server)}`);
+        if (res) { this.toast(`Signed in as <b>${esc(res.result.user?.name || "you")}</b> on ${esc(res.result.server)}`); this.collabHomeRefresh(); }
       };
     }
   },
@@ -734,16 +1039,9 @@ const MIXIN = {
     }, "open");
     const load = async () => {
       const box = $("#cl-docs"); picked = null;
-      box.innerHTML = `<p class="muted">Loading...</p>`;
-      const r = await this.collabCmd("collab_documents", { project: $("#cl-proj").value });
-      const docs = (r?.documents || []).filter((x) => (x.kind || "part") === "part");
-      if (!docs.length) { box.innerHTML = `<p class="muted">No parts in this project yet: share one with Collaborate › Share This Part.</p>`; return; }
-      box.innerHTML = `<table class="dw-bom"><tr><th>Part</th><th>Changes</th><th>Last changed</th></tr>${docs.map((x) =>
-        `<tr class="cl-doc" data-id="${esc(x.id)}"><td><b>${esc(x.name)}</b></td><td>${esc(x.seq ?? x.head_seq ?? "")}</td><td>${esc(when(x.updated_at))}</td></tr>`).join("")}</table>`;
-      for (const tr of box.querySelectorAll(".cl-doc")) {
-        tr.onclick = () => { box.querySelectorAll(".cl-doc").forEach((x) => x.classList.toggle("picked", x === tr)); picked = tr.dataset.id; };
-        tr.ondblclick = () => open(tr.dataset.id).catch(() => {});
-      }
+      picked = null;
+      await this.collabDocTable(box, $("#cl-proj").value, { open: (id) => open(id).catch(() => {}), pick: (id) => { picked = id; },
+        empty: "No parts in this project yet: make one on Home › Cloud, or move one there with Collaborate › Move to Cloud." });
     };
     $("#cl-proj").onchange = load; load();
   },
@@ -792,4 +1090,7 @@ const MIXIN = {
 
 export function installCollab(App) {
   for (const [k, fn] of Object.entries(MIXIN)) App.prototype[k] = fn;
+  // Home: a Cloud tab next to Local; New Part: local or cloud
+  App.prototype.homeTabs.push({ id: "cloud", label: "Cloud", icon: "cloud", render(panel) { return this.collabHome(panel); } });
+  App.prototype.newPartChoosers.push(function () { return this.collabChooseNewPart(); });
 }

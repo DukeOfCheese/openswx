@@ -516,3 +516,32 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .cl-name-version { display: flex; gap: 6px; margin-top: 8px; }
 .cl-name-version input { flex: 1; min-width: 0; }
 .cl-warn { color: var(--note-fg); }
+/* Home's Cloud tab (collab.js) */
+.cl-acct { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); }
+.cl-home { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; margin-top: 18px; }
+.cl-orgs { display: flex; flex-direction: column; gap: 10px; }
+.cl-org { display: flex; flex-direction: column; gap: 1px; }
+.cl-org-b { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; padding: 4px 8px; border: 0; background: none; text-align: left; cursor: pointer; border-radius: 4px; }
+.cl-org-b:hover, .cl-proj-b:hover { background: var(--hover); }
+.cl-proj-b { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px 0 18px; border: 1px solid transparent; border-radius: 4px; background: none; text-align: left; cursor: pointer; }
+.cl-proj-b svg { width: 16px; height: 16px; flex: none; }
+.cl-proj-b span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-proj-b.active { background: var(--accent-soft); border-color: var(--accent); }
+.cl-newproj { color: var(--muted); }
+.cl-main { min-width: 0; }
+.cl-main .hm-head:first-child { margin-top: 0; }
+.cl-main h3 { margin: 18px 0 8px; font-size: 12.5px; font-weight: 600; }
+.cl-doctable tr.picked { background: var(--accent-soft); }
+.cl-here { display: flex; align-items: center; gap: 2px; min-height: 22px; }
+.cl-av.cl-dot { display: inline-grid; place-items: center; width: 20px; height: 20px; font-size: 8.5px; line-height: 1; cursor: default; }
+.cl-team { margin-top: 26px; }
+.cl-invite, .cl-accept { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.cl-invite input:not([type=checkbox]), .cl-invite select, .cl-accept input { height: 28px; border: 1px solid var(--border); border-radius: var(--r-field); padding: 0 8px; font: inherit; background: var(--field); color: var(--text); }
+.cl-invite input:focus, .cl-invite select:focus, .cl-accept input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.cl-members select, .cl-team select { height: 24px; border: 1px solid var(--border); border-radius: var(--r-field); background: var(--field); color: var(--text); font: inherit; }
+.cl-invite input[type=email], .cl-accept input { flex: 1; min-width: 180px; max-width: 360px; }
+.cl-ip { display: inline-flex; align-items: center; gap: 4px; }
+.cl-signin { max-width: 420px; }
+.cl-where { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.cl-where label { display: flex; align-items: baseline; gap: 6px; cursor: pointer; }
+@media (max-width: 760px) { .cl-home { grid-template-columns: minmax(0, 1fr); } }

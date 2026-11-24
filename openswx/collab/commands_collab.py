@@ -16,7 +16,10 @@ from . import MISSING, available
 
 __all__ = ["collab_sign_in", "collab_server_info", "collab_sign_out", "collab_status", "collab_projects", "collab_create_project",
            "collab_documents", "collab_enable", "collab_open", "collab_disable", "collab_lock", "collab_unlock",
-           "collab_history", "collab_name_version", "collab_restore", "collab_presence"]
+           "collab_history", "collab_name_version", "collab_restore", "collab_presence", "collab_new_part",
+           "collab_create_org", "collab_members", "collab_invite", "collab_cancel_invite", "collab_set_role",
+           "collab_remove_member", "collab_accept_invite", "collab_project_members", "collab_set_project_role",
+           "collab_remove_project_member"]
 
 
 def _need():
@@ -258,33 +261,212 @@ def _brief(c) -> dict:
         {"peers": [p["name"] for p in st["peers"]]}
 
 
-@command(category="collab")
-def collab_open(document_id: str) -> dict:
-    """Open a cloud document (live collaboration) by its id (collab_documents lists them): it opens as a new part
-    showing the server's current state, and stays in sync with everyone editing it. If it is already open it is
-    made active. Returns its status (role, read_only and why, peers)."""
+def _offline(url: str | None) -> DocumentError:
+    return DocumentError(f"cannot reach {url or 'the collaboration server'}; cloud parts open only while connected")
+
+
+@contextlib.contextmanager
+def _online(url: str | None):
+    """Network trouble inside becomes the plain 'cannot reach; cloud parts open only while connected'."""
+    import httpx
+    try:
+        yield
+    except DocumentError as exc:
+        if isinstance(exc.__cause__, httpx.HTTPError):
+            raise _offline(url) from exc
+        raise
+
+
+def _open(document_id: str, info: dict | None = None) -> dict:
+    """Open a cloud document as a new part, or fail leaving nothing behind (a cloud part never exists offline)."""
     auth, client = _need()
-    c = client.CLIENTS.get(document_id)
-    if c is not None and not c.closed:
-        for n, d in APP.documents.items():
-            if d is c.doc:
-                APP.active = n
-        return {"document_id": document_id, **_brief(c)}
+    document_id = _id(document_id, "document")
     url, tok = auth.server(), auth.token()
-    with _server() as s:
-        info = _ok(s.get(f"/api/documents/{document_id}"), "opening the cloud document")
+    if info is None:
+        with _online(url), _server() as s:
+            info = _ok(s.get(f"/api/documents/{document_id}"), "opening the cloud document")
     if info.get("kind", "part") != "part":
         raise DocumentError("only parts can be opened for now (assemblies come later)")
+    before = APP.active
     doc = APP.new_document(info["name"])
     key = APP.active
     try:
         c = client.attach(doc, document_id, url, tok, info)
     except Exception:
         APP.documents.pop(key, None)
-        APP.active = next(iter(APP.documents), None)
+        APP.active = before if before in APP.documents else next(iter(APP.documents), None)
         raise
     doc.dirty = False
     return {"document_id": document_id, "name": info["name"], **_brief(c)}
+
+
+@command(category="collab")
+def collab_open(document_id: str) -> dict:
+    """Open a cloud document (live collaboration) by its id (collab_documents lists them): it opens as a new part
+    showing the server's current state, and stays in sync with everyone editing it. If it is already open it is
+    made active. A cloud part opens only while the server can be reached: otherwise this fails and opens nothing.
+    Returns its status (role, read_only and why, peers)."""
+    _, client = _need()
+    c = client.CLIENTS.get(document_id)
+    if c is not None and not c.closed:
+        for n, d in APP.documents.items():
+            if d is c.doc:
+                APP.active = n
+        return {"document_id": document_id, **_brief(c)}
+    return _open(document_id)
+
+
+@command(category="collab")
+def collab_new_part(project: str, name: str = "Part") -> dict:
+    """Create a new, empty part straight in the cloud, in a project (id or name; see collab_projects), and open
+    it: everyone in the project can open it and edit it with you, at any time, whether or not you are online.
+    Nothing is made if the server cannot be reached. Returns the document id and status."""
+    from ..document import PartDocument
+    auth, client = _need()
+    name = (name or "").strip()[:200] or "Part"
+    url = auth.server()
+    with _online(url), _server() as s:
+        p = _project(s, project)
+        info = _ok(s.post(f"/api/projects/{p['id']}/documents",
+                          json={"name": name, "content": client.plain(PartDocument(name).to_dict())}),
+                   "creating the cloud part")
+    return {**_open(info["id"], info), "project": p["name"]}
+
+
+# ---------------------------------------------------------------------- team: organisations, members, invites
+def _org(s, org: str | None) -> dict:
+    orgs = _ok(s.get("/api/orgs"), "listing organisations")
+    pick = [o for o in orgs if org is None or org == o["id"] or org.lower() == o["name"].lower()]
+    if len(pick) == 1:
+        return pick[0]
+    if not pick and org is not None:
+        raise DocumentError(f"no organisation {org!r} that you are in; yours: {[o['name'] for o in orgs]}")
+    raise DocumentError(f"name the organisation (org=) among: {[o['name'] for o in orgs]}" if orgs
+                        else "you are not in any organisation on this server yet")
+
+
+def _id(v: str, what: str) -> str:
+    """An id from the server, as it may go into an address: letters, digits, '-' and '_'."""
+    if not isinstance(v, str) or not v or len(v) > 100 or not all(ch.isalnum() or ch in "-_" for ch in v):
+        raise DocumentError(f"not a valid {what} id: {v!r}"[:200])
+    return v
+
+
+@command(mutates=False, category="collab")
+def collab_create_org(name: str) -> dict:
+    """Create an organisation on the collaboration server (you become its owner). Organisations hold projects
+    and the people who work in them. Servers may allow only their admin to do this. Returns {id, name, role}."""
+    name = name.strip()
+    if not name:
+        raise DocumentError("give the organisation a name")
+    with _server() as s:
+        return _ok(s.post("/api/orgs", json={"name": name[:200]}), "creating the organisation")
+
+
+@command(mutates=False, category="collab")
+def collab_members(org: str | None = None) -> dict:
+    """The people in an organisation (id or name; default: your only one) with their roles (owner, admin,
+    member), and, for owners and admins, the invitations not yet accepted. Returns {org, members, invites}."""
+    with _server() as s:
+        o = _org(s, org)
+        members = _ok(s.get(f"/api/orgs/{o['id']}/members"), "listing the members")
+        invites = []
+        if o.get("role") in ("owner", "admin"):
+            invites = _ok(s.get(f"/api/orgs/{o['id']}/invites"), "listing the invitations")
+    return {"org": o, "members": members, "invites": invites}
+
+
+@command(mutates=False, category="collab")
+def collab_invite(org: str | None = None, email: str | None = None, role: Literal["admin", "member"] = "member",
+                  project: str | None = None, project_role: Literal["owner", "editor", "viewer"] = "editor",
+                  days: int = 7) -> dict:
+    """Invite someone to an organisation (owners and admins). email: their address (the server emails them the
+    link if it can; without an address, anyone with the link can join). project: also give them a role in this
+    project (id or name). Returns the invite with its link (url) and code, to send them yourself: they are shown
+    only now. They join with collab_accept_invite or by opening the link."""
+    body: dict[str, Any] = {"role": role, "days": max(1, min(int(days), 90))}
+    if email and email.strip():
+        body["email"] = email.strip()[:320]
+    with _server() as s:
+        o = _org(s, org)
+        if project:
+            p = _project(s, project)
+            if p["org_id"] != o["id"]:
+                raise DocumentError(f"project {p['name']!r} is not in {o['name']}")
+            body["projects"] = [{"project_id": p["id"], "role": project_role}]
+        inv = _ok(s.post(f"/api/orgs/{o['id']}/invites", json=body), "inviting")
+    return {"org": o["name"], **{k: inv.get(k) for k in ("id", "email", "role", "projects", "expires_at", "url", "emailed")},
+            "code": inv.get("token")}
+
+
+@command(mutates=False, category="collab")
+def collab_cancel_invite(invite: str, org: str | None = None) -> dict:
+    """Withdraw an invitation that has not been accepted (its id, from collab_members)."""
+    invite = _id(invite, "invitation")
+    with _server() as s:
+        o = _org(s, org)
+        _ok(s.delete(f"/api/orgs/{o['id']}/invites/{invite}"), "withdrawing the invitation")
+    return {"cancelled": invite}
+
+
+@command(mutates=False, category="collab")
+def collab_set_role(user: str, role: Literal["owner", "admin", "member"], org: str | None = None) -> dict:
+    """Change someone's role in an organisation (user: their id, from collab_members). Admins manage members and
+    invitations; only an owner can make or unmake owners, and an organisation keeps at least one owner."""
+    user = _id(user, "user")
+    with _server() as s:
+        o = _org(s, org)
+        return _ok(s.patch(f"/api/orgs/{o['id']}/members/{user}", json={"role": role}), "changing the role")
+
+
+@command(mutates=False, category="collab")
+def collab_remove_member(user: str, org: str | None = None) -> dict:
+    """Remove someone from an organisation (user: their id; your own id leaves it). They lose its projects and
+    their open cloud documents at once; their past work stays."""
+    user = _id(user, "user")
+    with _server() as s:
+        o = _org(s, org)
+        _ok(s.delete(f"/api/orgs/{o['id']}/members/{user}"), "removing the member")
+    return {"removed": user, "org": o["name"]}
+
+
+@command(mutates=False, category="collab")
+def collab_accept_invite(code: str) -> dict:
+    """Join an organisation with the code (or the whole link) from an invitation, as the signed-in account.
+    Returns {org, role}."""
+    code = code.strip().rstrip("/").rsplit("/", 1)[-1]
+    if not code or len(code) > 200:
+        raise DocumentError("give the invitation code or link")
+    with _server() as s:
+        return _ok(s.post("/api/invites/accept", json={"token": code}), "accepting the invitation")
+
+
+@command(mutates=False, category="collab")
+def collab_project_members(project: str) -> dict:
+    """Who has a role in a project (id or name): owner, editor or viewer. Returns {project, members}."""
+    with _server() as s:
+        p = _project(s, project)
+        return {"project": p, "members": _ok(s.get(f"/api/projects/{p['id']}/members"), "listing the project's members")}
+
+
+@command(mutates=False, category="collab")
+def collab_set_project_role(project: str, user: str, role: Literal["owner", "editor", "viewer"]) -> dict:
+    """Give someone in the organisation a role in a project, or change it (project owners): owner, editor (can
+    change its documents) or viewer (can only look). user: their id."""
+    user = _id(user, "user")
+    with _server() as s:
+        p = _project(s, project)
+        return _ok(s.put(f"/api/projects/{p['id']}/members/{user}", json={"role": role}), "setting the project role")
+
+
+@command(mutates=False, category="collab")
+def collab_remove_project_member(project: str, user: str) -> dict:
+    """Take someone's role in a project away (project owners). user: their id."""
+    user = _id(user, "user")
+    with _server() as s:
+        p = _project(s, project)
+        _ok(s.delete(f"/api/projects/{p['id']}/members/{user}"), "removing them from the project")
+    return {"removed": user, "project": p["name"]}
 
 
 @command(category="collab")

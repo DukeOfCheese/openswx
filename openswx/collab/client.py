@@ -1025,6 +1025,7 @@ class Hook:
                     doc.dirty = dirty
                     continue
                 c.commit_local(ops, name, args)
+                doc.dirty = False  # (a cloud document is kept by the server: nothing to save, nothing to recover)
             except DocumentError as exc:  # (refused: commit_local already put the server's state back)
                 doc.dirty = dirty  # (and nothing of it is left to save)
                 first = first or exc

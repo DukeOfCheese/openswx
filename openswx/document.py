@@ -163,6 +163,14 @@ class PartDocument:
         self.path, self.name, self.dirty = str(p), p.stem, False
         return str(p)
 
+    def save_copy(self, path: str) -> str:
+        """Write the part to `path` (.oswprt) as a copy: the open document keeps its name, file and state."""
+        p = Path(path)
+        if p.suffix.lower() != ".oswprt":
+            p = p.with_suffix(".oswprt")
+        p.write_text(json.dumps(self.to_dict(), indent=1), encoding="utf-8")
+        return str(p)
+
     @classmethod
     def open(cls, path: str) -> "PartDocument":
         doc = cls(Path(path).stem)
