@@ -2678,10 +2678,19 @@ class App {
       While openswx is open, the agent works in this window and you watch its edits live.</p>
       <pre class="code">${escapeHtml(JSON.stringify(desktop, null, 1))}</pre>
       <p><b>Claude Code</b> (and clients that reach this computer over HTTP):</p>
-      <pre class="code">claude mcp add --transport http openswx ${escapeHtml(location.origin)}/mcp --header "Authorization: Bearer &lt;token&gt;"</pre>
-      <p>The token is your openswx secret: print it with <code>openswx token</code> (desktop app: <code>openswx-cli token</code>). Requests without it are refused.</p>
+      <pre class="code" id="mcp-cc">claude mcp add --transport http openswx ${escapeHtml(location.origin)}/mcp --header "Authorization: Bearer <span id="mcp-tok">••••••••</span>"</pre>
+      <p>${info.token ? `<button class="btn" id="mcp-show">Show token</button> <button class="btn" id="mcp-copy">Copy command</button> ` : ""}The token is your
+      openswx secret (keep it to yourself): requests without it are refused. In a terminal, <code>${escapeHtml(info.token_command || "openswx token")}</code> prints it.</p>
       <p><b>Claude on the web (claude.ai)</b> connects to MCP servers from Anthropic's servers, which cannot reach an app on
       this computer: use Claude Desktop or Claude Code.</p>`, null, "agent");
+    const tok = $("#mcp-tok"), show = $("#mcp-show"), copy = $("#mcp-copy");
+    if (show) show.onclick = () => { const on = tok.textContent !== info.token; tok.textContent = on ? info.token : "••••••••"; show.textContent = on ? "Hide token" : "Show token"; };
+    if (copy) {
+      copy.onclick = async () => {
+        const cmd = `claude mcp add --transport http openswx ${location.origin}/mcp --header "Authorization: Bearer ${info.token}"`;
+        try { await navigator.clipboard.writeText(cmd); this.toast("Copied: paste it in a terminal where Claude Code runs."); } catch { tok.textContent = info.token; show && (show.textContent = "Hide token"); this.toast("Copy blocked here: the token is shown, select the command and copy it."); }
+      };
+    }
   }
 
   async checkUpdates() {

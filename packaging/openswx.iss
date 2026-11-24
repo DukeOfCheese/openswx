@@ -27,6 +27,8 @@ DefaultGroupName={#AppName}
 PrivilegesRequired=lowest
 UninstallFilesDir={#RuntimeDir}\uninstall
 ChangesAssociations=yes
+; (the optional PATH entry: open terminals see it after the installer tells Windows)
+ChangesEnvironment=yes
 OutputDir=..\dist
 OutputBaseFilename=openswx-setup-{#AppVersion}
 SetupIconFile=openswx.ico
@@ -40,6 +42,7 @@ WizardStyle=modern
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "assoc"; Description: "Open .oswprt and .oswasm files with openswx"; GroupDescription: "File associations:"
+Name: "addtopath"; Description: "Add openswx to PATH (so ""openswx-cli"" works in a terminal, e.g. ""openswx-cli token"")"; GroupDescription: "Command line:"
 
 [InstallDelete]
 ; an upgrade replaces the runtime as a whole (no stale modules from the previous version)
@@ -61,6 +64,8 @@ Name: "{group}\Uninstall openswx"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\openswx"; Filename: "{app}\openswx.exe"; Tasks: desktopicon
 
 [Registry]
+; the install folder (openswx-cli.exe) on this user's PATH, once; removed again by the uninstaller ([Code])
+Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Check: NeedsAddPath(ExpandConstant('{app}')); Tasks: addtopath
 ; where the launchers find the runtime
 Root: HKCU; Subkey: "Software\openswx"; ValueType: string; ValueName: "RuntimeDir"; ValueData: "{#RuntimeDir}"; Flags: uninsdeletekey
 ; openswx's own formats
@@ -91,3 +96,41 @@ Root: HKA; Subkey: "Software\Classes\Applications\openswx.exe\shell\open\command
 
 [Run]
 Filename: "{app}\openswx.exe"; Description: "{cm:LaunchProgram,openswx}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+// the user's PATH (HKCU\Environment) already holds `dir`?
+function NeedsAddPath(Dir: string): Boolean;
+var
+  Paths: string;
+begin
+  if not RegQueryStringValue(HKEY_CURRENT_USER, 'Environment', 'Path', Paths) then
+  begin
+    Result := True;
+    exit;
+  end;
+  Result := Pos(';' + Uppercase(Dir) + ';', ';' + Uppercase(Paths) + ';') = 0;
+end;
+
+// uninstall: take the install folder off the user's PATH again (other entries are left as they are)
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  Paths, Dir: string;
+  P: Integer;
+begin
+  if CurUninstallStep <> usPostUninstall then
+    exit;
+  if not RegQueryStringValue(HKEY_CURRENT_USER, 'Environment', 'Path', Paths) then
+    exit;
+  Dir := ExpandConstant('{app}');
+  P := Pos(';' + Uppercase(Dir) + ';', ';' + Uppercase(Paths) + ';');
+  if P = 0 then
+    exit;
+  // P is the position of Dir in ';' + Paths: remove it with its separator
+  Paths := ';' + Paths + ';';
+  Delete(Paths, P, Length(Dir) + 1);
+  if (Length(Paths) > 0) and (Paths[1] = ';') then
+    Delete(Paths, 1, 1);
+  if (Length(Paths) > 0) and (Paths[Length(Paths)] = ';') then
+    Delete(Paths, Length(Paths), 1);
+  RegWriteExpandStringValue(HKEY_CURRENT_USER, 'Environment', 'Path', Paths);
+end;
