@@ -2679,8 +2679,9 @@ class App {
       <pre class="code">${escapeHtml(JSON.stringify(desktop, null, 1))}</pre>
       <p><b>Claude Code</b> (and clients that reach this computer over HTTP):</p>
       <pre class="code" id="mcp-cc">claude mcp add --transport http openswx ${escapeHtml(location.origin)}/mcp --header "Authorization: Bearer <span id="mcp-tok">••••••••</span>"</pre>
-      <p>${info.token ? `<button class="btn" id="mcp-show">Show token</button> ` : ""}The token is your
-      openswx secret (keep it to yourself): requests without it are refused. In a terminal, <code>${escapeHtml(info.token_command || "openswx token")}</code> prints it.</p>
+      ${info.token ? `<div style="display:flex;gap:8px;margin:6px 0 10px"><button class="btn" id="mcp-show">Show token</button><button class="btn" id="mcp-copy">Copy command</button></div>` : ""}
+      <p>The token is your openswx secret (keep it to yourself): requests without it are refused. In a terminal,
+      <code>${escapeHtml(info.token_command || "openswx token")}</code> prints it.</p>
       <p><b>Claude on the web (claude.ai)</b> connects to MCP servers from Anthropic's servers, which cannot reach an app on
       this computer: use Claude Desktop or Claude Code.</p>`, null, "agent");
     // the Claude Code block shows the token masked; its Copy button copies the command with the real token
@@ -2690,6 +2691,8 @@ class App {
     const reveal = (on) => { tok.textContent = on ? info.token : "••••••••"; show.textContent = on ? "Hide token" : "Show token"; };
     if (show) show.onclick = () => reveal(tok.textContent !== info.token);
     this.addCopyButtons($("#modal-box .mb-body"), (c) => { if (c === cc && show) reveal(true); }); // (copy blocked: show the token to select)
+    const copy = $("#mcp-copy"); // (the same copy as the block's own button, on the row under it)
+    if (copy) copy.onclick = () => cc.parentElement.querySelector(".copy-btn").click();
   }
 
   // a Copy button on every code block and inline code in `root` (dialogs that show commands or config to paste).

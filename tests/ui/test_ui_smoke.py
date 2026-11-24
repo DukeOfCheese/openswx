@@ -279,6 +279,10 @@ def test_connect_an_agent_dialog_copies_every_code_section(page, server):
     assert TOKEN not in page.evaluate("T.text()")
     info = page.evaluate("async () => (await T.run('agent_connection_info', {port: 8765})).result")
     assert info["token_command"] in codes  # (the command that prints the token, not a fixed name)
+    page.evaluate("navigator.clipboard.writeText('')")
+    page.click("#mcp-copy")  # (the button row under the command: the same copy, real token)
+    page.wait_for_function("async () => (await navigator.clipboard.readText()).length > 0")
+    assert page.evaluate("navigator.clipboard.readText()") == codes[2]
     page.evaluate("T.close()")
 
 
@@ -319,6 +323,20 @@ def test_agent_toasts(page):
     assert got["shown"][1].replace(" ", " ") == "Agent Extrude failed: unknown sketch <Sketch9>"
     assert "<b>" not in "".join(got["shown"]) and got["dot"]
     assert got["whileOpen"] == 0
+
+def test_agent_setup_dialog_fits_without_sideways_scrolling(page):
+    """Help > Agent (MCP) Setup: long paths, the JSON config and the claude mcp add command wrap inside the dialog."""
+    wide = page.evaluate("""async () => {
+        T.close(); await window.app.mcpDialog(); document.querySelector('#mcp-show')?.click();
+        const box = document.querySelector('#modal-box');
+        const right = box.getBoundingClientRect().right;
+        const out = [...box.querySelectorAll('*')].filter((e) => e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX !== 'visible'
+            || e.getBoundingClientRect().right > right + 1).map((e) => e.tagName);
+        T.close();
+        return out;
+    }""")
+    assert wide == []
+
 
 def test_no_script_errors(page):
     assert page.errors == []
