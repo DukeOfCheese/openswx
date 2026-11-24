@@ -40,7 +40,8 @@ CSP = (
     "worker-src 'self' blob:; "
     "object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 )
-VENDOR_CACHE = "public, max-age=31536000, immutable"
+# the page and every static file, vendored libraries included, are revalidated on each load (a 304 when
+# unchanged): their names carry no version, so a long-lived cache would serve an old copy after an upgrade
 UI_CACHE = "no-cache"
 _UI_EVAL = os.environ.get("OPENSWX_UI_EVAL", "").strip().lower() not in ("", "0", "false", "no")
 _INLINE_SCRIPT = re.compile(r'<script(?=[\s>])(?![^>]*\bsrc=)(?![^>]*\bnonce=)', re.I)
@@ -76,8 +77,8 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
 
     @app.middleware("http")
     async def ui_headers(request: Request, call_next):
-        """Every response gets the headers above; the UI's modules are revalidated each load, while the vendored
-        libraries are cached for good. The per-response nonce is what the inline import map in the page carries."""
+        """Every response gets the headers above, and the UI's files are revalidated on each load (UI_CACHE). The
+        per-response nonce is what the inline import map in the page carries."""
         nonce = secrets.token_urlsafe(16)
         request.state.csp_nonce = nonce
         response = await call_next(request)
@@ -85,9 +86,7 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
             response.headers[name] = value
         response.headers["Content-Security-Policy"] = CSP.format(nonce=nonce, eval=" 'unsafe-eval'" if _UI_EVAL else "")
         path = request.url.path
-        if path.startswith("/static/vendor/"):
-            response.headers["Cache-Control"] = VENDOR_CACHE
-        elif path == "/" or path.startswith("/static/"):
+        if path == "/" or path.startswith("/static/"):
             response.headers["Cache-Control"] = UI_CACHE
         return response
 

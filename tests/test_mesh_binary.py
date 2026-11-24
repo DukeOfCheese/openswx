@@ -102,3 +102,34 @@ def test_binary_payload_is_smaller_than_json():
     raw = json.dumps(mesh, separators=(",", ":")).encode("utf-8")
     binary = encode_mesh(mesh)
     assert len(binary) < len(raw)
+
+
+def test_only_triangle_data_travels_as_buffers():
+    """Edge polylines and sketch geometry stay JSON number lists at full precision: the UI sends a picked vertex
+    (edges[].p) back as a command argument and flattens sketch points (entities[].p) for the extrude handle, which
+    a typed array breaks (it serialises as {"0": .., "1": ..} and does not flatten). Only the triangle data of
+    faces, surfaces and context goes in buffers."""
+    _part()
+    sk = S.create_sketch("Top")["sketch"]
+    S.sketch_circle(sk, [12.3, 4.56], 7.89)
+    S.sketch_arc(sk, [0, 0], [10.1, 0], [0, 10.1]) if hasattr(S, "sketch_arc") else None
+    mesh = S.get_mesh()
+    assert any(len(e["p"]) >= 8 for e in mesh["edges"])
+    assert any(len(e["p"]) >= 8 for s in mesh["sketches"] for e in s["entities"] if "p" in e)
+    data = encode_mesh(mesh)
+    header = json.loads(data[16:16 + struct.unpack_from("<I", data, 12)[0]])
+
+    def buffers(value, path):
+        if isinstance(value, dict):
+            if set(value) == {"$buf"}:
+                yield path
+            for k, v in value.items():
+                yield from buffers(v, f"{path}.{k}")
+        elif isinstance(value, list):
+            for v in value:
+                yield from buffers(v, f"{path}[]")
+    packed = set(buffers(header["mesh"], "mesh"))
+    assert packed and packed <= {"mesh.faces[].v", "mesh.faces[].t", "mesh.surfaces[].v", "mesh.surfaces[].t",
+                                 "mesh.context[].v", "mesh.context[].t"}, packed
+    back = decode_mesh(data)
+    assert back["edges"] == mesh["edges"] and back["sketches"] == mesh["sketches"]  # (exactly: no float32 rounding)
