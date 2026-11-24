@@ -212,6 +212,27 @@ def test_disk_cache_rehashes_recent_files(tmp_path, monkeypatch):
     assert first
 
 
+def test_disk_cache_never_serves_a_stale_hash(tmp_path, monkeypatch):
+    """A file hashed while its timestamp was recent, then rewritten at the same size with the same timestamps
+    (inside the file system's timestamp resolution), must get a new key later on: the digest of a recently
+    modified file is not remembered (as git does for racily clean files)."""
+    import os
+    import time
+    from openswx.system import cache
+    src = tmp_path / "part.bin"
+    src.write_bytes(b"a" * 1000)
+    monkeypatch.setenv("OPENSWX_CACHE", str(tmp_path / "cache"))
+    cache._DIGESTS.clear()
+    before = cache.key(str(src), "body")
+    assert cache._DIGESTS == {}, "a recently modified file must not populate the digest memo"
+    st = src.stat()
+    src.write_bytes(b"b" * 1000)
+    os.utime(src, ns=(st.st_atime_ns, st.st_mtime_ns))  # (the same size and timestamps as the first version)
+    real = time.time_ns
+    monkeypatch.setattr(cache.time, "time_ns", lambda: real() + 5_000_000_000)  # (looked up 5 s later)
+    assert cache.key(str(src), "body") != before
+
+
 def test_disk_cache_prunes_at_most_once_a_minute(tmp_path, monkeypatch):
     from openswx.system import cache
     monkeypatch.setenv("OPENSWX_CACHE", str(tmp_path / "cache"))
@@ -264,3 +285,27 @@ def test_desktop_save_as_uses_the_native_dialog(tmp_path, monkeypatch):
     monkeypatch.setattr(api, "_dialog", lambda kind, name="", types=(): str(tmp_path / "missing" / "x.oswprt"))
     r = api.save_as()
     assert r["ok"] is False and r["error"]
+
+
+def test_suppress_with_int_survives_undo_and_reopen(tmp_path):
+    import json
+    S.new_part("Suppressed")
+    sk = S.create_sketch("Top")["sketch"]
+    S.sketch_rectangle(sk, [0, 0], [40, 20])
+    S.extrude(sk, depth=10)
+    S.suppress_feature("Boss-Extrude1", 1)
+    S.undo()
+    S.suppress_feature("Boss-Extrude1", 1)
+    feature = next(f for f in S.get_model()["features"] if f["name"] == "Boss-Extrude1")
+    assert feature["suppressed"] is True
+    path = tmp_path / "suppressed.oswprt"
+    S.save_part(str(path))
+    S.open_part(str(path))
+    feature = next(f for f in S.get_model()["features"] if f["name"] == "Boss-Extrude1")
+    assert feature["suppressed"] is True
+    data = json.loads(path.read_text())
+    next(f for f in data["features"] if f["name"] == "Boss-Extrude1")["suppressed"] = 1
+    path.write_text(json.dumps(data))
+    S.open_part(str(path))
+    feature = next(f for f in S.get_model()["features"] if f["name"] == "Boss-Extrude1")
+    assert feature["suppressed"] is True

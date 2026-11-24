@@ -19,7 +19,7 @@ from collections import OrderedDict
 from functools import lru_cache
 from pathlib import Path
 
-LIMIT = 1 << 30
+LIMIT = 1 << 30  # bytes kept before the oldest entries are removed
 _PRUNE_EVERY = 60.0
 _TOUCH_EVERY = 3600.0
 _RACY_NS = 2_000_000_000
@@ -67,7 +67,7 @@ def code_tag() -> str:
                 h.update(src.relative_to(here).as_posix().encode())
                 h.update(src.read_bytes())
                 found = True
-        if not found:
+        if not found:  # (a frozen build has no sources: its executable stands for the code)
             try:
                 st = Path(sys.executable).stat()
                 h.update(f"{st.st_size}:{st.st_mtime_ns}".encode())
@@ -84,8 +84,7 @@ def _digest(path: Path) -> str | None:
         return None
     memo = (str(path), st.st_size, st.st_mtime_ns, st.st_ctime_ns, getattr(st, "st_ino", 0))
     hit = _DIGESTS.get(memo)
-    # a file modified recently can change again inside the filesystem timestamp resolution
-    if hit is not None and st.st_mtime_ns <= time.time_ns() - _RACY_NS:
+    if hit is not None:
         _DIGESTS.move_to_end(memo)
         return hit
     try:
@@ -93,9 +92,12 @@ def _digest(path: Path) -> str | None:
             digest = hashlib.file_digest(f, "sha1").hexdigest()
     except OSError:
         return None
-    _DIGESTS[memo] = digest
-    if len(_DIGESTS) > _DIGEST_MAX:
-        _DIGESTS.popitem(last=False)
+    # only store a digest once the file is old enough that a same-size rewrite cannot keep its timestamps (a file
+    # modified within the timestamp resolution could change again unseen: git's "racily clean" rule)
+    if st.st_mtime_ns <= time.time_ns() - _RACY_NS:
+        _DIGESTS[memo] = digest
+        if len(_DIGESTS) > _DIGEST_MAX:
+            _DIGESTS.popitem(last=False)
     return digest
 
 
@@ -122,7 +124,7 @@ def _touch(p: Path) -> None:
     if last is not None and now - last < _TOUCH_EVERY:
         return
     try:
-        os.utime(p)
+        os.utime(p)  # (recently used: kept longest)
         _TOUCHED[str(p)] = now
     except OSError:
         pass

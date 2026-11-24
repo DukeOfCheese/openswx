@@ -178,7 +178,10 @@ def test_the_policy_fits_the_ui():
     assert "unsafe-inline" not in second.headers["Content-Security-Policy"].split("style-src")[0]
 
 
-def test_vendored_libraries_are_cached_but_the_ui_is_revalidated():
+def test_the_ui_and_the_vendored_libraries_are_revalidated():
+    """Every UI file, the vendored libraries included, is revalidated on each load (a 304 when unchanged): the
+    vendored files have no version in their names, so a long-lived cache would keep an old three.js after an
+    upgrade (the desktop app always serves the same address)."""
     with client() as c:
         c.cookies.set(security.COOKIE, TOKEN)
         page = c.get("/")
@@ -186,9 +189,9 @@ def test_vendored_libraries_are_cached_but_the_ui_is_revalidated():
         vendor_two = c.get("/static/vendor/three-gpu-pathtracer.module.js")
         ui = c.get("/static/js/app.js")
         css = c.get("/static/css/style.css")
+        again = c.get("/static/vendor/three.module.min.js", headers={"If-None-Match": vendor.headers["etag"]})
     assert page.status_code == vendor.status_code == vendor_two.status_code == 200
     assert ui.status_code == css.status_code == 200
-    for r in (vendor, vendor_two):
-        assert r.headers["Cache-Control"] == "public, max-age=31536000, immutable"
-    for r in (page, ui, css):  # a changed module shows up on the next load, index.html included
+    for r in (page, vendor, vendor_two, ui, css):  # a changed file shows up on the next load, index.html included
         assert r.headers["Cache-Control"] == "no-cache"
+    assert again.status_code == 304  # (unchanged: nothing is sent again)
