@@ -44,6 +44,7 @@
 .pm-btn:hover { background: var(--lift); box-shadow: var(--lift-shadow); border-color: transparent; }
 .pm-btn svg { width: 18px; height: 18px; }
 .pm-msg { margin: 4px 8px 6px; padding: 7px 9px; background: var(--note-bg); border: 1px solid var(--note-line); color: var(--note-fg); border-radius: 8px; line-height: 1.35; }
+.pm-msg:empty { display: none; }
 .pm-msg.err { background: var(--err-bg); border-color: var(--err-line); color: var(--err-fg); }
 .pm-group { margin: 8px 7px; border-radius: var(--r-tray); background: var(--panel); box-shadow: var(--tray-shadow); }
 .pm-gh { display: flex; align-items: center; gap: 6px; padding: 6px 9px; font-weight: 600; cursor: pointer; border-bottom: 1px solid var(--chrome-2); }
