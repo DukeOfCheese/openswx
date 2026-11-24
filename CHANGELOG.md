@@ -8,8 +8,9 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ### Changed
 
-- Help > Connect an agent: every command and config snippet has a Copy button, and the Claude Desktop path is
-  Settings > Desktop App > Extensions > Manage > Edit Config.
+- Help > Agent (MCP) Setup: every command and config snippet has a Copy button (the Claude Code command is copied
+  with your token filled in, though it is shown masked), and the Claude Desktop path is Settings > Desktop App >
+  Extensions > Manage > Edit Config.
 
 ### Fixed
 

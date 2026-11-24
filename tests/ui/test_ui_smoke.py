@@ -267,13 +267,18 @@ def test_connect_an_agent_dialog_copies_every_code_section(page, server):
     page.evaluate("async () => { T.close(); await window.app.mcpDialog(); }")
     page.wait_for_function("T.open()")
     assert "Settings > Desktop App > Extensions > Manage > Edit Config" in page.evaluate("T.text()")
-    codes = page.evaluate("[...document.querySelectorAll('#modal-box pre.code, #modal-box code')].map(c => c.textContent)")
-    assert len(codes) >= 5 and page.evaluate("document.querySelectorAll('#modal-box .copy-btn').length") == len(codes)
+    # (what each Copy button must copy: the shown text, except the Claude Code block, whose token is shown masked)
+    codes = page.evaluate("[...document.querySelectorAll('#modal-box pre.code, #modal-box code')].map(c => c.dataset.copy ?? c.textContent)")
+    assert len(codes) >= 4 and page.evaluate("document.querySelectorAll('#modal-box .copy-btn').length") == len(codes)
     for i, text in enumerate(codes):
         page.evaluate("i => document.querySelectorAll('#modal-box .copy-btn')[i].click()", i)
         page.wait_for_function("i => document.querySelectorAll('#modal-box .copy-btn')[i].textContent === 'Copied'", arg=i)
         assert page.evaluate("navigator.clipboard.readText()").replace("\r\n", "\n") == text  # (Windows: CRLF)
     assert '"mcpServers"' in codes[1] and codes[2].startswith("claude mcp add")
+    assert codes[2].endswith(f'"Authorization: Bearer {TOKEN}"')  # (the real token, not the dots shown)
+    assert TOKEN not in page.evaluate("T.text()")
+    info = page.evaluate("async () => (await T.run('agent_connection_info', {port: 8765})).result")
+    assert info["token_command"] in codes  # (the command that prints the token, not a fixed name)
     page.evaluate("T.close()")
 
 
@@ -290,6 +295,30 @@ def test_command_manager_keeps_its_height_on_every_tab(page):
     }""")
     assert len(tops) > 5 and len({tuple(v) for v in tops.values()}) == 1, tops  # (the tabs and the workspace never move)
 
+
+def test_agent_toasts(page):
+    """An agent's command shows a tidy toast (no markup shown as text, readable command name), failures included;
+    with the Agent activity pane open there is no toast (the pane lists it)."""
+    got = page.evaluate("""async () => {
+        document.querySelector('#toasts').innerHTML = '';
+        const tp = document.querySelector('#taskpane');
+        if (!tp.classList.contains('collapsed')) window.app.showTask('agent');  // (closed to start with)
+        tp.classList.add('collapsed');
+        window.app.onAgent({command: 'sketch_circle', ok: true});
+        window.app.onAgent({command: 'extrude', ok: false, message: 'unknown sketch <Sketch9>'});
+        const shown = [...document.querySelectorAll('#toasts .toast')].map((t) => t.innerText);
+        const dot = !!document.querySelector('.tp-tab[data-pane="agent"] .dot');
+        document.querySelector('#toasts').innerHTML = '';
+        window.app.showTask('agent');
+        window.app.onAgent({command: 'fillet', ok: true});
+        const whileOpen = document.querySelectorAll('#toasts .toast').length;
+        window.app.showTask('agent');  // (close it again)
+        return {shown, dot, whileOpen};
+    }""")
+    assert got["shown"][0].replace(" ", " ") == "Agent Sketch circle"
+    assert got["shown"][1].replace(" ", " ") == "Agent Extrude failed: unknown sketch <Sketch9>"
+    assert "<b>" not in "".join(got["shown"]) and got["dot"]
+    assert got["whileOpen"] == 0
 
 def test_no_script_errors(page):
     assert page.errors == []

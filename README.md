@@ -134,7 +134,8 @@ claude mcp add --transport http openswx http://127.0.0.1:8765/mcp \
   --header "Authorization: Bearer $(python -m openswx token)"
 ```
 
-With the desktop app, use `openswx-cli token` in place of `python -m openswx token`.
+With the desktop app, Help > Agent (MCP) Setup shows the token and copies this command with it filled in; the
+Windows installer can also add openswx to PATH, after which `openswx-cli token` works in place of `python -m openswx token`.
 
 **Claude Desktop** (and other chat apps that start local MCP servers): add openswx to its config (Claude
 Desktop: *Settings → Desktop App → Extensions → Manage → Edit Config*) and restart it. While openswx is open, `openswx mcp` relays to

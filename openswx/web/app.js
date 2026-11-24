@@ -174,9 +174,13 @@ class App {
 
   onAgent(entry) {
     this.homeHide(); // (an agent at work: show what it does)
-    this.toast(`<b>Agent</b> ${escapeHtml(entry.command)}${entry.ok ? "" : ` failed: ${escapeHtml(entry.message)}`}`, entry.ok ? "agent" : "err");
-    const dot = document.querySelector('.tp-tab[data-pane="agent"]');
-    if (dot && $("#taskpane").classList.contains("collapsed") && !dot.querySelector(".dot")) dot.append(el("span", "dot"));
+    const tab = document.querySelector('.tp-tab[data-pane="agent"]');
+    const watching = !$("#taskpane").classList.contains("collapsed") && tab?.classList.contains("active");
+    if (watching) return; // (the Agent activity pane is open and already lists it: no toast on top)
+    const what = String(entry.command || "").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()); // sketch_circle -> Sketch circle
+    const msg = entry.ok ? `<b>Agent</b>&ensp;${escapeHtml(what)}` : `<b>Agent</b>&ensp;${escapeHtml(what)} failed: ${escapeHtml(entry.message || "")}`;
+    this.toast(msg, entry.ok ? "agent" : "err", { html: true });
+    if (tab && !tab.querySelector(".dot")) tab.append(el("span", "dot")); // (unread, until the pane is opened)
   }
 
   // ================================================================== title / quick access / menus
@@ -2674,19 +2678,29 @@ class App {
       While openswx is open, the agent works in this window and you watch its edits live.</p>
       <pre class="code">${escapeHtml(JSON.stringify(desktop, null, 1))}</pre>
       <p><b>Claude Code</b> (and clients that reach this computer over HTTP):</p>
-      <pre class="code">claude mcp add --transport http openswx ${escapeHtml(location.origin)}/mcp --header "Authorization: Bearer &lt;token&gt;"</pre>
-      <p>The token is your openswx secret: print it with <code>openswx token</code> (desktop app: <code>openswx-cli token</code>). Requests without it are refused.</p>
+      <pre class="code" id="mcp-cc">claude mcp add --transport http openswx ${escapeHtml(location.origin)}/mcp --header "Authorization: Bearer <span id="mcp-tok">••••••••</span>"</pre>
+      <p>${info.token ? `<button class="btn" id="mcp-show">Show token</button> ` : ""}The token is your
+      openswx secret (keep it to yourself): requests without it are refused. In a terminal, <code>${escapeHtml(info.token_command || "openswx token")}</code> prints it.</p>
       <p><b>Claude on the web (claude.ai)</b> connects to MCP servers from Anthropic's servers, which cannot reach an app on
       this computer: use Claude Desktop or Claude Code.</p>`, null, "agent");
-    this.addCopyButtons($("#modal-box .mb-body"));
+    // the Claude Code block shows the token masked; its Copy button copies the command with the real token
+    const tok = $("#mcp-tok"), show = $("#mcp-show"), cc = $("#mcp-cc");
+    if (info.token) cc.dataset.copy = `claude mcp add --transport http openswx ${location.origin}/mcp --header "Authorization: Bearer ${info.token}"`;
+    else tok.textContent = "<token>";
+    const reveal = (on) => { tok.textContent = on ? info.token : "••••••••"; show.textContent = on ? "Hide token" : "Show token"; };
+    if (show) show.onclick = () => reveal(tok.textContent !== info.token);
+    this.addCopyButtons($("#modal-box .mb-body"), (c) => { if (c === cc && show) reveal(true); }); // (copy blocked: show the token to select)
   }
 
-  // a Copy button on every code block and inline code in `root` (dialogs that show commands or config to paste)
-  addCopyButtons(root) {
+  // a Copy button on every code block and inline code in `root` (dialogs that show commands or config to paste).
+  // It copies the element's data-copy when it has one (e.g. a command whose secret is shown masked), else its text;
+  // onFail(element) runs when the clipboard refuses, so the dialog can help the user select the text instead.
+  addCopyButtons(root, onFail = null) {
     for (const c of root.querySelectorAll("pre.code, code")) {
       const b = el("button", "copy-btn", "Copy"); b.type = "button"; b.title = "Copy to the clipboard";
       b.onclick = async () => {
-        const ok = await this.copyText(c.textContent);
+        const ok = await this.copyText(c.dataset.copy ?? c.textContent);
+        if (!ok) onFail?.(c);
         b.textContent = ok ? "Copied" : "Select and copy"; b.classList.toggle("done", ok);
         setTimeout(() => { b.textContent = "Copy"; b.classList.remove("done"); }, 1500);
       };
@@ -2728,8 +2742,10 @@ class App {
     setTimeout(() => box.querySelector("input")?.focus());
   }
 
-  toast(msg, kind = "") {
-    const t = el("div", `toast ${kind}`, kind === "err" ? escapeHtml(msg) : msg); $("#toasts").append(t);
+  // msg is HTML, except error messages, which are escaped (they may carry text from files or the server) unless
+  // the caller built and escaped the HTML itself ({ html: true })
+  toast(msg, kind = "", { html = false } = {}) {
+    const t = el("div", `toast ${kind}`, kind === "err" && !html ? escapeHtml(msg) : msg); $("#toasts").append(t);
     setTimeout(() => t.remove(), kind === "err" ? 6000 : 3500);
   }
 

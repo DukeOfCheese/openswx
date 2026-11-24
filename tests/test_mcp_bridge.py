@@ -91,6 +91,16 @@ def test_agent_connection_info_names_this_installation():
     info = S.agent_connection_info(port=9100)
     assert info["stdio"]["args"][-3:] == ["mcp", "--port", "9100"] and Path(info["stdio"]["command"]).exists()
     assert info["http"] == "http://127.0.0.1:9100/mcp" and info["claude_desktop_config"].endswith("claude_desktop_config.json")
+    # the window shows the token and the full command that prints it (an installed openswx-cli need not be on PATH)
+    from openswx import security
+    assert info["token"] == security.user_token() and info["token_command"].endswith("token")
+    import subprocess, shlex  # noqa: E401
+    out = subprocess.run(shlex.split(info["token_command"], posix=False) if "\\" in info["token_command"] else shlex.split(info["token_command"]),
+                         capture_output=True, text=True, timeout=120,
+                         env={**__import__("os").environ, "OPENSWX_LOG": "off", "OPENSWX_PLUGINS": "off"})
+    assert out.stdout.strip() == info["token"]
+    # neither an MCP tool nor a query a view-only link may run
+    assert S.COMMANDS["agent_connection_info"]["mcp"] is False and S.COMMANDS["agent_connection_info"]["category"] != "query"
 
 
 def test_agents_are_told_this_is_openswx_not_solidworks():

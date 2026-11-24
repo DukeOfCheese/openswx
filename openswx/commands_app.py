@@ -215,14 +215,19 @@ def agent_connection_info(port: int = 8765) -> dict:
     """Help > Agent (MCP) Setup: how agents connect to this installation. `stdio` is the command a chat app such
     as Claude Desktop starts (with openswx open it relays to the open window, so the edits show live there);
     `http` is the endpoint for clients that can reach this computer (Claude Code); `claude_desktop_config` is
-    where Claude Desktop keeps its MCP servers on this system."""
+    where Claude Desktop keeps its MCP servers on this system; `token` is this user's secret for the HTTP endpoint
+    and `token_command` the full command that prints it (shown only in the app's own window: not an MCP tool, and
+    refused on view-only links)."""
     import os
     import sys
+    from . import security
     if getattr(sys, "frozen", False):  # desktop build: the console executable sits next to the app
         exe = Path(sys.executable).with_name("openswx-cli.exe" if os.name == "nt" else "openswx-cli")
         command, args = str(exe), ["mcp"]
+        token_command = f'"{exe}" token' if " " in str(exe) else f"{exe} token"
     else:
         command, args = sys.executable, ["-m", "openswx", "mcp"]
+        token_command = (f'"{sys.executable}"' if " " in sys.executable else sys.executable) + " -m openswx token"
     if port != 8765:
         args += ["--port", str(port)]
     if sys.platform == "darwin":
@@ -232,4 +237,4 @@ def agent_connection_info(port: int = 8765) -> dict:
     else:
         cfg = Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
     return {"stdio": {"command": command, "args": args}, "http": f"http://127.0.0.1:{port}/mcp",
-            "claude_desktop_config": str(cfg)}
+            "claude_desktop_config": str(cfg), "token": security.user_token(), "token_command": token_command}
