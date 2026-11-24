@@ -426,7 +426,7 @@ def magnetic_mate(point1: str, point2: str) -> dict:
 @command(category="assembly")
 def magnetic_snap(component: str, tolerance: float = 25.0) -> dict:
     """After dragging a component: if one of its connection points is within `tolerance` mm of another
-    component's, snap them together with a magnetic mate (as SOLIDWORKS does while dragging)."""
+    component's, snap them together with a magnetic mate."""
     import numpy as np
     asm = APP.asm
     c = asm.component(component)
@@ -1571,7 +1571,7 @@ def macro_stop(path: str | None = None) -> dict:
 @command(mutates=False, category="tools", mcp=False)
 def run_macro(path: str) -> dict:
     """Tools > Macro > Run: execute a macro (.py, Python using the openswx API as `S`). Macros run with your
-    permissions, like SOLIDWORKS VBA macros: run only ones you trust."""
+    permissions: run only ones you trust."""
     import runpy
     from . import session
     p = Path(path)

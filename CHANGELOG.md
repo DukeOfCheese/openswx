@@ -27,6 +27,13 @@ formats or commands; files are migrated automatically and the change is listed h
   the bounding box with its size (layer BBOX).
 - Keyboard navigation: Alt+T moves to the FeatureManager tree (arrows, Enter, F2, Shift+F10); F10 opens the menu
   bar (arrows, Enter, Escape).
+- A dark theme for the interface, following the operating system's light / dark setting. The graphics area
+  stays light in both.
+
+### Changed
+
+- A cleaner look for the same layout: tool buttons without outline boxes or gradients (hover lifts, the active
+  tool is pressed in), ribbon groups and panes as rounded panels, pill-shaped ribbon tabs.
 
 ### Fixed
 

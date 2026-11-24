@@ -32,11 +32,15 @@ def _agent_errors(fn):
     return wrapper
 
 
-INSTRUCTIONS = """openswx is an open-source parametric CAD (parts, assemblies, drawings) with a SOLIDWORKS-style
-workflow. Units are millimetres and degrees. Standard planes: Front (XY, normal +Z), Top (XZ, normal +Y),
+INSTRUCTIONS = """These tools drive openswx, an open-source parametric CAD application (parts, assemblies,
+drawings). When you talk to the user, call it openswx. It is not SOLIDWORKS and is not connected to SOLIDWORKS
+or Dassault Systemes; it has its own geometry kernel (OpenCASCADE). Its menus and feature names will look
+familiar to SOLIDWORKS users, and it can open SOLIDWORKS part files, but nothing here runs in SOLIDWORKS.
+
+Units are millimetres and degrees. Standard planes: Front (XY, normal +Z), Top (XZ, normal +Y),
 Right (YZ, normal +X).
 
-Typical part workflow (same as SOLIDWORKS):
+Typical part workflow:
 1. create_sketch(plane) -> sketch name, e.g. 'Sketch1'. Planes: 'Front'|'Top'|'Right', 'Plane1', or a
    planar face from get_topology.
 2. Add geometry: sketch_rectangle / sketch_circle / sketch_line / sketch_arc / sketch_polygon / sketch_slot.

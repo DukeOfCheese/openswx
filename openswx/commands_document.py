@@ -435,7 +435,7 @@ def face_features() -> dict:
 
 @command(mutates=False, category="query")
 def measure_items(items: list[str | Vec3]) -> dict:
-    """Measure, as SOLIDWORKS' Measure tool: one item gives its size (face area, radius/diameter, edge length,
+    """Measure: one item gives its size (face area, radius/diameter, edge length,
     vertex XYZ); two give the minimum distance, the centre distance of circles/cylinders, dX/dY/dZ and the
     angle between planar faces or straight edges. Items: Face#/Edge# ids (Component/Face# in an assembly) or
     [x, y, z] vertices."""
@@ -518,7 +518,8 @@ def redefine_feature(name: str, command_name: str, args: dict) -> dict:
 
 @command(category="edit")
 def delete_feature(name: str, delete_absorbed_sketch: bool = True) -> dict:
-    """Delete a feature (and its absorbed sketch, as SOLIDWORKS offers)."""
+    """Delete a feature by name (e.g. 'Boss-Extrude1'). delete_absorbed_sketch=True (default) also deletes the
+    sketch it absorbed (the sketch that defines it); False keeps the sketch. Returns what was removed."""
     removed = APP.doc.delete_feature(name, delete_absorbed_sketch)
     return {"removed": removed, "model": APP.doc.summary()}
 
@@ -760,7 +761,7 @@ def set_units(units: Literal["mm", "cm", "m", "in", "ft"]) -> dict:
 @command(mutates=False, category="query")
 def parent_child(name: str) -> dict:
     """Parent/Child relationships of a feature: the features it references (parents) and the features that
-    reference it (children), as in the SOLIDWORKS Parent/Child dialog."""
+    reference it (children)."""
     doc = APP.doc
     feat = doc.find(name)
     names = {f["name"] for f in doc.features}

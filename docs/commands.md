@@ -278,7 +278,7 @@ Which feature made each face of the part: {"Face3": "Boss-Extrude1", ...} (assem
 measure_items(items: list[str | Vec3])
 ```
 
-Measure, as SOLIDWORKS' Measure tool: one item gives its size (face area, radius/diameter, edge length, vertex XYZ); two give the minimum distance, the centre distance of circles/cylinders, dX/dY/dZ and the angle between planar faces or straight edges. Items: Face#/Edge# ids (Component/Face# in an assembly) or [x, y, z] vertices.
+Measure: one item gives its size (face area, radius/diameter, edge length, vertex XYZ); two give the minimum distance, the centre distance of circles/cylinders, dX/dY/dZ and the angle between planar faces or straight edges. Items: Face#/Edge# ids (Component/Face# in an assembly) or [x, y, z] vertices.
 
 ### `list_materials` *(read-only)*
 
@@ -294,7 +294,7 @@ The material library: density (kg/m^3), elastic modulus/yield/tensile strength (
 parent_child(name: str)
 ```
 
-Parent/Child relationships of a feature: the features it references (parents) and the features that reference it (children), as in the SOLIDWORKS Parent/Child dialog.
+Parent/Child relationships of a feature: the features it references (parents) and the features that reference it (children).
 
 ### `get_view_image` *(read-only)*
 
@@ -369,7 +369,7 @@ Re-define a feature using the creation command's arguments (used by the UI's Edi
 delete_feature(name: str, delete_absorbed_sketch: bool = True)
 ```
 
-Delete a feature (and its absorbed sketch, as SOLIDWORKS offers).
+Delete a feature by name (e.g. 'Boss-Extrude1'). delete_absorbed_sketch=True (default) also deletes the sketch it absorbed (the sketch that defines it); False keeps the sketch. Returns what was removed.
 
 ### `reorder_feature`
 
@@ -575,7 +575,7 @@ Add an arc through start, a point on the arc (mid) and end.
 sketch_polygon(sketch: str, center: Vec2, radius: float, sides: int = 6, angle: float = 90.0)
 ```
 
-Add a regular polygon inscribed in a construction circle (like the SOLIDWORKS Polygon tool).
+Add a regular polygon inscribed in a construction circle (polygon tool).
 
 ### `sketch_slot`
 
@@ -623,7 +623,7 @@ Move a sketch dimension's label to position (sketch [x, y]); the geometry does n
 set_dimension(dimension: str, value: float, sketch: str | None = None, configurations: str | list[str] | None = None)
 ```
 
-Change a dimension value, e.g. set_dimension('D1@Sketch1', 42). Rebuilds the model. configurations (as the SOLIDWORKS Modify box): None or 'all' sets it in all configurations (the base value; overrides of it are removed), 'this' only in the active configuration, or a list of configuration names.
+Change a dimension value, e.g. set_dimension('D1@Sketch1', 42). Rebuilds the model. configurations (as in the Modify box): None or 'all' sets it in all configurations (the base value; overrides of it are removed), 'this' only in the active configuration, or a list of configuration names.
 
 ### `sketch_delete`
 
@@ -727,7 +727,7 @@ Save a sketch as DXF (local sketch XY, mm); a .dwg path converts through the ODA
 sketch_mirror(sketch: str, entities: list[str], about: str, copy: bool = True)
 ```
 
-Mirror Entities: copy entities across a sketch line/centerline (`about`), adding symmetric relations. copy=False removes the originals (SOLIDWORKS' Copy option off).
+Mirror Entities: copy entities across a sketch line/centerline (`about`), adding symmetric relations. copy=False removes the originals (the Copy option off).
 
 ### `sketch_offset`
 
@@ -2069,7 +2069,7 @@ Basic motion: drive a distance/angle mate from `start` to `end` like a motor and
 motion_export(mate: str, start: float, end: float, path: str, frames: int = 36, view: Literal['isometric', 'front', 'top', 'right', 'trimetric'] = 'isometric', width: int = 640, height: int = 480, fps: int = 12)
 ```
 
-Motion study > Save as animation: drive a distance/angle mate from start to end and write the frames as a video (.avi, MJPEG, like SOLIDWORKS) or an animated .gif (fixed camera). The assembly is unchanged.
+Motion study > Save as animation: drive a distance/angle mate from start to end and write the frames as a video (.avi, MJPEG) or an animated .gif (fixed camera). The assembly is unchanged.
 
 ### `edit_in_context`
 
@@ -2181,7 +2181,7 @@ Magnetic mate between two connection points 'Component/Connection Point1': they 
 magnetic_snap(component: str, tolerance: float = 25.0)
 ```
 
-After dragging a component: if one of its connection points is within `tolerance` mm of another component's, snap them together with a magnetic mate (as SOLIDWORKS does while dragging).
+After dragging a component: if one of its connection points is within `tolerance` mm of another component's, snap them together with a magnetic mate.
 
 ### `apply_mate_references`
 
@@ -2411,7 +2411,7 @@ Sheet properties for the active document's drawing: sheet size, projection, scal
 drawing_move_view(view: str, dx: float, dy: float)
 ```
 
-Move a drawing view by (dx, dy) sheet mm (y down): a view id (drawing with sheets) or front / top / right / left / isometric (automatic drawing). Projected views follow their parent and only slide along their projection line, as in SOLIDWORKS.
+Move a drawing view by (dx, dy) sheet mm (y down): a view id (drawing with sheets) or front / top / right / left / isometric (automatic drawing). Projected views follow their parent and only slide along their projection line.
 
 ### `drawing_add_note`
 
@@ -3250,7 +3250,7 @@ Mesh convergence of the static study: run it at several element sizes (given, or
 cam_generate(setup: Literal['+Z', '-Z', '+X', '-X', '+Y', '-Y'] = '+Z', tool_diameter: float = 6.0, flutes: int = 3, stepdown: float | None = None, stepover: float | None = None, leave: float = 0.3, stock_margin: float = 1.0, stock_top: float = 1.0, material: Literal['aluminum', 'brass', 'plastic', 'mild_steel', 'stainless', 'titanium', 'cast_iron'] = 'aluminum', drill: bool = True, max_drill_diameter: float = 20.0, tolerance: float | None = None)
 ```
 
-CAM (3-axis milling, like SOLIDWORKS CAM): toolpaths for the active part seen from `setup` (the side the tool comes from). Stock = the part's box + stock_margin on the sides and stock_top on top. Z-level roughing with a flat end mill (stepdown default D/2, stepover 0.45 D) leaving `leave` mm, finishing of the walls and flat floors, and drilling of the holes along the tool axis (canned cycles; peck when deeper than 3 D). Feeds and speeds from the material (carbide, a starting point). A stock-removal check on the toolpath raster reports gouges and the material left (inside corners keep the tool radius). `tolerance` is the raster cell (precision, default D/30 within 0.05-0.25 mm). Then cam_gcode.
+CAM (3-axis milling): toolpaths for the active part seen from `setup` (the side the tool comes from). Stock = the part's box + stock_margin on the sides and stock_top on top. Z-level roughing with a flat end mill (stepdown default D/2, stepover 0.45 D) leaving `leave` mm, finishing of the walls and flat floors, and drilling of the holes along the tool axis (canned cycles; peck when deeper than 3 D). Feeds and speeds from the material (carbide, a starting point). A stock-removal check on the toolpath raster reports gouges and the material left (inside corners keep the tool radius). `tolerance` is the raster cell (precision, default D/30 within 0.05-0.25 mm). Then cam_gcode.
 
 ### `cam_finish_3d` *(read-only)*
 
@@ -3301,7 +3301,7 @@ The plastics library: generic grades with melt / mold / ejection temperatures, v
 plastics_fill(gates: list, material: str = 'ABS', melt_temperature: float | None = None, mold_temperature: float | None = None, fill_time: float | None = None, max_pressure: float = 150.0, element_size: float | None = None, clamp_axis: Literal['X', 'Y', 'Z'] = 'Z')
 ```
 
-Plastics fill analysis (like SOLIDWORKS Plastics): inject the active part (the cavity) from `gates` - points [x, y, z] on the part or faces 'FaceN' - with a generic `material` (ABS, PC, PP, PA66, POM, HDPE, PS, PC/ABS) at a constant flow rate over `fill_time` s (default from the volume). Hele-Shaw flow with the local wall thickness and a shear-thinning melt; isothermal (freeze-off is checked, not simulated). Returns the fill time, injection pressure (short shot above max_pressure MPa), clamp force along clamp_axis, cooling time, weld lines, air traps, sink-mark risk and warnings; plot with plastics_results.
+Plastics fill analysis: inject the active part (the cavity) from `gates` - points [x, y, z] on the part or faces 'FaceN' - with a generic `material` (ABS, PC, PP, PA66, POM, HDPE, PS, PC/ABS) at a constant flow rate over `fill_time` s (default from the volume). Hele-Shaw flow with the local wall thickness and a shear-thinning melt; isothermal (freeze-off is checked, not simulated). Returns the fill time, injection pressure (short shot above max_pressure MPa), clamp force along clamp_axis, cooling time, weld lines, air traps, sink-mark risk and warnings; plot with plastics_results.
 
 ### `plastics_results` *(UI only, read-only)*
 
@@ -3524,7 +3524,7 @@ Tools > Macro > Stop: end recording and save the macro as a Python script (.py) 
 run_macro(path: str)
 ```
 
-Tools > Macro > Run: execute a macro (.py, Python using the openswx API as `S`). Macros run with your permissions, like SOLIDWORKS VBA macros: run only ones you trust.
+Tools > Macro > Run: execute a macro (.py, Python using the openswx API as `S`). Macros run with your permissions: run only ones you trust.
 
 ### `start_job` *(read-only)*
 
