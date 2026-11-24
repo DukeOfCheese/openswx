@@ -36,7 +36,7 @@ def cam_generate(setup: Literal["+Z", "-Z", "+X", "-X", "+Y", "-Y"] = "+Z", tool
                  stock_margin: float = 1.0, stock_top: float = 1.0,
                  material: Literal["aluminum", "brass", "plastic", "mild_steel", "stainless", "titanium", "cast_iron"] = "aluminum",
                  drill: bool = True, max_drill_diameter: float = 20.0, tolerance: float | None = None) -> dict:
-    """CAM (3-axis milling, like SOLIDWORKS CAM): toolpaths for the active part seen from `setup` (the side the
+    """CAM (3-axis milling): toolpaths for the active part seen from `setup` (the side the
     tool comes from). Stock = the part's box + stock_margin on the sides and stock_top on top. Z-level
     roughing with a flat end mill (stepdown default D/2, stepover 0.45 D) leaving `leave` mm, finishing of
     the walls and flat floors, and drilling of the holes along the tool axis (canned cycles; peck when deeper
@@ -189,7 +189,7 @@ def plastics_materials() -> dict:
 def plastics_fill(gates: list, material: str = "ABS", melt_temperature: float | None = None,
                   mold_temperature: float | None = None, fill_time: float | None = None, max_pressure: float = 150.0,
                   element_size: float | None = None, clamp_axis: Literal["X", "Y", "Z"] = "Z") -> dict:
-    """Plastics fill analysis (like SOLIDWORKS Plastics): inject the active part (the cavity) from `gates` -
+    """Plastics fill analysis: inject the active part (the cavity) from `gates` -
     points [x, y, z] on the part or faces 'FaceN' - with a generic `material` (ABS, PC, PP, PA66, POM, HDPE,
     PS, PC/ABS) at a constant flow rate over `fill_time` s (default from the volume). Hele-Shaw flow with the
     local wall thickness and a shear-thinning melt; isothermal (freeze-off is checked, not simulated).

@@ -242,7 +242,7 @@ def motion_export(mate: str, start: float, end: float, path: str, frames: int = 
                   view: Literal["isometric", "front", "top", "right", "trimetric"] = "isometric",
                   width: int = 640, height: int = 480, fps: int = 12) -> dict:
     """Motion study > Save as animation: drive a distance/angle mate from start to end and write the frames
-    as a video (.avi, MJPEG, like SOLIDWORKS) or an animated .gif (fixed camera). The assembly is unchanged."""
+    as a video (.avi, MJPEG) or an animated .gif (fixed camera). The assembly is unchanged."""
     import io
     import numpy as np
     from PIL import Image

@@ -91,3 +91,17 @@ def test_agent_connection_info_names_this_installation():
     info = S.agent_connection_info(port=9100)
     assert info["stdio"]["args"][-3:] == ["mcp", "--port", "9100"] and Path(info["stdio"]["command"]).exists()
     assert info["http"] == "http://127.0.0.1:9100/mcp" and info["claude_desktop_config"].endswith("claude_desktop_config.json")
+
+
+def test_agents_are_told_this_is_openswx_not_solidworks():
+    """Agents name the program after what the MCP server tells them: the instructions say openswx and that it
+    is not SOLIDWORKS, and no tool description compares itself with a SOLIDWORKS tool (file formats and the
+    equation syntax may still name it)."""
+    import re
+    from openswx import mcp_server
+    from openswx import session as S
+    ins = mcp_server.INSTRUCTIONS
+    assert "call it openswx" in ins and "It is not SOLIDWORKS" in ins
+    assert "same as SOLIDWORKS" not in ins and "SOLIDWORKS-style" not in ins
+    likeness = re.compile(r"\b(like|as in|as)\s+(the\s+)?SOLIDWORKS\b", re.I)
+    assert [k for k, m in S.COMMANDS.items() if likeness.search(m["doc"] or "")] == []
