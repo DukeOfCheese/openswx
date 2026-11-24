@@ -22,6 +22,14 @@ VERSION = 1  # (migrate.CURRENT[FORMAT]; see migrate.py before changing it)
 _KNOWN_KEYS = {"format", "version", "name", "units", "material", "appearance", "properties", "drawing", "study", "features",
                "rollback", "counters", "next_id", "variables", "configurations", "active_config", "folders",
                "design_table", "named_views", "pmi", "render", "tolerances", "journal", "requirements", "blocks", "display_states", "display_state"}
+# container types load_dict reads; a file that gives any of them another type is refused before it is used
+_PART_TYPES = {"name": str, "units": str, "material": dict, "appearance": dict, "properties": dict,
+               "drawing": dict, "study": dict, "features": list, "counters": dict, "variables": dict,
+               "configurations": dict, "folders": list, "named_views": dict, "pmi": list, "render": dict,
+               "tolerances": dict, "requirements": list, "blocks": dict, "display_states": dict}
+_TYPE_WORDS = {str: "a string", bool: "true or false", list: "a list", dict: "an object"}
+_FEATURE_TYPES = {"name": str, "type": str, "params": dict, "suppressed": bool}
+
 DEFAULT_TREE = ["History", "Sensors", "Annotations", "Material", "Front Plane", "Top Plane", "Right Plane", "Origin"]
 CONSUMES_SKETCH = {"extrude", "cut_extrude", "revolve", "cut_revolve", "sweep", "cut_sweep", "loft", "cut_loft",
                    "base_flange", "structural_member", "sketched_bend", "revolved_surface", "swept_surface",
@@ -118,12 +126,51 @@ class PartDocument:
             **getattr(self, "_extra", {}),  # (keys of the file this version does not use: written back)
         }
 
+    @staticmethod
+    def _validate(d: dict) -> None:
+        """Refuse the container types load_dict relies on, so a damaged file fails here and not halfway through."""
+        for key, typ in _PART_TYPES.items():
+            if key in d and not isinstance(d[key], typ):
+                raise DocumentError(f"{key} must be {_TYPE_WORDS[typ]}, not {type(d[key]).__name__}")
+        features = d.get("features") or []
+        rollback = d.get("rollback")
+        if rollback is not None:
+            if isinstance(rollback, bool) or not isinstance(rollback, int):
+                raise DocumentError(f"rollback must be an integer or null, not {type(rollback).__name__}")
+            if not 0 <= rollback <= len(features):
+                raise DocumentError(f"rollback {rollback} is outside the feature tree (0 to {len(features)})")
+        if "next_id" in d and (isinstance(d["next_id"], bool) or not isinstance(d["next_id"], int)):
+            raise DocumentError(f"next_id must be an integer, not {type(d['next_id']).__name__}")
+        for key, typ in (("active_config", str), ("design_table", dict), ("display_state", str), ("journal", list)):
+            if key in d and d[key] is not None and not isinstance(d[key], typ):
+                raise DocumentError(f"{key} must be {_TYPE_WORDS[typ]} or null, not {type(d[key]).__name__}")
+        for i, f in enumerate(features):
+            if not isinstance(f, dict):
+                raise DocumentError(f"feature {i} must be an object, not {type(f).__name__}")
+            for key, typ in _FEATURE_TYPES.items():
+                if not isinstance(f.get(key), typ):
+                    raise DocumentError(f"feature {i} ({f.get('name') or 'unnamed'}): "
+                                        f"{key} must be {_TYPE_WORDS[typ]}, not {type(f.get(key)).__name__}")
+            if f.get("id") is not None and not isinstance(f["id"], str):
+                raise DocumentError(f"feature {i} ({f['name']}): id must be a string, not {type(f['id']).__name__}")
+        for name, cfg in (d.get("configurations") or {}).items():
+            if not isinstance(cfg, dict):
+                raise DocumentError(f"configuration {name!r} must be an object, not {type(cfg).__name__}")
+            for key in ("suppressed", "values"):
+                if key in cfg and not isinstance(cfg[key], dict):
+                    raise DocumentError(f"configuration {name!r}: {key} must be an object, "
+                                        f"not {type(cfg[key]).__name__}")
+        for name, n in (d.get("counters") or {}).items():
+            if not isinstance(n, int):
+                raise DocumentError(f"counter {name!r} must be an integer, not {type(n).__name__}")
+
     def load_dict(self, d: dict) -> None:
         from . import migrate
         try:
             d = migrate.migrate(copy.deepcopy(d), FORMAT)  # (a copy: never share feature lists between documents)
         except migrate.FormatError as exc:
             raise DocumentError(str(exc)) from exc
+        self._validate(d)
         self._extra = migrate.extras(d, _KNOWN_KEYS)
         self.name = d.get("name", self.name)
         self.units = d.get("units", "mm")
