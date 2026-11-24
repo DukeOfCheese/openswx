@@ -1455,7 +1455,7 @@ def build_boundary_surface(ctx: Ctx, p: dict, name: str) -> None:
     """Surfaces > Boundary Surface: with curves in both directions, a patch whose edges are exactly the
     direction-1 and direction-2 curves (they must form a closed loop); with direction-1 curves only, a smooth
     skin through them in order."""
-    from build123d import Face as _F, Shell, Wire
+    from build123d import Face as _F, Wire
     d1, d2 = p.get("direction1", []), p.get("direction2", [])
     if len(d1) < 2 and not (d1 and d2):
         raise FeatureError("a boundary surface needs at least two direction-1 curves (or curves in both directions)")

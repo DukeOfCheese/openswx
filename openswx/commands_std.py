@@ -3,7 +3,6 @@ extrusions made as ordinary openswx parts, for layout, mass and BOMs. Envelope d
 standards named; internal detail (balls, cages, exact slot profiles) is left out."""
 from __future__ import annotations
 
-import math
 from typing import Literal
 
 from .document import DocumentError

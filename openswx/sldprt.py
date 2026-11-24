@@ -193,7 +193,7 @@ def _read_sldprt(path: str, config: int | None = None):
     otherwise sheet bodies; several bodies come back as a Compound."""
     from build123d import Compound, Shape
 
-    from .parasolid import XTError, _Builder, read_xt_bytes
+    from .parasolid import XTError
     streams = read_streams(path)
     parts = sorted((int(m.group(1)), n) for n in streams if (m := re.fullmatch(r"Contents/Config-(\d+)-Partition", n)))
     if not parts:

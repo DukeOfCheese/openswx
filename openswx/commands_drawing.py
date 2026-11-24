@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from typing import Literal
 
-from . import session as _S
 from .session import (  # noqa: F401
     APP, DocumentError, Path, SheetSize, Vec2, _PICK_MM, _beside, _drawing_edit, _drawing_state, _hole_callout,
     _line_dimension, _new_balloon, _next_ann, _views_edit, command, math,

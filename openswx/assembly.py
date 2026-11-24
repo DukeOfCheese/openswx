@@ -17,7 +17,6 @@ from scipy.optimize import least_squares
 from scipy.spatial.transform import Rotation
 
 from .document import DocumentError, PartDocument
-from .features import mass_properties
 from .geom import face_normal, face_ref, resolve_face, tessellate
 
 from . import snapshots  # noqa: E402
@@ -1107,7 +1106,7 @@ def _mechanical_residual(m, ea, eb, xa, xb, extra, xextra) -> list[float]:
         conc = list(np.cross(Na, Nb)) + list(w - Na * np.dot(w, Na))
         (c3, _, p3, n3, _), (c4, _, p4, n4, _) = extra
         P3, N3 = c3.to_world(p3, xextra[0]), c3.dir_to_world(n3, xextra[0])
-        P4, N4 = c4.to_world(p4, xextra[1]), c4.dir_to_world(n4, xextra[1])
+        P4, _N4 = c4.to_world(p4, xextra[1]), c4.dir_to_world(n4, xextra[1])
         return conc + [float(np.dot(P4 - P3, N3))]  # the faces touch (they are square to the hinge axis)
     xa0, xb0 = (np.array(v, float) for v in m["init6"])
     if t == "linear_coupler":  # B travels along its direction `ratio` times A's travel along its own

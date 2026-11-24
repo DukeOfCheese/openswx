@@ -7,7 +7,7 @@ from build123d import Box, Cylinder
 from openswx import fea_tet
 from openswx import session as S
 
-pytestmark = pytest.mark.skipif(not fea_tet.available(), reason="the Netgen mesher is not installed")
+pytestmark = [pytest.mark.slow, pytest.mark.skipif(not fea_tet.available(), reason="the Netgen mesher is not installed")]
 
 STEEL = {"elastic_modulus": 200000.0, "poisson": 0.3, "yield_strength": 250.0}
 

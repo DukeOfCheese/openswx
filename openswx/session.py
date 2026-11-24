@@ -20,7 +20,7 @@ from typing import Any, Literal
 
 from . import applog, jobs
 from .document import DocumentError, PartDocument
-from .features import END_CONDITIONS, FeatureError, encode_shape, mass_properties
+from .features import END_CONDITIONS, FeatureError, encode_shape, mass_properties  # noqa: F401
 from .geom import edge_ref, face_ref
 from .sketch import SketchError
 
@@ -689,7 +689,7 @@ def _import_sldasm_mates(asm, p: Path, placed: dict) -> list[str]:
 
     def fit(typ, ca, cb, numbers):
         """(type, value, aligned, entity a, entity b, value confirmed) when the mate holds, else None."""
-        (ra, ea), (rb, eb) = ca, cb
+        (_ra, ea), (_rb, eb) = ca, cb
         Pa, Na = ea[0].to_world(ea[2]), ea[0].dir_to_world(ea[3])
         Pb, Nb = eb[0].to_world(eb[2]), eb[0].dir_to_world(eb[3])
         faces_only = {ea[1], eb[1]} <= {"plane", "axis"}

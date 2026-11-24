@@ -12,7 +12,6 @@ import math
 
 import numpy as np
 from scipy.sparse import coo_matrix
-from scipy.sparse.linalg import spsolve
 
 _CORNERS = np.array([(-1, -1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1),
                      (-1, -1, 1), (1, -1, 1), (1, 1, 1), (-1, 1, 1)], float)
@@ -253,7 +252,7 @@ def solve_static(body, material: dict, fixtures: list, loads: list, element_size
         raise ValueError("add at least one load")
     separate = any(c.get("contact") for c in connectors or []) or bool(connectors and len(body.solids()) > 1)
     m = (_build_structural_separate if separate else _build_structural)(body, E, nu, element_size, target_elements, regions)
-    h, hh, frac, mask, I, J, K = m["h"], m["hh"], m["frac"], m["mask"], m["I"], m["J"], m["K"]
+    h, hh, _frac, mask, I, J, K = m["h"], m["hh"], m["frac"], m["mask"], m["I"], m["J"], m["K"]
     used, conn, nn, coords, edofs, fr, scale, Kg = (m[k] for k in ("used", "conn", "nn", "coords", "edofs", "fr", "scale", "Kg"))
     origin, n, nodes_near = m["origin"], m["n"], m["nodes_near"]
     fixed = set()

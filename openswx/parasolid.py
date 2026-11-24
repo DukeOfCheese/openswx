@@ -693,7 +693,7 @@ class _Builder:
         """Blend boundary (an intersection with a BLEND_BOUND): the rolling ball touches the supporting surface
         at the foot of its centre, so the curve is the projection of the spine onto that surface, sampled
         densely and interpolated."""
-        from OCP.GeomAPI import GeomAPI_Interpolate, GeomAPI_ProjectPointOnCurve, GeomAPI_ProjectPointOnSurf
+        from OCP.GeomAPI import GeomAPI_Interpolate, GeomAPI_ProjectPointOnSurf
         from OCP.collections import HArray1_gp_Pnt
         bb = next((si for si in r["surface"] if self.node(si)[0] == 59), None)
         if bb is None:
@@ -767,7 +767,6 @@ class _Builder:
         """The surface, with B-splines (also under an offset) extended on all four sides by the part size:
         used only for intersections, never as face geometry (extension may re-parametrise)."""
         from OCP.Geom import Geom_BSplineSurface, Geom_OffsetSurface
-        from OCP.GeomLib import GeomLib
         t, r = self.node(idx)
         s = self.surface(idx)
         if t == 60 and s is not None:
@@ -950,7 +949,6 @@ class _Builder:
             return self.edges[idx]
         from OCP.BRep import BRep_Tool
         from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeEdge
-        from OCP.GeomAPI import GeomAPI_ProjectPointOnCurve
         er = self.node(idx)[1]
         cidx = er["curve"]
         if not cidx:  # tolerant edge: use the curve of one of its fins

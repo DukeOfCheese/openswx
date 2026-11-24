@@ -69,7 +69,6 @@ async def main():
                 frames.append((ev["metadata"]["timestamp"], f))
                 asyncio.ensure_future(cdp.send("Page.screencastFrameAck", {"sessionId": ev["sessionId"]}))
             cdp.on("Page.screencastFrame", on_frame)
-            t_video = time.time()
             await page.goto(f"{base}/?token={TOKEN}")
             await page.wait_for_function("window.app && window.app.version >= 0")
             here = Path(__file__).parent

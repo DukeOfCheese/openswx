@@ -113,7 +113,8 @@ The full list with colours is in [`.github/labels.yml`](.github/labels.yml).
 - Changes to the **SOLIDWORKS history rebuild** (`sw_rebuild.py`, `sw_sketch.py`, `sw_tree.py`) must include
   a survey comparison (`tools/survey.py compare before.jsonl after.jsonl`): parts gained and, especially,
   parts lost.
-- CI must pass: the test suite on Linux, Windows and macOS, and the UI smoke tests.
+- Run the fast loop while working (`python -m pytest -q -m "not slow"`), then the full suite before pushing
+(`python -m pytest -q -n auto --dist loadscope`). CI must pass on Linux, Windows and macOS, and the UI smoke tests.
 - Fill in the pull request template; the checklist is the review checklist.
 
 Commit messages: a short summary line in the imperative or as a noun phrase ("Path-traced rendering in Render

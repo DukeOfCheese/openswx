@@ -235,7 +235,6 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
 
     @app.get("/api/drawing_export")
     def drawing_export(format: str = "pdf", inline: bool = False):
-        import tempfile
         fmt = format.lower() if format.lower() in ("pdf", "dxf", "dwg", "svg") else "pdf"
         tmp = _temp_path(f"{S.APP.active_doc.name}.{fmt}", f"drawing.{fmt}")
         try:

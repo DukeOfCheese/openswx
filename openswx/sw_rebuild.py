@@ -767,7 +767,6 @@ def _section_sketches(oracle: "_Oracle", sk: dict) -> list[dict]:
     coordinates. For an extrusion this is its profile (plus any later cuts through it). For a revolve
     (_REVOLVE_AXES set: standard axes through the origin) also the half-sections: the body cut by the half of
     the sketch plane on either side of an axis lying in it, closed along the axis - a revolved profile."""
-    import numpy as np
     from build123d import Shape
     from OCP.BRepAlgoAPI import BRepAlgoAPI_Section
     from OCP.gp import gp_Dir, gp_Pln, gp_Pnt
@@ -1214,7 +1213,7 @@ def _helix(doc: PartDocument, oracle: "_Oracle", name: str, sketch, sketches: di
     starts at the circle's point. Its handedness and direction are not decoded: the variant whose curve runs
     inside the stored body (a swept spring holds its path) is kept."""
     import numpy as np
-    from build123d import Axis, Edge, Plane, Vector
+    from build123d import Axis, Edge, Vector
     sk = sketches.get(sketch) if sketch else None
     circ = [(c, s_) for c, s_, e_ in (sk or {}).get("arcs", []) if s_ == e_]
     if not circ or len(lengths) < 2:
