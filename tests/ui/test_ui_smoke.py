@@ -27,7 +27,7 @@ def server(tmp_path_factory):
         port = s.getsockname()[1]
     env = dict(os.environ, OPENSWX_HOME=str(tmp_path_factory.mktemp("home")), OPENSWX_TOKEN=TOKEN,
                OPENSWX_AUTOSAVE="off", OPENSWX_LOG="off", OPENSWX_PLUGINS="off",
-               OPENSWX_SHOW_HOME="0")  # (Home has its own tests: test_ui_home.py)
+               OPENSWX_SHOW_HOME="0", OPENSWX_UI_EVAL="1")  # (Home has its own tests: test_ui_home.py)
     proc = subprocess.Popen([sys.executable, "-m", "openswx", "serve", "--port", str(port)], cwd=ROOT, env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     base = f"http://127.0.0.1:{port}"
