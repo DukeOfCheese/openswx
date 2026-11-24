@@ -7,9 +7,9 @@ import { cap } from "../lib/helpers.js";
 const MIXIN = {
   renderTitle() {
     const m = this.model; const name = m.name + (m.dirty ? " *" : "");
-    $("#doctitle").textContent = `${name}  —  openswx`;
+    $("#doctitle").textContent = `${name} - openswx`;
     document.title = `${name} - openswx`;
-    $("#docname-corner").textContent = this.sk.active ? `${m.name} (Default)  —  Editing ${this.sk.name}` : `${m.name} (Default)`;
+    $("#docname-corner").textContent = this.sk.active ? `${m.name} (Default) - Editing ${this.sk.name}` : `${m.name} (Default)`;
   },
 
   buildQuickAccess() {

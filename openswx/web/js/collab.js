@@ -148,7 +148,7 @@ const MIXIN = {
       + `<span class="cl-peers">${peers.map((p) => {
         const tool = p.presence?.tool || "";
         return `<button class="cl-av${p.client_id === cl.follow ? " following" : ""}" data-client="${esc(p.client_id)}" style="--c:${colour(p.colour)}"
-          title="${esc(p.name)}${tool ? ` — ${esc(tool)}` : ""}${p.read_only ? " (viewing)" : ""}&#10;Click to ${p.client_id === cl.follow ? "stop following" : "follow their view"}">${esc(initials(p.name))}</button>`
+          title="${esc(p.name)}${tool ? ` - ${esc(tool)}` : ""}${p.read_only ? " (viewing)" : ""}&#10;Click to ${p.client_id === cl.follow ? "stop following" : "follow their view"}">${esc(initials(p.name))}</button>`
           + (tool ? `<span class="cl-tool" data-client="${esc(p.client_id)}">${esc(tool)}</span>` : "");
       }).join("")}</span>`
       + (peers.length ? "" : `<span class="cl-alone">Nobody else here</span>`)
@@ -554,7 +554,7 @@ const MIXIN = {
   },
 
   collabRefusedDialog(list) {
-    const rows = list.map((c) => `<tr><td>${esc(c.command || "change")}</td><td>${esc((c.who || []).join(", ") || "—")}</td><td>${esc(c.text || c.message)}</td></tr>`).join("");
+    const rows = list.map((c) => `<tr><td>${esc(c.command || "change")}</td><td>${esc((c.who || []).join(", ") || "-")}</td><td>${esc(c.text || c.message)}</td></tr>`).join("");
     this.modal("Changes not applied", `<p>While you were offline, others changed the same things. These changes of yours were not applied;
       the model shows their version:</p><table class="dw-bom cl-refused"><tr><th>Your change</th><th>Changed first by</th><th>Why</th></tr>${rows}</table>`, null, "warning");
   },
@@ -959,7 +959,7 @@ const MIXIN = {
     if (!r?.ok) { box.innerHTML = `<p class="muted">${esc(r?.error || "No answer from that address.")}</p>`; return; }
     const names = { google: "Google", github: "GitHub" };
     box.innerHTML = (r.result.oauth || []).map((p) => `<button class="btn cl-provider" data-p="${esc(p)}">Sign in with ${esc(names[p] || p)}</button>`).join("")
-      + `<p class="muted">${esc(r.result.name)} ${esc(r.result.version || "")}${(r.result.oauth || []).length ? " — or with email and password:" : ""}</p>`;
+      + `<p class="muted">${esc(r.result.name)} ${esc(r.result.version || "")}${(r.result.oauth || []).length ? " - or with email and password:" : ""}</p>`;
     for (const b of box.querySelectorAll(".cl-provider")) {
       b.onclick = async () => {
         $("#modal").classList.add("hidden");
@@ -1100,7 +1100,7 @@ const MIXIN = {
       <td>${N(x.seq) < h.seq ? `<button class="btn cl-restore" data-seq="${N(x.seq)}" data-label="change ${N(x.seq)} (${esc(x.command || "")} by ${esc(x.author?.name || "")})">Restore</button>` : '<span class="muted">now</span>'}</td></tr>`).join("");
     const vers = (h.versions || []).map((v) => `<tr><td><b>${esc(v.name)}</b>${v.note ? `<div class="muted">${esc(v.note)}</div>` : ""}</td><td>${N(v.seq)}</td><td>${esc(v.author?.name || "")}</td><td>${esc(when(v.created_at))}</td>
       <td><button class="btn cl-restore" data-version="${esc(v.name)}" data-label="version ${esc(v.name)}">Restore</button></td></tr>`).join("");
-    this.modal(`History and Versions — ${d.cloud_name}`, `
+    this.modal(`History and Versions - ${d.cloud_name}`, `
       <div class="cl-hist"><table class="dw-bom"><tr><th>#</th><th>When</th><th>Who</th><th>Change</th><th></th></tr>${rows || '<tr><td colspan="5" class="muted">No changes yet</td></tr>'}</table></div>
       <h4>Named versions</h4>
       <table class="dw-bom">${vers ? `<tr><th>Version</th><th>State</th><th>By</th><th>Named</th><th></th></tr>${vers}` : '<tr><td class="muted">None yet</td></tr>'}</table>

@@ -2,7 +2,7 @@ import { icon } from "./icons.js";
 import { el, escapeHtml, UNITS } from "./propman.js";
 
 const SNAP_PX = 9, INFER_DEG = 3;
-const GLYPH = { horizontal: "—", vertical: "|", parallel: "∥", perpendicular: "⊥", equal: "=", tangent: "◠", concentric: "◎",
+const GLYPH = { horizontal: "─", vertical: "|", parallel: "∥", perpendicular: "⊥", equal: "=", tangent: "◠", concentric: "◎",
   coincident: "•", midpoint: "▾", fix: "⚓", collinear: "⋯", symmetric: "⇹" };
 
 export class Sketcher {

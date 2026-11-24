@@ -229,7 +229,7 @@ const MIXIN = {
     if (r.ok) this.toast(`Saved ${escapeHtml(r.result.saved)} (log, versions, recent commands; no documents).`); else this.toast(r.error, "err");
   },
 
-  about() { this.modal("About openswx", `<p><b>openswx</b> 0.1 — open-source parametric CAD with a familiar layout and a built-in MCP server for agents.</p><p>Geometry: OpenCASCADE (via build123d/OCP). Not affiliated with Dassault Systèmes.</p><p>Licensed under the Apache License 2.0; third-party notices are in the NOTICE file that comes with openswx.</p>`, null, "help"); },
+  about() { this.modal("About openswx", `<p><b>openswx</b> 0.1, open-source parametric CAD with a familiar layout and a built-in MCP server for agents.</p><p>Geometry: OpenCASCADE (via build123d/OCP). Not affiliated with Dassault Systèmes.</p><p>Licensed under the Apache License 2.0; third-party notices are in the NOTICE file that comes with openswx.</p>`, null, "help"); },
 };
 
 export function installFiles(App) {

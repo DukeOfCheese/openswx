@@ -294,7 +294,7 @@ const MIXIN = {
     const frow = el("div", "pm-row"); frow.append(filt); b.append(frow);
     const pts = this.sk.pts(), E = sk.entities;
     for (const r of shown) {
-      const row = el("div", "pm-sel-item" + (failing.has(r.id) ? " err" : "") + (isDangling(r) ? " dangling" : ""), `<span>${cap(r.type)} — ${escapeHtml(r.refs.join(", "))}${isDangling(r) ? " (dangling)" : ""}</span>`); const x = el("span", "x", "&#10005;");
+      const row = el("div", "pm-sel-item" + (failing.has(r.id) ? " err" : "") + (isDangling(r) ? " dangling" : ""), `<span>${cap(r.type)} - ${escapeHtml(r.refs.join(", "))}${isDangling(r) ? " (dangling)" : ""}</span>`); const x = el("span", "x", "&#10005;");
       x.onclick = async () => { await this.run("sketch_delete", { sketch: this.sk.name, item: r.id }); this.deleteRelationsPM(); };
       row.onmouseenter = () => { // show what the relation is on
         this.vp.setSelection(r.refs.filter((id) => E[id]).map((id) => ({ kind: "sketch", id, sketch: this.sk.name })));

@@ -142,8 +142,8 @@ const MIXIN = {
     this.modal("Static Study - Results", `<div class="kv"><div>Mesh</div><div>${r.elements} ${(r.mesh || "").startsWith("tetra") ? "quadratic tetrahedra, curvature-based" : "hex elements (voxel)"}, ${r.nodes} nodes (size ${r.element_size.toFixed(3)} mm)</div>
       <div>Max displacement</div><div><b>${r.max_displacement.toExponential(4)} mm</b></div>
       <div>Max von Mises stress</div><div><b>${r.max_von_mises.toFixed(3)} MPa</b></div>
-      <div>Yield strength</div><div>${r.yield_strength || "—"} MPa</div>
-      <div>Factor of safety</div><div><b style="color:${(r.factor_of_safety ?? 9) < 1 ? "#d0312d" : "#2f9e44"}">${r.factor_of_safety?.toFixed(3) ?? "—"}</b></div>
+      <div>Yield strength</div><div>${r.yield_strength || "-"} MPa</div>
+      <div>Factor of safety</div><div><b style="color:${(r.factor_of_safety ?? 9) < 1 ? "#d0312d" : "#2f9e44"}">${r.factor_of_safety?.toFixed(3) ?? "-"}</b></div>
       <div>Reaction (N)</div><div>${r.reaction.map((v) => v.toFixed(2)).join(", ")}</div></div>`, () => this.simPlot("stress"), "sim_run");
   },
 
@@ -344,7 +344,7 @@ const MIXIN = {
     const r = await this.evalCall("check_geometry"); if (!r) return;
     this.modal("Check Entity", `<div class="kv"><div>Result</div><div><b style="color:${r.valid ? "#2f9e44" : "#d0312d"}">${r.valid ? "No invalid geometry found" : "Problems found"}</b></div>
       <div>Solids / faces / edges</div><div>${r.solids} / ${r.faces} / ${r.edges}</div>
-      <div>Minimum edge length</div><div>${r.min_edge_length ?? "—"} mm</div><div>Minimum radius of curvature</div><div>${r.min_radius ?? "—"} mm</div></div>
+      <div>Minimum edge length</div><div>${r.min_edge_length ?? "-"} mm</div><div>Minimum radius of curvature</div><div>${r.min_radius ?? "-"} mm</div></div>
       ${r.issues.length ? `<ul>${r.issues.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>` : ""}`, null, "check");
   },
 
@@ -356,7 +356,7 @@ const MIXIN = {
 
   massProps() {
     this.api("/api/command", { name: "get_mass_properties", args: {} }).then((r) => {
-      if (r.ok) this.modal(`Mass Properties — ${this.model.name}`, massHtml(r.result, true), null, "mass");
+      if (r.ok) this.modal(`Mass Properties - ${this.model.name}`, massHtml(r.result, true), null, "mass");
     });
   },
 

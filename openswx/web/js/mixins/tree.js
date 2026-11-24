@@ -462,7 +462,7 @@ const MIXIN = {
     const r = await this.api("/api/command", { name: "get_equations", args: {} });
     if (!r.ok) return this.toast(r.error, "err");
     const eq = r.result;
-    const f = (v) => (v === null || v === undefined ? "—" : (+v).toFixed(3).replace(/\.?0+$/, ""));
+    const f = (v) => (v === null || v === undefined ? "-" : (+v).toFixed(3).replace(/\.?0+$/, ""));
     const dims = Object.entries(eq.dimensions || {}).map(([k, v]) => `<option value="${escapeHtml(k)}">${escapeHtml(k)} = ${f(v)}</option>`).join("");
     this.modal("Equations, Global Variables, and Dimensions", `
       <div class="tp-h">Global Variables</div>
