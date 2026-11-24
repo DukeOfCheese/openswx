@@ -55,11 +55,13 @@
 
     <aside id="taskpane" class="collapsed">
       <div id="tp-tabs">
+        <button class="tp-tab hidden" data-pane="people" title="People in this part" aria-label="People in this part"></button>
         <button class="tp-tab" data-pane="agent" title="Agent activity (MCP)" aria-label="Agent activity (MCP)"></button>
         <button class="tp-tab" data-pane="props" title="Mass Properties" aria-label="Mass Properties"></button>
         <button class="tp-tab" data-pane="help" title="Shortcuts" aria-label="Shortcuts"></button>
       </div>
       <div id="tp-body">
+        <div id="tp-people" class="tp-pane hidden"></div>
         <div id="tp-agent" class="tp-pane"></div>
         <div id="tp-props" class="tp-pane hidden"></div>
         <div id="tp-help" class="tp-pane hidden"></div>

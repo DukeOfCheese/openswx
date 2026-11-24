@@ -64,7 +64,7 @@ const MIXIN = {
   },
 
   buildTaskPane() {
-    const keys = { agent: "agent", props: "mass", help: "keyboard" };
+    const keys = { people: "people", agent: "agent", props: "mass", help: "keyboard" };
     document.querySelectorAll(".tp-tab").forEach((b) => { b.innerHTML = icon(keys[b.dataset.pane]); b.onclick = () => this.showTask(b.dataset.pane); });
     this.renderHelpPane();
   },
@@ -92,12 +92,14 @@ const MIXIN = {
     tp.classList.toggle("collapsed", same);
     document.querySelectorAll(".tp-tab").forEach((b) => b.classList.toggle("active", !same && b.dataset.pane === p));
     document.querySelector(`.tp-tab[data-pane="${p}"] .dot`)?.remove();
-    for (const id of ["agent", "props", "help"]) $(`#tp-${id}`).classList.toggle("hidden", id !== p);
+    document.querySelectorAll(".tp-tab").forEach((b) => b.setAttribute("aria-pressed", String(!same && b.dataset.pane === p)));
+    for (const id of ["people", "agent", "props", "help"]) $(`#tp-${id}`).classList.toggle("hidden", id !== p);
     requestAnimationFrame(() => this.vp.resize()); this.renderTaskPane();
   },
 
   async renderTaskPane() {
     if ($("#taskpane").classList.contains("collapsed")) return;
+    if (!$("#tp-people").classList.contains("hidden")) this.collabRenderPeople(this.collabDoc?.() || null);
     if (!$("#tp-agent").classList.contains("hidden")) {
       const res = await this.api("/api/command", { name: "get_activity", args: { limit: 60 } });
       const log = res.ok ? res.result.log.slice().reverse() : [];

@@ -212,7 +212,8 @@ Several people can edit the same part at the same time. It is built into the des
    open it, at any time.
 
 While you work, each change reaches the others as it is made and their pointers glide over the model with a
-name bubble. A sketch or feature someone has open is locked for everyone else, and Undo takes back only your
+name bubble. The **People** pane in the Task Pane on the right (its tab shows how many are in the part) lists
+everyone, with what each is editing; click someone to follow their view. A sketch or feature someone has open is locked for everyone else, and Undo takes back only your
 own changes. **Collaborate → History** lists every change with its author; name a version, or restore one.
 Agents take part too: the `collab` toolset gives them the same commands.
 
