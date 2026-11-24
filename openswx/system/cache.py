@@ -14,6 +14,7 @@ from pathlib import Path
 LIMIT = 1 << 30
 _PRUNE_EVERY = 60.0
 _TOUCH_EVERY = 3600.0
+_RACY_NS = 2_000_000_000
 _DIGEST_MAX = 256
 _TAG: list = [None]
 _PRUNE_AT = 0.0
@@ -75,7 +76,8 @@ def _digest(path: Path) -> str | None:
         return None
     memo = (str(path), st.st_size, st.st_mtime_ns, st.st_ctime_ns, getattr(st, "st_ino", 0))
     hit = _DIGESTS.get(memo)
-    if hit is not None:
+    # a file modified recently can change again inside the filesystem timestamp resolution
+    if hit is not None and st.st_mtime_ns <= time.time_ns() - _RACY_NS:
         _DIGESTS.move_to_end(memo)
         return hit
     try:

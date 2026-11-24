@@ -186,7 +186,9 @@ def test_disk_cache_for_files(tmp_path, monkeypatch):
     assert cache.clear() == 3
 
 
-def test_disk_cache_hashes_a_file_once(tmp_path, monkeypatch):
+def test_disk_cache_rehashes_recent_files(tmp_path, monkeypatch):
+    import os
+    import time
     from openswx.system import cache
     src = tmp_path / "part.bin"
     src.write_bytes(b"x" * 1000)
@@ -199,11 +201,15 @@ def test_disk_cache_hashes_a_file_once(tmp_path, monkeypatch):
         return digest(*args, **kwargs)
 
     monkeypatch.setattr(cache.hashlib, "file_digest", counted)
-    assert cache.key(str(src), "body") and cache.key(str(src), "history")
-    assert len(calls) == 1
+    before = cache.key(str(src), "body")
     src.write_bytes(b"y" * 1000)
-    cache.key(str(src), "body")
-    assert len(calls) == 2
+    assert cache.key(str(src), "body") != before
+    old = time.time() - 10
+    os.utime(src, (old, old))
+    calls.clear()
+    first = cache.key(str(src), "body")
+    assert cache.key(str(src), "history") and len(calls) == 1
+    assert first
 
 
 def test_disk_cache_prunes_at_most_once_a_minute(tmp_path, monkeypatch):
