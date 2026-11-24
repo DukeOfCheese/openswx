@@ -195,7 +195,7 @@ Help > Save Diagnostic Report: a .zip with the application log (commands, timing
 agent_connection_info(port: int = 8765)
 ```
 
-Help > Agent (MCP) Setup: how agents connect to this installation. `stdio` is the command a chat app such as Claude Desktop starts (with openswx open it relays to the open window, so the edits show live there); `http` is the endpoint for clients that can reach this computer (Claude Code); `claude_desktop_config` is where Claude Desktop keeps its MCP servers on this system.
+Help > Agent (MCP) Setup: how agents connect to this installation. `stdio` is the command a chat app such as Claude Desktop starts (with openswx open it relays to the open window, so the edits show live there); `http` is the endpoint for clients that can reach this computer (Claude Code); `claude_desktop_config` is where Claude Desktop keeps its MCP servers on this system; `token` is this user's secret for the HTTP endpoint and `token_command` the full command that prints it (shown only in the app's own window: not an MCP tool, and refused on view-only links).
 
 
 ## Queries
