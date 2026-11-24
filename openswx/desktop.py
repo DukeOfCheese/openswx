@@ -115,7 +115,7 @@ class DesktopApi:
             return {"cancelled": True}
         try:
             return {"ok": True, "result": S.call("save_part", {"path": path}, "ui")}
-        except S.CommandError as exc:
+        except (S.CommandError, OSError) as exc:  # (OSError: a folder that cannot be written, say)
             return {"ok": False, "error": str(exc)}
 
     def export(self, fmt):

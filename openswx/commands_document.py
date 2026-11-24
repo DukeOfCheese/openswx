@@ -182,9 +182,11 @@ def _open(p: Path, history: bool) -> dict:
 
 @command(category="document")
 def save_part(path: str | None = None) -> dict:
-    """Save the active document (part .oswprt or assembly .oswasm), optionally to a new path (Save As). A cloud
-    part (live collaboration) is kept by its server and needs no saving: with a path, this writes a local copy of
-    it, and it stays the cloud part."""
+    """Save the active document (part .oswprt or assembly .oswasm). path: the file to write (Save As); the
+    extension is added when missing. Without path the document is written to the file it was opened from or last
+    saved to; a document never saved to a file needs a path, and gets an error that says so. Later saves without
+    path go to the file last written. A cloud part (live collaboration) is kept by its server and needs no
+    saving: with a path, this writes a local copy of it, and it stays the cloud part. Returns {"saved": path}."""
     d = APP.active_doc
     c = getattr(d, "_collab", None)
     if c is not None and not getattr(c, "closed", True):
@@ -195,6 +197,10 @@ def save_part(path: str | None = None) -> dict:
         from . import recent
         recent.add(saved)
         return {"saved": saved, "copy": True}
+    if not path and not getattr(d, "path", None):
+        kind = getattr(d, "kind", "part")
+        raise DocumentError(f"{d.name} has never been saved to a file, so there is nowhere to save it: give the "
+                            f"path argument (the file to write, e.g. {d.name}{'.oswasm' if kind == 'assembly' else '.oswprt'})")
     saved = d.save(path)
     if APP.active != d.name:
         APP.documents[d.name] = APP.documents.pop(APP.active)
