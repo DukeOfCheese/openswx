@@ -184,3 +184,27 @@ def test_disk_cache_for_files(tmp_path, monkeypatch):
     src.write_bytes(b"two")  # the file changed: a new key, nothing cached for it
     assert cache.key(str(src), "x") != k and cache.get_json("history", cache.key(str(src), "x")) is None
     assert cache.clear() == 3
+
+
+def test_suppress_with_int_survives_undo_and_reopen(tmp_path):
+    import json
+    S.new_part("Suppressed")
+    sk = S.create_sketch("Top")["sketch"]
+    S.sketch_rectangle(sk, [0, 0], [40, 20])
+    S.extrude(sk, depth=10)
+    S.suppress_feature("Boss-Extrude1", 1)
+    S.undo()
+    S.suppress_feature("Boss-Extrude1", 1)
+    feature = next(f for f in S.get_model()["features"] if f["name"] == "Boss-Extrude1")
+    assert feature["suppressed"] is True
+    path = tmp_path / "suppressed.oswprt"
+    S.save_part(str(path))
+    S.open_part(str(path))
+    feature = next(f for f in S.get_model()["features"] if f["name"] == "Boss-Extrude1")
+    assert feature["suppressed"] is True
+    data = json.loads(path.read_text())
+    next(f for f in data["features"] if f["name"] == "Boss-Extrude1")["suppressed"] = 1
+    path.write_text(json.dumps(data))
+    S.open_part(str(path))
+    feature = next(f for f in S.get_model()["features"] if f["name"] == "Boss-Extrude1")
+    assert feature["suppressed"] is True
