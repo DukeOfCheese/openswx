@@ -27,7 +27,7 @@ _PART_TYPES = {"name": str, "units": str, "material": dict, "appearance": dict, 
                "configurations": dict, "folders": list, "named_views": dict, "pmi": list, "render": dict,
                "tolerances": dict, "requirements": list, "blocks": dict, "display_states": dict}
 _TYPE_WORDS = {str: "a string", bool: "true or false", list: "a list", dict: "an object"}
-_FEATURE_TYPES = {"name": str, "type": str, "params": dict, "suppressed": bool}
+_FEATURE_TYPES = {"name": str, "type": str, "params": dict}
 
 DEFAULT_TREE = ["History", "Sensors", "Annotations", "Material", "Front Plane", "Top Plane", "Right Plane", "Origin"]
 CONSUMES_SKETCH = {"extrude", "cut_extrude", "revolve", "cut_revolve", "sweep", "cut_sweep", "loft", "cut_loft",
@@ -149,6 +149,10 @@ class PartDocument:
                 if not isinstance(f.get(key), typ):
                     raise DocumentError(f"feature {i} ({f.get('name') or 'unnamed'}): "
                                         f"{key} must be {_TYPE_WORDS[typ]}, not {type(f.get(key)).__name__}")
+            suppressed = f.get("suppressed")  # (0 / 1 as well: files written while it could be stored as a number)
+            if not (isinstance(suppressed, bool) or (isinstance(suppressed, int) and suppressed in (0, 1))):
+                raise DocumentError(f"feature {i} ({f.get('name') or 'unnamed'}): "
+                                    f"suppressed must be true or false, not {type(suppressed).__name__}")
             if f.get("id") is not None and not isinstance(f["id"], str):
                 raise DocumentError(f"feature {i} ({f['name']}): id must be a string, not {type(f['id']).__name__}")
         for name, cfg in (d.get("configurations") or {}).items():
@@ -178,11 +182,15 @@ class PartDocument:
         self.drawing = d.get("drawing", {})
         self.study = d.get("study", {"fixtures": [], "loads": [], "element_size": None})
         self.features = d.get("features", [])
+        for f in self.features:
+            f["suppressed"] = bool(f.get("suppressed", False))
         self.rollback = d.get("rollback")
         self.counters = d.get("counters", {})
         self.next_id = d.get("next_id", len(self.features) + 1)
         self.variables = d.get("variables", {})
         self.configurations = d.get("configurations", {"Default": {"suppressed": {}, "values": {}}})
+        for cfg in self.configurations.values():
+            cfg["suppressed"] = {k: bool(v) for k, v in (cfg.get("suppressed") or {}).items()}
         self.active_config = d.get("active_config", "Default")
         self.folders = d.get("folders", [])
         self.design_table = d.get("design_table")
@@ -422,9 +430,9 @@ class PartDocument:
         self._checkpoint()
         config = config or self.active_config
         if config == "Default":
-            feat["suppressed"] = suppressed
+            feat["suppressed"] = bool(suppressed)
         else:
-            self._config(config)["suppressed"][feat["name"]] = suppressed
+            self._config(config)["suppressed"][feat["name"]] = bool(suppressed)
         self.rebuild()
 
     def set_variable(self, name: str, expression) -> None:
