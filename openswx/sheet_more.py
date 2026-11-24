@@ -1,4 +1,4 @@
-"""Sheet metal: Rip and Vent.
+"""Sheet metal: Rip, Vent, Unfold and Fold.
 
 Rip opens a gap along the corner edges of a hollow part (the first step of converting a shelled box to sheet
 metal). Vent cuts an opening through the sheet from a sketched outline, leaving straight ribs across it.
@@ -12,7 +12,7 @@ from build123d import Face, Plane, Vector, Wire, extrude
 from .features import Ctx, FeatureError, _sketch, apply_op
 from .geom import resolve_edge
 
-NAME_PREFIX = {"rip": "Rip", "vent": "Vent"}
+NAME_PREFIX = {"rip": "Rip", "vent": "Vent", "unfold": "Unfold", "fold": "Fold"}
 
 
 def _wall_depth(body, start: Vector, d: Vector, reach: float) -> float:
@@ -114,4 +114,55 @@ def build_vent(ctx: Ctx, p: dict, name: str) -> None:
     ctx.tools[name] = [("cut", x) for x in tools]
 
 
-BUILDERS = {"rip": build_rip, "vent": build_vent}
+def _base(key: str) -> str:
+    return key.split("#")[0]  # (a jog keeps its two bends as "Jog1" and "Jog1#2")
+
+
+def build_unfold(ctx: Ctx, p: dict, name: str) -> None:
+    """Unfold: the listed bends (features before this one) are laid flat; features after it work on the flat
+    sheet until a Fold bends them back. The geometry is done by the bends themselves (the rebuild builds them
+    flat); this feature checks the list."""
+    if ctx.sheet is None:
+        raise FeatureError("insert a Base Flange first")
+    bends = p.get("bends") or []
+    if not bends:
+        raise FeatureError("pick the bends to unfold")
+    if ctx.flat:
+        return
+    pend = {_base(k) for k in ctx.sheet.get("unfolded", {})}
+    for b in bends:
+        if b not in pend:
+            raise FeatureError(f"{b} is not a bend (edge flange, hem, sketched bend or jog) before this Unfold")
+    ctx.info[name] = {"bends": list(bends)}
+
+
+def build_fold(ctx: Ctx, p: dict, name: str) -> None:
+    """Fold: bend back the listed unfolded bends (default: all of them), in the order they were made. Holes
+    and notches cut across a bend zone while it was flat are wrapped onto the bend."""
+    from .features import _bend
+    if ctx.sheet is None:
+        raise FeatureError("insert a Base Flange first")
+    if ctx.flat:
+        return  # the flat pattern stays flat
+    pend = dict(ctx.sheet.get("unfolded", {}))
+    want = p.get("bends") or sorted({_base(k) for k in pend}, key=lambda b: [_base(k) for k in pend].index(b))
+    keys = [k for k in pend if _base(k) in want]
+    missing = [b for b in want if b not in {_base(k) for k in keys}]
+    if missing or not keys:
+        raise FeatureError(f"nothing unfolded to fold: {', '.join(missing) or 'no bends'} (add an Unfold before this Fold)")
+    arcs = []
+    for k in keys:
+        e = pend.pop(k)
+        a, u, n, m = (Vector(*e[x]) for x in ("a", "u", "n", "m"))
+        BA, arc, pt, vv = _bend(ctx, a, u, n, m, e["phi"], e["r"], e["up"])
+        arcs.append(arc)
+        for j, o in list(pend.items()):  # bends on the side that moved move with it
+            if (Vector(*o["a"]) - a).dot(m) > BA / 2:
+                pend[j] = {**o, "a": list(pt(Vector(*o["a"]))), "u": list(vv(Vector(*o["u"]))),
+                           "n": list(vv(Vector(*o["n"]))), "m": list(vv(Vector(*o["m"])))}
+    ctx.sheet["unfolded"] = pend
+    ctx.tools[name] = [("add", x) for x in arcs]
+    ctx.info[name] = {"bends": sorted({_base(k) for k in keys}, key=lambda b: [_base(k) for k in keys].index(b))}
+
+
+BUILDERS = {"rip": build_rip, "vent": build_vent, "unfold": build_unfold, "fold": build_fold}

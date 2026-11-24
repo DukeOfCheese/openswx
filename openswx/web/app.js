@@ -11,7 +11,7 @@ import { DEFAULT_KEYS, SHORTCUTS, comboOf, conflicts, effectiveKeys, keyTable } 
 const $ = (s) => document.querySelector(s);
 const TYPE_ICON = { sketch: "sketch_item", extrude: "extrude", cut_extrude: "cut_extrude", revolve: "revolve", cut_revolve: "cut_revolve",
   fillet: "fillet", variable_fillet: "fillet", chamfer: "chamfer", shell: "shell", hole: "hole", linear_pattern: "linear_pattern", circular_pattern: "circular_pattern",
-  sketch_pattern: "sketch_pattern", curve_pattern: "curve_pattern", table_pattern: "table_pattern", fill_pattern: "fill_pattern", mirror: "mirror", plane: "plane_item", ref_axis: "ref_axis", ref_point: "ref_point", csys: "csys", sketch3d: "sketch3d", helix: "helix", hem: "hem", rip: "rip", vent: "vent", sketched_bend: "sketched_bend",
+  sketch_pattern: "sketch_pattern", curve_pattern: "curve_pattern", table_pattern: "table_pattern", fill_pattern: "fill_pattern", mirror: "mirror", plane: "plane_item", ref_axis: "ref_axis", ref_point: "ref_point", csys: "csys", sketch3d: "sketch3d", helix: "helix", hem: "hem", rip: "rip", vent: "vent", unfold: "unfold", fold: "fold", sketched_bend: "sketched_bend",
   revolved_surface: "revolved_surface", swept_surface: "swept_surface", lofted_surface: "lofted_surface", boundary_surface: "boundary_surface", planar_surface: "planar_surface",
   filled_surface: "filled_surface", offset_surface: "offset_surface", knit_surface: "knit_surface", trim_surface: "trim_surface", end_cap: "end_cap", gusset: "gusset", vertex_chamfer: "vertex_chamfer", face_fillet: "face_fillet",
   full_round_fillet: "full_round_fillet", wrap: "wrap", jog: "jog", corner_relief: "corner_relief", dimple: "dimple", miter_flange: "miter_flange", louver: "louver", lance: "lance", extruded_flange: "extruded_flange", form_rib: "form_rib", auto_corner_relief: "corner_relief", import: "import", sweep: "sweep", cut_sweep: "cut_sweep", loft: "loft", cut_loft: "cut_loft",
@@ -20,7 +20,7 @@ const TYPE_ICON = { sketch: "sketch_item", extrude: "extrude", cut_extrude: "cut
   projected_curve: "intersection_curve", composite_curve: "sketch3d", xyz_curve: "spline", split_line: "intersection_curve", intersect: "knit_surface", indent: "dimple" };
 const FEATURE_TO_SPEC = { extrude: "extrude", cut_extrude: "cut_extrude", revolve: "revolve", cut_revolve: "cut_revolve", fillet: "fillet", variable_fillet: "fillet",
   chamfer: "chamfer", shell: "shell", hole: "hole", linear_pattern: "linear_pattern", circular_pattern: "circular_pattern", sketch_pattern: "sketch_pattern", curve_pattern: "curve_pattern", table_pattern: "table_pattern", fill_pattern: "fill_pattern", mirror: "mirror", plane: "plane", ref_axis: "ref_axis", ref_point: "ref_point", csys: "csys", helix: "helix",
-  hem: "hem", rip: "rip", vent: "vent", sketched_bend: "sketched_bend", revolved_surface: "revolved_surface", swept_surface: "swept_surface", lofted_surface: "lofted_surface",
+  hem: "hem", rip: "rip", vent: "vent", unfold: "unfold", fold: "fold", sketched_bend: "sketched_bend", revolved_surface: "revolved_surface", swept_surface: "swept_surface", lofted_surface: "lofted_surface",
   planar_surface: "planar_surface", filled_surface: "filled_surface", offset_surface: "offset_surface", knit_surface: "knit_surface", trim_surface: "trim_surface",
   end_cap: "end_cap", gusset: "gusset", vertex_chamfer: "vertex_chamfer", face_fillet: "face_fillet", full_round_fillet: "full_round_fillet", wrap: "wrap",
   jog: "jog", corner_relief: "corner_relief", dimple: "dimple", miter_flange: "miter_flange", louver: "louver", lance: "lance",
@@ -232,7 +232,7 @@ class App {
       ["Reference Geometry > Point...", "", F("ref_point")], ["Reference Geometry > Mate Reference...", "", F("mate_reference")],
       ["Reference Geometry > Connection Point...", "", F("connection_point")],
       ["Sheet Metal > Base Flange/Tab...", "", F("base_flange")], ["Sheet Metal > Edge Flange...", "", F("edge_flange")], ["Sheet Metal > Miter Flange...", "", F("miter_flange")],
-      ["Sheet Metal > Hem...", "", F("hem")], ["Sheet Metal > Rip...", "", F("rip")], ["Sheet Metal > Vent...", "", F("vent")], ["Sheet Metal > Jog...", "", F("jog")], ["Sheet Metal > Sketched Bend...", "", F("sketched_bend")],
+      ["Sheet Metal > Hem...", "", F("hem")], ["Sheet Metal > Unfold...", "", F("unfold")], ["Sheet Metal > Fold...", "", F("fold")], ["Sheet Metal > Rip...", "", F("rip")], ["Sheet Metal > Vent...", "", F("vent")], ["Sheet Metal > Jog...", "", F("jog")], ["Sheet Metal > Sketched Bend...", "", F("sketched_bend")],
       ["Sheet Metal > Flatten / Fold", "", () => this.run("flatten", { flat: !this.model?.flattened })],
       ["Weldments > Structural Member...", "", F("structural_member")], ["Weldments > End Cap...", "", F("end_cap")], ["Weldments > Gusset...", "", F("gusset")],
       ["Molds > Parting Line...", "", F("parting_line")], ["Molds > Shut-Off Surfaces...", "", F("shut_off_surfaces")],
@@ -395,7 +395,8 @@ class App {
       "Sheet Metal": [[B("base_flange", "Base<br>Flange/Tab", () => this.feature("base_flange")), B("edge_flange", "Edge<br>Flange", () => this.feature("edge_flange")),
           { stack: [B("hem", "Hem", () => this.feature("hem")), B("sketched_bend", "Sketched Bend", () => this.feature("sketched_bend")),
             B("jog", "Jog", () => this.feature("jog"))] },
-          { stack: [B("rip", "Rip", () => this.feature("rip")), B("vent", "Vent", () => this.feature("vent"))] },
+          { stack: [B("unfold", "Unfold", () => this.feature("unfold")), B("fold", "Fold", () => this.feature("fold")), B("rip", "Rip", () => this.feature("rip"))] },
+          { stack: [B("vent", "Vent", () => this.feature("vent"))] },
           { stack: [B("miter_flange", "Miter Flange", () => this.feature("miter_flange")), B("corner_relief", "Corner Relief", () => this.feature("corner_relief")),
             B("dimple", "Forming Tool (Dimple)", () => this.feature("dimple"))] },
           { stack: [B("louver", "Louver", () => this.feature("louver")), B("lance", "Bridge Lance", () => this.feature("lance")),
@@ -1809,6 +1810,10 @@ class App {
     if (["projected_curve", "split_line"].includes(key) && skItems.length) initial = { sketch: skItems.slice(0, 1), ...initial };
     const edge = this.selection.find((s) => s.kind === "edge");
     if (["edge_flange", "hem"].includes(key) && edge) initial = { edge: [{ kind: "edge", label: edge.id, value: edge.id }], ...initial };
+    if (["unfold", "fold"].includes(key)) { // bends picked in the tree before the command
+      const bends = this.selection.filter((s) => s.kind === "feature" && ["edge_flange", "hem", "sketched_bend", "jog"].includes(s.type));
+      initial = { bends: bends.map((s) => ({ kind: "feature", label: s.id, value: s.id })), ...initial };
+    }
     if (key === "gusset") initial = { faces: this.selection.filter((s) => s.kind === "face").slice(0, 2).map((s) => ({ kind: "face", label: s.id, value: s.id })), ...initial };
     if (["sketched_bend", "planar_surface", "revolved_surface"].includes(key) && skItems.length) initial = { sketch: skItems.slice(0, 1), ...initial };
     if (key === "filled_surface" && skItems.length) initial = { boundary: skItems.slice(0, 1), ...initial };
