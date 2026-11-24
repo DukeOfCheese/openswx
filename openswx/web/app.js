@@ -6,6 +6,7 @@ import { Sketcher } from "./sketcher.js";
 import { DrawingEditor } from "./drawing.js";
 import { MORE_FEATURE_TO_SPEC, MORE_SPECS, MORE_TYPE_ICON, installMore, menuTree, renderMenu } from "./more.js";
 import { installMfg } from "./mfg.js";
+import { installHome } from "./home.js";
 import { DEFAULT_KEYS, SHORTCUTS, comboOf, conflicts, effectiveKeys, keyTable } from "./keys.js";
 
 const $ = (s) => document.querySelector(s);
@@ -59,9 +60,10 @@ class App {
     this.renderCommandManager(); this.renderConfirm();
     this.connect();
     this.loadUserSettings();
+    this.homeStart();
     this.checkRecovery();
     // leaving with unsaved changes asks first (the desktop window has its own check on close)
-    window.addEventListener("beforeunload", (e) => { if (!this.desk && (this.docs || []).some((d) => d.dirty)) { e.preventDefault(); e.returnValue = ""; } });
+    window.addEventListener("beforeunload", (e) => { if (!this.desk && (this.docs?.documents || []).some((d) => d.dirty)) { e.preventDefault(); e.returnValue = ""; } });
   }
 
   // Document Recovery: autosaved copies left by a session that crashed or was killed
@@ -154,6 +156,7 @@ class App {
     if (this.measureOpen) this.updateMeasure();
     if (this.lastKind !== (this.model.kind || "part")) { this.lastKind = this.model.kind || "part"; this.renderCommandManager(); }
     this.renderTree(); this.renderTitle(); this.renderStatus(); this.renderQuickAccessState(); this.renderTaskPane(); this.renderConfirm();
+    this.homeCheck();
     if (this.model.drawing_document && this.openedDrawingDoc !== this.model.drawing_document) { // a .oswdrw was opened: show it
       this.openedDrawingDoc = this.model.drawing_document; this.dwg.open();
     } else if (this.model.show_drawing) this.dwg.open(); // a SOLIDWORKS drawing was opened
@@ -169,6 +172,7 @@ class App {
   }
 
   onAgent(entry) {
+    this.homeHide(); // (an agent at work: show what it does)
     this.toast(`<b>Agent</b> ${escapeHtml(entry.command)}${entry.ok ? "" : ` failed: ${escapeHtml(entry.message)}`}`, entry.ok ? "agent" : "err");
     const dot = document.querySelector('.tp-tab[data-pane="agent"]');
     if (dot && $("#taskpane").classList.contains("collapsed") && !dot.querySelector(".dot")) dot.append(el("span", "dot"));
@@ -255,7 +259,7 @@ class App {
       ["Routing > From-To Wire List...", "", () => this.fromToDialog()], ["Routing > Build Harness", "", () => this.harnessBuild()], "-",
       ["Exploded View...", "", () => this.explodeDialog()], ["Alternate Position...", "", () => this.altPositionsDialog()]];
     const M = {
-      File: () => [["New Part...", "Ctrl+N", () => this.newPart()], ["New Assembly...", "", () => this.newAssembly()], ["Open...", "Ctrl+O", () => this.openFile()],
+      File: () => [["Home", "Ctrl+Shift+H", () => this.homeShow()], "-", ["New Part...", "Ctrl+N", () => this.newPart()], ["New Assembly...", "", () => this.newAssembly()], ["Open...", "Ctrl+O", () => this.openFile()],
         ["Import STEP...", "", () => this.openFile("import")], ["Make Drawing from Part/Assembly", "", () => this.makeDrawing()], "-",
         ["Save", "Ctrl+S", () => this.save()], ["Save As...", "", () => this.save(true)], ["Download .oswprt", "", () => window.open("/api/download?format=oswprt")],
         ...(asm() ? [["Pack and Go...", "", () => this.packAndGoDialog()]] : []), "-",
@@ -2510,7 +2514,11 @@ class App {
   }
 
   // ================================================================== files / dialogs
-  async newPart() { await this.run("new_part"); this.vp.setView("trimetric"); this.vp.zoomFit(); }
+  // New Part: a chooser registered in newPartChoosers (e.g. local or cloud) may take it over by returning true
+  async newPart() {
+    for (const choose of this.newPartChoosers) if (await choose.call(this) === true) return;
+    await this.run("new_part"); this.vp.setView("trimetric"); this.vp.zoomFit();
+  }
 
   bindFileInput() {
     const fi = $("#fileinput");
@@ -2694,13 +2702,14 @@ class App {
       view_orientation: () => this.orientationMenu(),
       rename: () => { const f = this.selection.find((x) => x.kind === "feature"); if (f) this.renameFeature(f.id); },
       command_search: () => { const i = $("#cmdsearch"); i?.focus(); i?.select(); },
-      focus_tree: () => this.focusTree(), open_menu: () => this.menuKeyOpen(0),
+      focus_tree: () => this.focusTree(), open_menu: () => this.menuKeyOpen(0), home: () => this.homeShow(),
     };
     this.bindTreeKeys();
     document.addEventListener("keydown", (e) => {
       if (this.menuKey(e)) return; // (an open menu takes the arrows, Enter and Escape)
       if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
       if (!$("#modal").classList.contains("hidden")) return;
+      if (this.homeOpen && e.key === "Escape") return this.homeHide();
       const k = e.key.toLowerCase(), C = e.ctrlKey || e.metaKey;
       // keys with a fixed meaning that depends on what is going on: these come before the customisable ones
       if (e.key === "Escape") {
@@ -2745,7 +2754,9 @@ class App {
 
   applyUserSettings(s) {
     if (!s) return;
-    this.graphics.style.background = `linear-gradient(${s.view_background_top}, ${s.view_background_bottom})`;
+    // the graphics area keeps the theme's own background (light or dark) until the user picks colours
+    const themed = s.view_background_top === "#cfdae8" && s.view_background_bottom === "#ffffff"; // (the settings' defaults)
+    this.graphics.style.background = themed ? "" : `linear-gradient(${s.view_background_top}, ${s.view_background_bottom})`;
     this.vp.setColors({ body: s.view_body_color, edge: s.view_edge_color, hover: s.view_highlight_color, sel: s.view_selection_color });
     this.vp.mouse = { preset: s.mouse_preset || "solidworks", zoomReverse: !!s.mouse_zoom_reverse };
     this.keys = effectiveKeys(s.shortcuts); this.keyMap = keyTable(this.keys);
@@ -2968,6 +2979,10 @@ function massHtml(mp, full = false) {
       <p style="margin-top:8px"><b>Bounding box</b> (${u}): ${mp.bounding_box.min.map((x) => f(L(x), 3)).join(", ")} → ${mp.bounding_box.max.map((x) => f(L(x), 3)).join(", ")}</p>` : "");
 }
 
+// New Part asks these first, in order (none on a plain install): each is called on the App and returns true
+// when it has handled New Part itself (it asked where the part goes, say), anything else to fall through
+App.prototype.newPartChoosers = [];
 installMore(App);
 installMfg(App);
+installHome(App);
 window.app = new App();

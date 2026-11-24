@@ -426,3 +426,50 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .t-row:focus { outline: none; box-shadow: inset 0 0 0 1px var(--accent); }
 .menu-item.kfocus { background: var(--hover); }
 .menu-item.has-sub.kopen > .menu-sub { display: block; }
+
+/* ---------------- Home page (home.js): over the editor (z 40-90: under modals, context menus and toasts) */
+#home { position: fixed; inset: 0; z-index: 70; display: grid; grid-template-columns: 220px minmax(0, 1fr); background: var(--chrome); }
+.hm-side { display: flex; flex-direction: column; gap: 2px; padding: 14px 10px; background: var(--chrome-2); border-right: 1px solid var(--border); }
+.hm-brand { display: flex; align-items: center; gap: 8px; padding: 4px 8px 18px; }
+.hm-brand .brand-cube { width: 26px; height: 26px; }
+.hm-brand .brand-name { font-size: 20px; }
+.hm-tabs { display: flex; flex-direction: column; gap: 2px; }
+.hm-tab { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border: 1px solid transparent; border-radius: 4px; background: none; text-align: left; cursor: pointer; font-size: 13px; }
+.hm-tab svg { width: 20px; height: 20px; flex: none; }
+.hm-tab:hover { background: var(--hover); }
+.hm-tab.active { background: var(--accent-soft); border-color: var(--accent); }
+.hm-fill { flex: 1; }
+.hm-close { color: var(--muted); }
+.hm-panel { overflow: auto; padding: 28px 36px 40px; user-select: text; }
+.hm-panel h1 { margin: 0 0 18px; font-size: 22px; font-weight: 600; }
+.hm-panel h2 { margin: 26px 0 10px; font-size: 14px; font-weight: 600; }
+.hm-panel > * { max-width: 1000px; }
+.hm-head { display: flex; align-items: center; gap: 12px; margin: 26px 0 10px; }
+.hm-head h2 { flex: 1; margin: 0; }
+.hm-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.hm-action { display: grid; grid-template-columns: 36px 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; width: 240px; padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--panel); text-align: left; cursor: pointer; }
+.hm-action svg { grid-row: 1 / 3; width: 32px; height: 32px; }
+.hm-action b { font-size: 13px; }
+.hm-action span { color: var(--muted); font-size: 11px; }
+.hm-action:hover, .hm-tut:hover { background: var(--hover); border-color: var(--accent); }
+.hm-action:focus-visible, .hm-tut:focus-visible, .hm-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hm-files { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; }
+.hm-files th { text-align: left; font-weight: 600; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.hm-files td { padding: 5px 10px; border-bottom: 1px solid var(--chrome-2); white-space: nowrap; }
+.hm-file { cursor: pointer; }
+.hm-file:hover { background: var(--hover); }
+.hm-file.missing { cursor: default; color: var(--muted); }
+.hm-file.missing:hover { background: none; }
+.hm-file.missing .hm-name svg { opacity: .4; }
+.hm-name { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.hm-name svg { width: 18px; height: 18px; }
+.hm-folder { color: var(--muted); max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
+.hm-when { color: var(--muted); }
+.hm-files td:last-child { width: 1px; text-align: right; }
+.hm-remove { visibility: hidden; }
+.hm-file:hover .hm-remove, .hm-file.missing .hm-remove, .hm-remove:focus-visible { visibility: visible; }
+.hm-empty { color: var(--muted); }
+.hm-tuts { display: flex; flex-wrap: wrap; gap: 8px; }
+.hm-tut { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--panel); cursor: pointer; }
+.hm-tut svg { width: 16px; height: 16px; }

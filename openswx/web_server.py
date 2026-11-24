@@ -180,7 +180,7 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
     return app
 
 
-_SAFE_CHARS = re.compile(r"[^A-Za-z0-9 ._()+-]")
+_SAFE_CHARS = re.compile(r"[^\w .()+-]")  # letters and digits of any script survive
 
 
 def _temp_path(filename: str, fallback: str) -> Path:

@@ -5,7 +5,7 @@
 export const SHORTCUTS = [
   // [action, label, default keys, group]
   ["new_part", "New part", "Ctrl+N", "File"], ["open", "Open", "Ctrl+O", "File"], ["save", "Save", "Ctrl+S", "File"],
-  ["close", "Close document", "Ctrl+W", "File"], ["next_document", "Next document", "Ctrl+Tab", "File"],
+  ["close", "Close document", "Ctrl+W", "File"], ["home", "Home page", "Ctrl+Shift+H", "File"], ["next_document", "Next document", "Ctrl+Tab", "File"],
   ["undo", "Undo", "Ctrl+Z", "Edit"], ["redo", "Redo", "Ctrl+Y", "Edit"], ["rebuild", "Rebuild", "Ctrl+B", "Edit"],
   ["force_rebuild", "Rebuild (all features)", "Ctrl+Q", "Edit"], ["rename", "Rename selected feature", "F2", "Edit"],
   ["view_front", "Front view", "Ctrl+1", "View"], ["view_back", "Back view", "Ctrl+2", "View"],

@@ -26,7 +26,8 @@ def server(tmp_path_factory):
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     env = dict(os.environ, OPENSWX_HOME=str(tmp_path_factory.mktemp("home")), OPENSWX_TOKEN=TOKEN,
-               OPENSWX_AUTOSAVE="off", OPENSWX_LOG="off", OPENSWX_PLUGINS="off")
+               OPENSWX_AUTOSAVE="off", OPENSWX_LOG="off", OPENSWX_PLUGINS="off",
+               OPENSWX_SHOW_HOME="0")  # (Home has its own tests: test_ui_home.py)
     proc = subprocess.Popen([sys.executable, "-m", "openswx", "serve", "--port", str(port)], cwd=ROOT, env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     base = f"http://127.0.0.1:{port}"
@@ -211,6 +212,7 @@ def test_view_colours_and_mouse_settings_apply(page):
     assert turned == {"moved": True, "clicks": 1}
     page.evaluate("async () => { await T.run('set_settings', {reset: true}); await window.app.loadUserSettings(); }")
     assert page.evaluate("window.app.vp.mouse") == {"preset": "solidworks", "zoomReverse": False}
+    assert page.evaluate("document.querySelector('#graphics').style.background") == ""  # back to the theme's own
 
 
 def test_keyboard_navigation(page):

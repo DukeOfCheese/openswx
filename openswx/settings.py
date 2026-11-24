@@ -1,8 +1,8 @@
 """User settings (Tools > Options), kept in `<home>/settings.json`.
 
 Each setting has a default, a type and a one-line description; unknown keys in the file are ignored and
-kept. Environment variables win over the file where one exists (OPENSWX_AUTOSAVE, OPENSWX_TOOLSETS), so a
-launch can still be configured from outside.
+kept. Environment variables win over the file where one exists (OPENSWX_AUTOSAVE, OPENSWX_TOOLSETS, and
+OPENSWX_SHOW_HOME for show_home), so a launch can still be configured from outside.
 """
 from __future__ import annotations
 
@@ -29,8 +29,8 @@ SETTINGS = {
     "image_width": {"default": 1600, "min": 100, "max": 8000, "doc": "Width in pixels of exported pictures"},
     "image_height": {"default": 1200, "min": 100, "max": 8000, "doc": "Height in pixels of exported pictures"},
     # view colours (the graphics area's gradient and the model's default, highlight and selection colours)
-    "view_background_top": {"default": "#cfdae8", "kind": "color", "doc": "Graphics area background: top colour"},
-    "view_background_bottom": {"default": "#ffffff", "kind": "color", "doc": "Graphics area background: bottom colour"},
+    "view_background_top": {"default": "#cfdae8", "kind": "color", "doc": "Graphics area background: top colour (left at the default, the theme's own background is used)"},
+    "view_background_bottom": {"default": "#ffffff", "kind": "color", "doc": "Graphics area background: bottom colour (left at the default, the theme's own background is used)"},
     "view_body_color": {"default": "#c4cad3", "kind": "color", "doc": "Colour of bodies with no appearance of their own"},
     "view_edge_color": {"default": "#101010", "kind": "color", "doc": "Colour of model edges"},
     "view_highlight_color": {"default": "#f08a00", "kind": "color", "doc": "Colour of what is under the pointer"},
@@ -41,6 +41,11 @@ SETTINGS = {
     "mouse_zoom_reverse": {"default": False, "doc": "Reverse the wheel: rolling forward zooms in"},
     # keyboard: {action: "Ctrl+Shift+K", ...} overriding the defaults ("" turns a shortcut off); Tools > Customize Keyboard
     "shortcuts": {"default": {}, "doc": "Keyboard shortcuts that differ from the defaults (action -> keys)"},
+    # start-up
+    "show_home": {"default": True, "env": "OPENSWX_SHOW_HOME",
+                  "doc": "Open on the Home page (new, open and recent files) when openswx starts without a file"},
+    "new_part_location": {"default": "local", "choices": ["local", "cloud"],
+                          "doc": "Where New Part creates a part when there is a choice (the last one picked)"},
 }
 
 _COLOR = re.compile(r"#[0-9a-fA-F]{6}")
@@ -101,7 +106,11 @@ def _check(key: str, value):
 
 
 def get(key: str):
-    """A setting's value: the file's if valid, else the default."""
+    """A setting's value: the environment variable's (for a boolean setting that has one), else the file's if
+    valid, else the default."""
+    env = os.environ.get(SETTINGS[key].get("env") or "")
+    if env is not None and env.strip() and isinstance(SETTINGS[key]["default"], bool):
+        return env.strip().lower() not in ("0", "off", "false", "no")
     v = _file().get(key, SETTINGS[key]["default"])
     try:
         return _check(key, v)
