@@ -53,7 +53,21 @@ class Application:
         r = list(self.running.values())
         return min(r, key=lambda e: e[1]) if r else None
 
+    def is_throwaway(self, doc) -> bool:
+        """The part `active_doc` made on demand, still untouched: no features, no unsaved changes, no file."""
+        return (getattr(doc, "_auto", False) and getattr(doc, "kind", "part") == "part" and not doc.features
+                and not doc.dirty and not doc.path)
+
+    def drop_throwaway(self) -> None:
+        """Close the active document if it is still the untouched part made on demand, so opening or creating
+        a document (from the Home page, say) leaves no stray empty Part1 behind."""
+        d = self.documents.get(self.active) if self.active else None
+        if d is not None and self.is_throwaway(d):
+            self.documents.pop(self.active, None)
+            self.active = next(iter(self.documents), None)
+
     def new_document(self, name: str | None = None) -> PartDocument:
+        self.drop_throwaway()
         self._doc_counter += 1
         name = name or f"Part{self._doc_counter}"
         while name in self.documents:
@@ -68,7 +82,7 @@ class Application:
     @property
     def active_doc(self):
         if self.active is None or self.active not in self.documents:
-            self.new_document()
+            self.new_document()._auto = True  # (made on demand: dropped by the next new or opened document while untouched)
         d = self.documents[self.active]
         if getattr(d, "kind", "part") == "assembly":
             d.live_docs = self.documents

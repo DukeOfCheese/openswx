@@ -22,6 +22,7 @@ __all__ = ["new_assembly", "insert_component", "add_mate", "redefine_mate", "edi
 def new_assembly(name: str | None = None) -> dict:
     """Create a new assembly document (File > New > Assembly) and make it active."""
     from .assembly import AssemblyDocument
+    APP.drop_throwaway()
     APP._doc_counter += 1
     name = name or f"Assem{APP._doc_counter}"
     asm = AssemblyDocument(name)

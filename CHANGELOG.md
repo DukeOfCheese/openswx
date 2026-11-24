@@ -8,7 +8,14 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ### Added
 
-- Tools > Customize Keyboard: change or clear the keys of 31 actions (views, zoom, undo, save, selection filters and
+- A Home page when openswx starts without a file: New Part, New Assembly, Open, the recent files (a missing file
+  is greyed out and can be removed from the list) and the tutorials. File > Home or Ctrl+Shift+H brings it back;
+  Escape, any choice on it, or an agent at work hides it. User Settings > show_home turns it off
+  (`OPENSWX_SHOW_HOME=0` for one launch).
+- Commands `recent_files` and `clear_recent_files`: the last 15 documents opened or saved (`<home>/recent.json`).
+- Opening or creating a document closes the empty Part1 made at start-up if it was never touched, so no stray
+  Part1 is left behind.
+- Tools > Customize Keyboard: change or clear the keys of 32 actions (views, zoom, undo, save, selection filters and
   more); clashes are flagged before saving, and the menus and the Task Pane show the keys in use.
 - User Settings: graphics area background, body, edge, highlight and selection colours; a mouse preset
   (SOLIDWORKS-style, Onshape-style, Fusion-style or Blender-style buttons for rotate, pan and zoom); reversing the wheel.
@@ -22,6 +29,7 @@ formats or commands; files are migrated automatically and the change is listed h
 ### Fixed
 
 - Ctrl+Shift+Z (Previous View) ran Undo.
+- Leaving the browser page with unsaved changes did not ask first.
 
 ## 0.2.0 (2026-11-23)
 
