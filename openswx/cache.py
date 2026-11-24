@@ -13,25 +13,35 @@ import hashlib
 import json
 import os
 import sys
+import time
+import uuid
+from collections import OrderedDict
+from functools import lru_cache
 from pathlib import Path
 
-LIMIT = 1 << 30  # bytes kept before the oldest entries are removed
+LIMIT = 1 << 30
+_PRUNE_EVERY = 60.0
+_TOUCH_EVERY = 3600.0
+_RACY_NS = 2_000_000_000
+_DIGEST_MAX = 256
 _TAG: list = [None]
-_MODULES = ("parasolid", "sldprt", "sw_rebuild", "sw_sketch", "sw_tree", "features", "document", "sketch", "naming", "geom")
+_PRUNE_AT = 0.0
+_DIGESTS: OrderedDict[tuple, str] = OrderedDict()
+_TOUCHED: dict[str, float] = {}
 
 
-def folder() -> Path | None:
-    env = os.environ.get("OPENSWX_CACHE")
+@lru_cache(maxsize=8)
+def _folder(env: str | None, platform: str, home: str, local: str | None, xdg: str | None) -> Path | None:
     if env and env.lower() in ("off", "0", "no", "false"):
         return None
     if env:
-        base = Path(env)
-    elif sys.platform == "win32":
-        base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "openswx" / "cache"
-    elif sys.platform == "darwin":
-        base = Path.home() / "Library" / "Caches" / "openswx"
+        base = Path(env).expanduser().resolve()
+    elif platform == "win32":
+        base = Path(local or (Path(home) / "AppData" / "Local")) / "openswx" / "cache"
+    elif platform == "darwin":
+        base = Path(home) / "Library" / "Caches" / "openswx"
     else:
-        base = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "openswx"
+        base = Path(xdg or (Path(home) / ".cache")) / "openswx"
     try:
         base.mkdir(parents=True, exist_ok=True)
     except OSError:
@@ -39,19 +49,23 @@ def folder() -> Path | None:
     return base
 
 
+def folder() -> Path | None:
+    return _folder(os.environ.get("OPENSWX_CACHE"), sys.platform, str(Path.home()),
+                   os.environ.get("LOCALAPPDATA"), os.environ.get("XDG_CACHE_HOME"))
+
+
 def code_tag() -> str:
     """openswx's version and the bytes of the modules whose output is cached (a frozen build: the program)."""
     if _TAG[0] is None:
-        from . import __version__
+        from openswx import __version__
         h = hashlib.sha1(__version__.encode())
         here = Path(__file__).resolve().parent
         found = False
-        for m in _MODULES:
-            src = here / f"{m}.py"
-            if src.exists():
-                h.update(src.read_bytes())
-                found = True
-        if not found:  # (a frozen build has no sources: its executable stands for the code)
+        for src in sorted(here.rglob("*.py")):
+            h.update(src.relative_to(here).as_posix().encode())
+            h.update(src.read_bytes())
+            found = True
+        if not found:
             try:
                 st = Path(sys.executable).stat()
                 h.update(f"{st.st_size}:{st.st_mtime_ns}".encode())
@@ -61,15 +75,36 @@ def code_tag() -> str:
     return _TAG[0]
 
 
+def _digest(path: Path) -> str | None:
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    memo = (str(path), st.st_size, st.st_mtime_ns, st.st_ctime_ns, getattr(st, "st_ino", 0))
+    hit = _DIGESTS.get(memo)
+    # a file modified recently can change again inside the filesystem timestamp resolution
+    if hit is not None and st.st_mtime_ns <= time.time_ns() - _RACY_NS:
+        _DIGESTS.move_to_end(memo)
+        return hit
+    try:
+        with path.open("rb") as f:
+            digest = hashlib.file_digest(f, "sha1").hexdigest()
+    except OSError:
+        return None
+    _DIGESTS[memo] = digest
+    if len(_DIGESTS) > _DIGEST_MAX:
+        _DIGESTS.popitem(last=False)
+    return digest
+
+
 def key(path: str, *what) -> str | None:
     """The cache key for `what` of the file at `path` (None when the file cannot be read or the cache is off)."""
     if folder() is None:
         return None
-    try:
-        data = Path(path).read_bytes()
-    except OSError:
+    digest = _digest(Path(path))
+    if digest is None:
         return None
-    h = hashlib.sha1(data)
+    h = hashlib.sha1(digest.encode())
     h.update(json.dumps([code_tag(), *what], default=str).encode())
     return h.hexdigest()
 
@@ -79,16 +114,43 @@ def _path(kind: str, k: str | None, ext: str) -> Path | None:
     return None if base is None else base / f"{kind}-{k}{ext}"
 
 
+def _touch(p: Path) -> None:
+    now = time.monotonic()
+    last = _TOUCHED.get(str(p))
+    if last is not None and now - last < _TOUCH_EVERY:
+        return
+    try:
+        os.utime(p)
+        _TOUCHED[str(p)] = now
+    except OSError:
+        pass
+    if len(_TOUCHED) > 4096:
+        _TOUCHED.clear()
+
+
+def _write_atomic(p: Path, data: bytes) -> None:
+    tmp = p.with_name(f"{p.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
+    try:
+        tmp.write_bytes(data)
+        os.replace(tmp, p)
+    finally:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+
+
 def get_json(kind: str, k: str | None):
     p = _path(kind, k, ".json")
-    if p is None or not p.exists():
+    if p is None:
         return None
     try:
-        out = json.loads(p.read_text(encoding="utf-8"))
-        os.utime(p)  # (recently used: kept longest)
-        return out
+        with p.open("r", encoding="utf-8") as f:
+            out = json.load(f)
     except (OSError, ValueError):
         return None
+    _touch(p)
+    return out
 
 
 def put_json(kind: str, k: str | None, value) -> None:
@@ -96,10 +158,8 @@ def put_json(kind: str, k: str | None, value) -> None:
     if p is None:
         return
     try:
-        tmp = p.with_name(p.name + ".tmp")
-        tmp.write_text(json.dumps(value), encoding="utf-8")
-        tmp.replace(p)
-        _prune(p.parent)
+        _write_atomic(p, json.dumps(value, separators=(",", ":")).encode())
+        _maybe_prune(p.parent)
     except (OSError, TypeError, ValueError):
         pass
 
@@ -107,7 +167,7 @@ def put_json(kind: str, k: str | None, value) -> None:
 def get_shape(kind: str, k: str | None):
     """(shape, extra) stored by put_shape, or None."""
     p = _path(kind, k, ".brep")
-    if p is None or not p.exists():
+    if p is None:
         return None
     meta = get_json(kind + "-meta", k)
     if meta is None:
@@ -115,7 +175,7 @@ def get_shape(kind: str, k: str | None):
     try:
         from build123d import import_brep
         shape = import_brep(str(p))
-        os.utime(p)
+        _touch(p)
         return shape, meta
     except Exception:
         return None
@@ -125,30 +185,52 @@ def put_shape(kind: str, k: str | None, shape, extra) -> None:
     p = _path(kind, k, ".brep")
     if p is None:
         return
+    tmp = p.with_name(f"{p.stem}.{os.getpid()}.{uuid.uuid4().hex}.part.brep.tmp")
     try:
         from build123d import export_brep
-        tmp = p.with_name(p.stem + ".part.brep")
         export_brep(shape, str(tmp))
-        tmp.replace(p)
+        os.replace(tmp, p)
         put_json(kind + "-meta", k, extra)
     except Exception:
-        pass
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+
+
+def _maybe_prune(base: Path) -> None:
+    global _PRUNE_AT
+    now = time.monotonic()
+    if now - _PRUNE_AT < _PRUNE_EVERY:
+        return
+    _PRUNE_AT = now
+    _prune(base)
 
 
 def _prune(base: Path) -> None:
+    entries = []
+    total = 0
     try:
-        files = [(f.stat().st_mtime, f.stat().st_size, f) for f in base.iterdir() if f.is_file()]
+        with os.scandir(base) as it:
+            for entry in it:
+                if not entry.is_file(follow_symlinks=False) or entry.name.endswith(".tmp"):
+                    continue
+                try:
+                    st = entry.stat()
+                except OSError:
+                    continue
+                entries.append((st.st_mtime, st.st_size, entry.path))
+                total += st.st_size
     except OSError:
         return
-    total = sum(s for _, s, _ in files)
     if total <= LIMIT:
         return
-    for _, s, f in sorted(files):
+    for _, size, path in sorted(entries):
         try:
-            f.unlink()
+            os.unlink(path)
         except OSError:
             continue
-        total -= s
+        total -= size
         if total <= 0.8 * LIMIT:
             break
 
@@ -159,10 +241,14 @@ def clear() -> int:
     n = 0
     if base is None:
         return 0
-    for f in base.iterdir():
-        try:
-            f.unlink()
-            n += 1
-        except OSError:
-            pass
+    try:
+        with os.scandir(base) as it:
+            for entry in it:
+                try:
+                    os.unlink(entry.path)
+                    n += 1
+                except OSError:
+                    pass
+    except OSError:
+        pass
     return n
