@@ -273,9 +273,36 @@ def unlocked():
         APP.lock._acquire_restore(state)
 
 
+def argument_problem(name: str, args: dict) -> str | None:
+    """What is wrong with `args` for command `name` (unknown or missing arguments), in words; None if they
+    fit its signature. Checked before the call so a caller never sees the interpreter's own error text."""
+    import inspect
+    if not isinstance(args, dict):
+        return f"bad arguments for {name}: arguments must be an object of name: value"
+    fn = COMMANDS[name]["fn"]
+    sig = inspect.signature(getattr(fn, "__wrapped__", fn))
+    params = sig.parameters
+    if any(p.kind == p.VAR_KEYWORD for p in params.values()):
+        return None
+    unknown = sorted(k for k in args if k not in params)
+    missing = [p.name for p in params.values() if p.default is p.empty and p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY)
+               and p.name not in args]
+    if not unknown and not missing:
+        return None
+    parts = []
+    if unknown:
+        parts.append(f"unknown argument{'s' if len(unknown) > 1 else ''} {', '.join(unknown)}")
+    if missing:
+        parts.append(f"missing {', '.join(missing)}")
+    return f"bad arguments for {name}: {'; '.join(parts)} (it takes {', '.join(params) or 'no arguments'})"
+
+
 def call(name: str, args: dict | None = None, origin: str | None = None) -> Any:
     if name not in COMMANDS:
         raise CommandError(f"unknown command {name!r}")
+    problem = argument_problem(name, args or {})
+    if problem:
+        raise CommandError(problem)
     prev = getattr(_TL, "origin", None)
     if origin:
         _TL.origin = origin

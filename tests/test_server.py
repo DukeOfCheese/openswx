@@ -66,3 +66,20 @@ def test_rest_api_and_origin_tagging():
                                                                         "entity2": f"{part}-2/Face0"}}).json()
         assert "ok" in pv
         assert c.get("/api/state").json()["model"]["kind"] == "assembly"
+
+
+def test_bad_arguments_and_file_names_are_handled_safely(tmp_path):
+    """Arguments are checked against the command's signature before the call (the message names the
+    problem, not the interpreter's error), and file names sent by a client cannot leave the temporary folder."""
+    from openswx.web_server import _temp_path
+    with TestClient(create_app(mount_mcp=False, token=None), base_url="http://127.0.0.1:8765") as c:
+        r = c.post("/api/command", json={"name": "new_part", "args": {"nmae": "X"}})
+        assert r.status_code == 400
+        assert r.json()["error"] == "bad arguments for new_part: unknown argument nmae (it takes name)"
+        r = c.post("/api/command", json={"name": "extrude", "args": {}})
+        assert "missing sketch" in r.json()["error"]
+    for evil in ("../../etc/passwd", r"..\..\Windows\win.ini", "/abs/path.step", r"C:\x\y.step"):
+        p = _temp_path(evil, "upload")
+        assert ".." not in p.parts and p.parent.name.startswith("openswx_") and p.name in ("passwd", "win.ini", "path.step", "y.step")
+    assert _temp_path("...", "upload").name == "upload"
+    assert _temp_path("a*b?.step", "x").name == "a_b_.step"

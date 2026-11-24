@@ -9,6 +9,10 @@ on:
   push:
     tags: ["v*"]
 
+# least privilege: read the code; a job that needs more says so itself
+permissions:
+  contents: read
+
 jobs:
   build:
     strategy:
