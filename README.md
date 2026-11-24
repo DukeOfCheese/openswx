@@ -227,7 +227,7 @@ Agents take part too: the `collab` toolset gives them the same commands.
 
 No change was lost or reordered and no error was logged at any of these loads, and a real openswx app in the
 part stayed in sync throughout. Measured on one Windows laptop (Intel Core i7-11800H, 16 GB) running the server
-and every simulated person at once, a dedicated Linux server (which also gets the faster uvloop) is expected to do better.
+and every simulated person at once; a dedicated Linux server (which also gets the faster uvloop) is expected to do better.
 
 ## How it differs from SOLIDWORKS
 
