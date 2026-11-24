@@ -72,6 +72,41 @@ def load(page, url):
     page.evaluate(HELPERS)
 
 
+# Recorded from the first animation frame on: what each frame would paint over the graphics area, and what the
+# active document was when Home went away. (Registered before the page's own scripts, so it runs first.)
+FIRST_PAINT = """
+window.__paint = [];
+const probe = () => {
+  const g = document.querySelector('#graphics'), h = document.querySelector('#home');
+  if (g && h) {
+    const r = g.getBoundingClientRect();
+    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    window.__paint.push(top && top.closest('#home') ? 'home' : top && top.closest('#graphics') ? 'graphics' : 'other');
+  }
+  if (window.__paint.length < 30) requestAnimationFrame(probe);
+};
+requestAnimationFrame(probe);
+"""
+WATCH_HIDE = """() => {
+  window.__hiddenWith = null;
+  new MutationObserver((_, obs) => {
+    if (!document.querySelector('#home').classList.contains('hidden')) return;
+    const m = window.app.model;
+    window.__hiddenWith = {name: m.name, throwaway: !!m.throwaway, empty: window.app.vp.bbox.isEmpty()};
+    obs.disconnect();
+  }).observe(document.querySelector('#home'), {attributes: true, attributeFilter: ['class']});
+}"""
+
+
+def test_home_is_the_first_thing_painted(server, page):
+    page.add_init_script(FIRST_PAINT)
+    load(page, f"{server}/?token={TOKEN}")
+    page.wait_for_function("window.__paint.length >= 30")
+    paint = page.evaluate("window.__paint")
+    assert "graphics" not in paint, paint  # (no frame showed the empty planes and triad first)
+    assert paint[0] == "home"
+
+
 def test_home_shows_at_start(server, page):
     load(page, f"{server}/?token={TOKEN}")
     page.wait_for_function(SHOWN)
@@ -94,10 +129,12 @@ def test_escape_hides_and_file_home_brings_it_back(page):
 
 
 def test_new_part_hides_home_and_leaves_one_document(page):
+    page.evaluate(WATCH_HIDE)
     page.click("#home .hm-action[data-act='part']")
     page.wait_for_function(HIDDEN)
     page.wait_for_function("window.app.model && !window.app.model.throwaway")
     assert len(page.evaluate("T.docs()")) == 1  # (the part made on demand gave way)
+    assert page.evaluate("window.__hiddenWith.throwaway") is False  # (Home stayed until the new part was in)
 
 
 def test_open_recent_file_leaves_no_part1(server, page, tmp_path):
@@ -119,9 +156,12 @@ def test_open_recent_file_leaves_no_part1(server, page, tmp_path):
     assert page.evaluate("[...document.querySelectorAll('#home .hm-file .hm-name')].map(e => e.textContent)") == \
         ["Ghost.oswprt", "Block.oswprt"]
     assert page.evaluate("document.querySelector('#home .hm-file.missing').innerText").count("Not found") == 1
+    page.evaluate(WATCH_HIDE)
     page.click("#home .hm-file:not(.missing)")
     page.wait_for_function(HIDDEN)
     page.wait_for_function("window.app.model.name === 'Block'")
+    hid = page.evaluate("window.__hiddenWith")
+    assert hid["name"] == "Block" and hid["empty"] is False  # (Home stayed until the block was in the view)
     assert page.evaluate("T.docs()") == ["Block"]
 
 
