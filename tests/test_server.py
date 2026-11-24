@@ -66,3 +66,28 @@ def test_rest_api_and_origin_tagging():
                                                                         "entity2": f"{part}-2/Face0"}}).json()
         assert "ok" in pv
         assert c.get("/api/state").json()["model"]["kind"] == "assembly"
+
+
+def test_web_errors_and_file_names_are_safe(tmp_path):
+    from openswx.web_server import _temp_path
+    # names from a browser or a document never point outside the temporary folder
+    for name, want in (("../../evil.step", "evil.step"), (r"..\..\evil.step", "evil.step"), ("..", "file"),
+                       ("", "file"), ("a/b/c:d?.oswprt", "c_d_.oswprt"), ("Träger.step", "Träger.step"),
+                       ("/etc/passwd", "passwd"), (" .hidden. ", "hidden")):
+        p = _temp_path(tmp_path, name)
+        assert p.parent == tmp_path and p.name == want, (name, p)
+    with TestClient(create_app(mount_mcp=False, token=None), base_url="http://127.0.0.1:8765") as c:
+        c.post("/api/command", json={"name": "new_part", "args": {}})
+        # wrong arguments: what the command takes, not Python's own message
+        r = c.post("/api/command", json={"name": "extrude", "args": {"nope": 1}})
+        assert r.status_code == 400
+        err = r.json()["error"]
+        assert err.startswith("bad arguments: extrude takes") and "sketch" in err and "unexpected" not in err
+        r = c.post("/api/preview", json={"name": "extrude", "args": {"nope": 1}})
+        assert r.json()["ok"] is False and r.json()["error"].startswith("bad arguments: extrude takes")
+        # an openswx error still says what went wrong, and nothing more
+        r = c.post("/api/command", json={"name": "extrude", "args": {"sketch": "Nope", "depth": 5}})
+        assert r.status_code == 400 and "unknown sketch" in r.json()["error"] and "Traceback" not in r.json()["error"]
+        # an uploaded file's name cannot escape its temporary folder
+        r = c.post("/api/upload", json={"filename": "../../../x.oswprt", "data": ""})
+        assert r.status_code == 400 and "Traceback" not in r.text

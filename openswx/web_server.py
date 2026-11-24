@@ -5,6 +5,9 @@ import asyncio
 import base64
 import contextlib
 import json
+import logging
+import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -15,6 +18,25 @@ from fastapi.staticfiles import StaticFiles
 from . import session as S
 
 WEB = Path(__file__).parent / "web"
+_LOG = logging.getLogger("openswx.web")
+_UNSAFE = re.compile(r"[^\w.()+ -]")  # (letters in any script stay: a part named "Träger" downloads as that)
+
+
+def _temp_path(folder: Path, name: str) -> Path:
+    """A file in `folder` (a fresh temporary folder) named after `name` (an uploaded file's name, or a document's):
+    only its last part, reduced to safe characters, so nothing can point outside the folder."""
+    base = _UNSAFE.sub("_", name.replace("\\", "/").rsplit("/", 1)[-1]).strip(" .")[:150] or "file"
+    root = os.path.normpath(str(folder))
+    full = os.path.normpath(os.path.join(root, base))
+    if os.path.dirname(full) != root:  # (cannot happen after the cleaning above: the last line of defence)
+        raise HTTPException(400, "bad file name")
+    return Path(full)
+
+
+def _bad_arguments(name) -> str:
+    """The answer to arguments a command does not take: what it does take (the Python error stays in the log)."""
+    _LOG.info("bad arguments for %r", name, exc_info=True)
+    return f"bad arguments: {S.arguments_hint(name) if isinstance(name, str) else 'unknown command'}"
 
 
 def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "127.0.0.1",
@@ -80,9 +102,9 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
         try:
             result = await asyncio.to_thread(S.call, body["name"], body.get("args") or {}, "ui")
         except S.CommandError as exc:
-            return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
-        except TypeError as exc:
-            return JSONResponse({"ok": False, "error": f"bad arguments: {exc}"}, status_code=400)
+            return JSONResponse({"ok": False, "error": exc.user_message}, status_code=400)
+        except TypeError:
+            return JSONResponse({"ok": False, "error": _bad_arguments(body.get("name"))}, status_code=400)
         return {"ok": True, "result": result, "version": S.APP.version}
 
     @app.post("/api/preview")
@@ -90,8 +112,8 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
         body = await req.json()
         try:
             return await asyncio.to_thread(S.preview, body["name"], body.get("args") or {})
-        except TypeError as exc:
-            return {"ok": False, "error": f"bad arguments: {exc}"}
+        except TypeError:
+            return {"ok": False, "error": _bad_arguments(body.get("name"))}
 
     @app.get("/api/state")
     def state():
@@ -119,14 +141,13 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
     async def upload(req: Request):
         """Open/import a file sent by the browser: {"filename": ..., "data": base64}."""
         body = await req.json()
-        name = Path(body["filename"]).name
-        tmp = Path(tempfile.mkdtemp(prefix="openswx_")) / name
+        tmp = _temp_path(Path(tempfile.mkdtemp(prefix="openswx_")), str(body.get("filename") or ""))
         tmp.write_bytes(base64.b64decode(body["data"]))
         cmd = "import_file" if body.get("mode") == "import" else "open_part"
         try:
             result = await asyncio.to_thread(S.call, cmd, {"path": str(tmp)})
         except S.CommandError as exc:
-            return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+            return JSONResponse({"ok": False, "error": exc.user_message}, status_code=400)
         return {"ok": True, "result": result}
 
     @app.get("/api/download")
@@ -139,7 +160,7 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
             raise HTTPException(400, "format must be oswprt, step, iges, stl, 3mf, glb, brep or x_t")
         doc = S.APP.active_doc  # assemblies export too
         ext = "igs" if format == "iges" else format
-        tmp = Path(tempfile.mkdtemp(prefix="openswx_")) / f"{doc.name}.{ext}"
+        tmp = _temp_path(Path(tempfile.mkdtemp(prefix="openswx_")), f"{doc.name}.{ext}")
         try:
             S.export_file(str(tmp), format)
         except S.CommandError as exc:
@@ -158,7 +179,7 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
     def drawing_export(format: str = "pdf", inline: bool = False):
         import tempfile
         fmt = format.lower() if format.lower() in ("pdf", "dxf", "dwg", "svg") else "pdf"
-        tmp = Path(tempfile.mkdtemp()) / f"{S.APP.active_doc.name}.{fmt}"
+        tmp = _temp_path(Path(tempfile.mkdtemp(prefix="openswx_")), f"{S.APP.active_doc.name}.{fmt}")
         try:
             S.call("export_drawing", {"path": str(tmp), "format": fmt}, "ui")
         except S.CommandError as exc:

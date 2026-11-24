@@ -23,6 +23,14 @@ formats or commands; files are migrated automatically and the change is listed h
 
 - Ctrl+Shift+Z (Previous View) ran Undo.
 
+### Security
+
+- A file sent to the web server (Open in a browser) or a document's name used for a download can no longer name a
+  path outside the server's temporary folder.
+- The web API no longer sends Python's own error text: wrong arguments get the list of what the command takes, and
+  openswx's errors only their message.
+- The GitHub workflows run with a read-only token unless a job asks for more.
+
 ## 0.2.0 (2026-11-23)
 
 Simulation on curvature-based tetrahedra for every study, Claude Desktop working in the open window, about 100

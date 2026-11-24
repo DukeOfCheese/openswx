@@ -10,6 +10,10 @@ concurrency:
   group: test-${{ github.ref }}
   cancel-in-progress: true
 
+# the token only reads the repository (a job that needs more says so itself)
+permissions:
+  contents: read
+
 jobs:
   test:
     strategy:

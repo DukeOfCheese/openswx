@@ -5,6 +5,10 @@ name: build-linux
 on:
   workflow_dispatch:
 
+# the token only reads the repository (a job that needs more says so itself)
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-22.04   # (an older glibc: the result also runs on newer distributions)

@@ -103,7 +103,26 @@ _TL = threading.local()  # .origin = "ui" for web requests; MCP/tests default to
 
 
 class CommandError(RuntimeError):
-    pass
+    """A command that could not be done, with a message written for the person (never a traceback)."""
+
+    def __init__(self, message: object = "") -> None:
+        super().__init__(message)
+        self.user_message = str(message)[:2000]
+
+
+def arguments_hint(name: str) -> str:
+    """What a command accepts, for a "bad arguments" answer (built from its signature, not from an exception)."""
+    meta = COMMANDS.get(name)
+    if meta is None:
+        return "unknown command"
+    try:
+        params = inspect.signature(meta["fn"]).parameters.values()
+    except (TypeError, ValueError):
+        return "see the command's documentation"
+    need = [p.name for p in params if p.default is inspect.Parameter.empty and p.kind is not p.VAR_KEYWORD]
+    opt = [p.name for p in params if p.default is not inspect.Parameter.empty]
+    return (f"{name} takes " + (", ".join(need) or "no required arguments")
+            + (f" (optional: {', '.join(opt)})" if opt else ""))
 
 
 def command(mutates: bool = True, category: str = "general", mcp: bool = True):
@@ -303,7 +322,7 @@ def preview(name: str, args: dict | None = None) -> dict:
             mesh["ok"] = True
             return mesh
         except CommandError as exc:
-            return {"ok": False, "error": str(exc)}
+            return {"ok": False, "error": exc.user_message}
         finally:
             _TL.preview = False
             APP.documents[key] = real
