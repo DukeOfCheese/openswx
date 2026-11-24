@@ -7,6 +7,7 @@ not it is installed; without it they say how to install it.
 from __future__ import annotations
 
 import contextlib
+import re
 import time
 from typing import Any, Literal
 
@@ -30,15 +31,17 @@ def _need():
 
 
 @contextlib.contextmanager
-def _server(url: str | None = None):
-    """An HTTP client signed in to the saved server; network trouble becomes a plain error."""
+def _server(url: str | None = None, unlock: bool = True):
+    """An HTTP client signed in to the saved server (kept open between commands); network trouble becomes a plain
+    error. unlock: other commands run while this waits for the server (the block must only talk to the server,
+    not read or change open documents; collab_enable, which sends a document, keeps the lock)."""
     import httpx
     auth, _ = _need()
     url = url or auth.server()
     if not url or not auth.token():
         raise DocumentError("not signed in to a collaboration server: run collab_sign_in first")
     try:
-        with auth.http(url) as c:
+        with (unlocked() if unlock else contextlib.nullcontext()), auth.shared(url) as c:
             yield c
     except httpx.HTTPError as exc:
         raise DocumentError(f"cannot reach the collaboration server at {url}: {exc}") from exc
@@ -218,6 +221,10 @@ def collab_documents(project: str) -> dict:
     """The cloud documents in a project (project id or name): [{id, name, kind, seq, updated_at, ...}]. Open one
     with collab_open(id)."""
     with _server() as s:
+        if _ID.fullmatch(project):  # (an id: straight to its documents, no listing of every organisation)
+            r = s.get(f"/api/projects/{project}/documents")
+            if r.status_code != 404:
+                return {"project": {"id": project}, "documents": _ok(r, "listing documents")}
         p = _project(s, project)
         return {"project": p, "documents": _ok(s.get(f"/api/projects/{p['id']}/documents"), "listing documents")}
 
@@ -238,7 +245,7 @@ def collab_enable(project: str, name: str | None = None) -> dict:
     if client.client_for(doc) is not None:
         raise DocumentError(f"{doc.name} is already a cloud document")
     url, tok = auth.server(), auth.token()
-    with _server() as s:
+    with _server(unlock=False) as s:  # (the document is read and sent: nobody may change it meanwhile)
         p = _project(s, project)
         content = client.plain(doc.to_dict())
         from openswx_collab_protocol import ops as O
@@ -259,6 +266,9 @@ def _brief(c) -> dict:
     st = c.status()
     return {k: st[k] for k in ("document", "seq", "role", "read_only", "read_only_reason", "state")} | \
         {"peers": [p["name"] for p in st["peers"]]}
+
+
+_ID = re.compile(r"[0-9a-f]{32}")  # (the server's ids)
 
 
 def _offline(url: str | None) -> DocumentError:
@@ -569,10 +579,24 @@ def collab_presence(pointer: dict | None = None, selection: list[str] | None = N
     face name}), selection (persistent names), tool (the command or panel in use), camera (for follow-my-view);
     draft: unfinished work to preview on their screens (sketch entities, panel parameters), clear_draft to remove
     it. Relayed as given, never stored. Returns {sent}."""
+    return send_presence(pointer=pointer, selection=selection, tool=tool, camera=camera, draft=draft,
+                         clear_draft=clear_draft)
+
+
+PRESENCE_ARGS = {"pointer": dict, "selection": list, "tool": str, "camera": dict, "draft": dict, "clear_draft": bool}
+
+
+def send_presence(**args) -> dict:
+    """collab_presence without the command lock (the UI sends it about 20 times a second; it reads no document,
+    so it never waits behind a rebuild). Arguments as collab_presence's, checked here."""
+    for k, v in args.items():
+        if k not in PRESENCE_ARGS:
+            raise DocumentError(f"collab_presence has no argument {k!r}")
+        if v is not None and not isinstance(v, PRESENCE_ARGS[k]):
+            raise DocumentError(f"collab_presence: {k} must be a {PRESENCE_ARGS[k].__name__}")
     c = _client()
-    data = {k: v for k, v in (("pointer", pointer), ("selection", selection), ("tool", tool), ("camera", camera))
-            if v is not None}
+    data = {k: args[k] for k in ("pointer", "selection", "tool", "camera") if args.get(k) is not None}
     sent = c.presence(data) if data else True
-    if draft is not None or clear_draft:
-        sent = c.draft(None if clear_draft else draft) and sent
+    if args.get("draft") is not None or args.get("clear_draft"):
+        sent = c.draft(None if args.get("clear_draft") else args["draft"]) and sent
     return {"sent": bool(sent)}

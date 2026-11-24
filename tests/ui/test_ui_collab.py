@@ -506,6 +506,44 @@ def test_a_new_cloud_part_from_home_opens_at_once_and_bob_sees_ada_in_it(world):
     b.keyboard.press("Escape")
 
 
+def test_the_cloud_tab_shows_what_it_last_loaded_at_once_and_refreshes_behind_it(world):
+    b = world["b"]
+    # the server answers slowly from now on: what was loaded before still shows straight away
+    b.evaluate("""() => { const app = window.app; app._api = app.api;
+        app.api = async (url, body) => { if (/collab_(projects|documents|members|project_members)/.test(body?.name || ''))
+            await new Promise((r) => setTimeout(r, 3000)); return app._api(url, body); }; }""")
+    b.evaluate("window.app.homeShow('cloud')")
+    b.wait_for_selector("#home .cl-doc:has-text('Plate')", timeout=1000)
+    b.wait_for_selector("#home .cl-members td:has-text('Ada')", timeout=1000)
+    # the server cannot be reached: the last lists stay, with a note
+    b.evaluate("""() => { const app = window.app;
+        app.api = async (url, body) => /collab_(projects|documents|members|project_members)/.test(body?.name || '')
+            ? {ok: false, error: 'cannot reach the collaboration server'} : app._api(url, body); }""")
+    b.evaluate("window.app.homeRender()")
+    b.wait_for_selector("#home .cl-stale:not(.hidden)")
+    assert b.locator("#home .cl-doc:has-text('Plate')").count() == 1
+    b.evaluate("window.app.api = window.app._api; window.app.homeRender()")
+    b.wait_for_selector("#home .cl-stale.hidden", state="attached")
+    # another account or server: nothing of the last one is kept
+    kept = b.evaluate("() => { const hc = window.app.cl.hc; return hc.m.size; }")
+    assert kept > 0
+    assert b.evaluate("() => window.app.collabHomeCache('elsewhere|someone').m.size") == 0
+    b.keyboard.press("Escape")
+
+
+def test_who_is_in_each_part_follows_while_the_tab_is_up(world):
+    a, b = world["a"], world["b"]
+    b.evaluate("window.app.cl.homeRefreshMs = 300; window.app.homeShow('cloud')")
+    b.wait_for_selector("#home .cl-doc:has-text('Plate') .cl-dot[title='Ada']")
+    a.evaluate("async () => { await window.app.switchDocument('Plate'); await window.app.run('collab_disable'); }")  # (Ada leaves Plate)
+    b.wait_for_function("""() => { const row = [...document.querySelectorAll('#home .cl-doc')].find((r) => r.innerText.includes('Plate'));
+        return row && !row.querySelector(".cl-dot[title='Ada']"); }""", timeout=15000)
+    b.evaluate("window.app.cl.homeRefreshMs = 0")
+    b.keyboard.press("Escape")
+    a.evaluate("async () => { await window.app.switchDocument('Bracket'); }")
+    a.wait_for_function("window.app.collabDoc()?.document === 'Bracket'")
+
+
 def test_new_part_asks_local_or_cloud_and_remembers_the_choice(world):
     a = world["a"]
     a.evaluate("window.app.newPart()")

@@ -141,6 +141,31 @@ def _remember(url: str, got: dict) -> dict:
     return {"server": url, "user": got.get("user") or {}}
 
 
+_POOL: dict[tuple[str, str], object] = {}  # (server, token) -> a kept-open httpx.Client
+_POOL_MU = threading.Lock()
+
+
+def shared(url: str | None = None, tok: str | None = None):
+    """A kept-open HTTP client for the server and token, shared by every command and connection: one TCP and
+    TLS handshake instead of one per request. Use it as `with shared() as c:`; leaving the block keeps it open."""
+    import contextlib
+
+    import httpx
+    url = url or server()
+    if not url:
+        raise AuthError("not signed in to a collaboration server (collab_sign_in)")
+    tok = token() if tok is None else tok
+    key = (url, tok or "")
+    with _POOL_MU:
+        c = _POOL.get(key)
+        if c is None or c.is_closed:
+            while len(_POOL) >= 4:  # (old tokens and servers: dropped, not closed, as a request may still use one)
+                _POOL.pop(next(iter(_POOL)))
+            headers = {"Authorization": f"Bearer {tok}"} if tok else {}
+            c = _POOL[key] = httpx.Client(base_url=url, headers=headers, timeout=30)
+    return contextlib.nullcontext(c)
+
+
 def http(url: str | None = None, tok: str | None = None, transport=None):
     """An HTTP client for the server, signed in when there is a token."""
     import httpx

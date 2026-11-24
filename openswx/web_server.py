@@ -117,6 +117,24 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
         mod = sys.modules.get("openswx.collab.client")  # (loaded only once a collab_* command ran)
         return mod.status() if mod is not None else {"revision": 0, "documents": []}
 
+    @app.post("/api/collab/presence")
+    async def collab_presence(req: Request):
+        """collab_presence for the UI's pointer and drafts (about 20 a second): it reads no document, so it does
+        not queue behind the command lock (a rebuild would otherwise freeze your pointer on the others' screens)."""
+        if req.scope.get("openswx.view_only"):
+            return JSONResponse({"ok": False, "error": "this is a view-only link"}, status_code=403)
+        body = await req.json()
+        args = body.get("args") if isinstance(body, dict) else None
+        if not isinstance(args, dict):
+            return JSONResponse({"ok": False, "error": "give args"}, status_code=400)
+        mod = sys.modules.get("openswx.collab.commands_collab")
+        if mod is None:
+            return JSONResponse({"ok": False, "error": "live collaboration is not running"}, status_code=400)
+        try:
+            return {"ok": True, "result": await asyncio.to_thread(mod.send_presence, **args)}
+        except S.DocumentError as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+
     @app.get("/api/mesh")
     def mesh():
         return S.get_mesh()
@@ -124,6 +142,11 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
     def collab_revision() -> int:
         mod = sys.modules.get("openswx.collab.client")
         return mod.REVISION[0] if mod is not None else 0
+
+    def collab_live() -> bool:
+        """Is a cloud document open (others' pointers may move)?"""
+        mod = sys.modules.get("openswx.collab.client")
+        return mod is not None and any(not c.closed for c in list(mod.CLIENTS.values()))
 
     pages: dict[str, int] = {}  # a page's id -> its open event streams
     gone_tasks: set = set()
@@ -160,7 +183,7 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
                         entry = S.APP.log[-1] if S.APP.log else None
                         event = {"version": last, "last": entry, **({"collab": rev} if rev else {})}
                         yield f"data: {json.dumps(event)}\n\n"
-                    await asyncio.sleep(0.05 if rev else 0.15)  # (others' pointers: ~20 a second)
+                    await asyncio.sleep(0.05 if collab_live() else 0.15)  # (others' pointers: ~20 a second)
             finally:
                 if page:
                     pages[page] -= 1

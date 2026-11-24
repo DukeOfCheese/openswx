@@ -49,6 +49,9 @@ NEED_CONNECTION = ("creating features in a cloud document needs a connection to 
                    "and names come from it); it is not reachable now - try again when it is back")
 
 
+BLOB_CACHE_BYTES = 256 * 1024 * 1024  # large imported bodies kept per cloud document, to save fetching them again
+
+
 def wait_seconds() -> float:
     try:
         return max(0.0, float(os.environ.get("OPENSWX_COLLAB_WAIT", "15")))
@@ -557,20 +560,28 @@ class DocClient:
 
     # ------------------------------------------------------------------ blobs (long strings travel separately)
     def _http(self):
-        return auth.http(self.server, self.token)
+        return auth.shared(self.server, self.token)  # (kept open: blobs come and go without a handshake each)
 
     def _internalize(self, obj):
         refs = O.blob_refs(obj)
         if not refs:
             return obj
-        missing = [s for s in refs if s not in self.blobs]
+        here = {s: self.blobs[s] for s in refs if s in self.blobs}
+        missing = [s for s in refs if s not in here]
         if missing:
             with self._http() as c:
                 for sha in missing:
                     r = c.get(f"/api/projects/{self.project_id}/blobs/{sha}")
                     r.raise_for_status()
-                    self.blobs[sha] = r.content
-        return O.internalize(obj, lambda sha: self.blobs[sha])
+                    here[sha] = self.blobs[sha] = r.content
+            self._trim_blobs()
+        return O.internalize(obj, here.__getitem__)
+
+    def _trim_blobs(self) -> None:
+        """Keep at most BLOB_CACHE_BYTES of blobs (the oldest go: one that is needed again is fetched again)."""
+        total = sum(len(b) for b in self.blobs.values())
+        while total > BLOB_CACHE_BYTES and len(self.blobs) > 1:
+            total -= len(self.blobs.pop(next(iter(self.blobs))))
 
     def _externalize(self, obj):
         sink: dict[str, bytes] = {}
@@ -582,6 +593,7 @@ class DocClient:
                 for sha in r.json():
                     _upload_ok(c.put(f"/api/projects/{self.project_id}/blobs/{sha}", content=sink[sha]))
             self.blobs.update(sink)
+            self._trim_blobs()
         return wire
 
     # ------------------------------------------------------------------ the open document
@@ -980,7 +992,9 @@ class DocClient:
                 "locks": {t: {**h, "target": self._target_label(t), "mine": h.get("client_id") == me}
                           for t, h in self.locks.items()},
                 "broken": {fid: {**b, "feature": self._feature_name(fid)} for fid, b in self.broken.items()},
-                "conflicts": list(self.conflicts), "recent": list(self.recent[-20:]),
+                # (a refused change's operations stay here, not in what every screen fetches many times a second)
+                "conflicts": [{k: v for k, v in c.items() if k != "ops"} for c in self.conflicts],
+                "recent": list(self.recent[-20:]),
                 "versions": list(self.versions), "can_undo": bool(self.mine), "can_redo": bool(self.redo_stack),
                 "pool": {"ids": len(self.pool_ids), "names": {k: len(v) for k, v in self.pool_names.items() if v}},
             }

@@ -191,6 +191,8 @@ def command(mutates: bool = True, category: str = "general", mcp: bool = True):
             watch = None  # a document without unsaved changes: did this command change it? (see _mark_dirty)
             if mutates and outer is None and not getattr(_TL, "preview", False):
                 watch = APP.documents.get(APP.active)
+                if watch is not None and getattr(getattr(watch, "_collab", None), "closed", True) is False:
+                    watch = None  # (a cloud document: the server keeps it, it is never "unsaved")
                 if watch is not None and not watch.dirty and getattr(watch, "_clean", None) is None:
                     watch._clean = _fingerprint(watch)
             t0 = time.perf_counter()
@@ -442,6 +444,8 @@ def _preview_locked(name: str, args: dict) -> dict:
         clone = type(real)(real.name)
         if getattr(real, "kind", "part") == "assembly":
             clone.live_docs = APP.documents
+        if "_rb_cache" in real.__dict__:  # (the rebuild picks up at the feature being previewed, not from scratch;
+            clone.__dict__["_rb_cache"] = real.__dict__["_rb_cache"]  # entries are keyed by content, copied on read)
         clone.load_dict(real.to_dict())
         APP.documents[key] = clone
         _TL.preview = True

@@ -603,3 +603,69 @@ def test_sign_in_method_commands(monkeypatch):
     assert calls == [("link", "google", "pw")]
     with pytest.raises(S.CommandError, match="only way into the account"):
         S.call("collab_unlink_provider", {"provider": "github"})
+
+
+# ---------------------------------------------------------------------- performance (review of 0.4.0)
+def test_presence_does_not_wait_for_the_command_lock(cloud):
+    import threading
+
+    from fastapi.testclient import TestClient
+
+    from openswx.collab import commands_collab  # noqa: F401 (as after any collab_* command)
+    from openswx.web_server import create_app
+    held, release = threading.Event(), threading.Event()
+
+    def busy():  # (a long rebuild, say)
+        with S.APP.lock:
+            held.set()
+            release.wait(20)
+    t = threading.Thread(target=busy)
+    t.start()
+    held.wait(5)
+    try:
+        with TestClient(create_app(mount_mcp=False, token=None), base_url="http://127.0.0.1:8765") as http:
+            r = http.post("/api/collab/presence", json={"args": {"pointer": {"point": [1, 2, 3]}, "tool": "fillet"}})
+            assert r.json() == {"ok": True, "result": {"sent": True}}
+            bad = http.post("/api/collab/presence", json={"args": {"pointer": "x"}})
+            assert bad.status_code == 400 and "pointer must be a dict" in bad.json()["error"]
+            assert http.post("/api/collab/presence", json={"args": {"run": "evil"}}).status_code == 400
+    finally:
+        release.set()
+        t.join()
+    assert cloud.ws.of("presence")[-1]["data"] == {"pointer": {"point": [1, 2, 3]}, "tool": "fillet"}
+
+
+def test_one_http_client_is_kept_per_server_and_token(monkeypatch, tmp_path):
+    monkeypatch.setenv("OPENSWX_HOME", str(tmp_path))
+    auth._POOL.clear()
+    with auth.shared("http://127.0.0.1:9", "a") as c1, auth.shared("http://127.0.0.1:9", "a") as c2:
+        assert c1 is c2 and not c1.is_closed
+    with auth.shared("http://127.0.0.1:9", "b") as c3:
+        assert c3 is not c1 and c3.headers["Authorization"] == "Bearer b"
+    assert not c1.is_closed  # (leaving the block keeps it open for the next command)
+    auth._POOL.clear()
+
+
+def test_status_leaves_out_a_refused_change_s_operations(cloud):
+    cloud.conflicts = [{"change_id": "c1", "command": "fillet", "who": ["Ada"], "ops": [{"op": "set"}] * 1000}]
+    (d,) = C.status()["documents"]
+    assert d["conflicts"] == [{"change_id": "c1", "command": "fillet", "who": ["Ada"]}]
+    assert cloud.conflicts[0]["ops"]  # (kept, just not sent to every screen)
+
+
+def test_the_blob_cache_keeps_the_newest_within_its_limit(cloud, monkeypatch):
+    monkeypatch.setattr(C, "BLOB_CACHE_BYTES", 10)
+    cloud.blobs = {"a": b"12345", "b": b"12345", "c": b"12345"}
+    cloud._trim_blobs()
+    assert list(cloud.blobs) == ["b", "c"]
+    cloud.blobs = {"big": b"x" * 50}
+    cloud._trim_blobs()
+    assert list(cloud.blobs) == ["big"]  # (never empty: the one in use stays)
+
+
+def test_a_cloud_document_is_never_fingerprinted_as_unsaved(cloud, monkeypatch):
+    calls = []
+    real = S._fingerprint
+    monkeypatch.setattr(S, "_fingerprint", lambda d: calls.append(d) or real(d))
+    S.call("edit_feature", {"name": "Boss-Extrude1", "params": {"depth": 12}})
+    assert calls == [] and S.APP.doc.dirty is False
