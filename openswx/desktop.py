@@ -229,6 +229,20 @@ def install_native_menu(window, menus: list) -> bool:
     return ok[0]
 
 
+def confirm_close(window, message: str) -> bool:
+    """Ask before closing with unsaved changes; True closes. On macOS pywebview runs the closing handlers on the
+    main thread (inside Cmd+Q / the close button), and its create_confirmation_dialog queues the dialog onto that
+    same thread and waits for it: a deadlock that hung the app on quit. There, the alert is shown directly."""
+    if sys.platform == "darwin" and threading.current_thread() is threading.main_thread():
+        try:
+            from webview.platforms.cocoa import BrowserView
+            return bool(BrowserView.display_confirmation_dialog("Close", "Cancel", message))
+        except Exception as exc:  # noqa: BLE001 - never hang the quit: close (autosave keeps a recovery copy)
+            print(f"openswx: could not ask before closing ({exc})", file=sys.stderr)
+            return True
+    return bool(window.create_confirmation_dialog("openswx", message))
+
+
 def run(port: int = 8765, file: str | None = None) -> int:
     import webview
 
@@ -248,7 +262,7 @@ def run(port: int = 8765, file: str | None = None) -> int:
         if not settings.get("confirm_close"):
             return True
         names = ", ".join(dirty[:5]) + (" ..." if len(dirty) > 5 else "")
-        return bool(window.create_confirmation_dialog("openswx", f"Close without saving the changes to {names}?"))
+        return confirm_close(window, f"Close without saving the changes to {names}?")
 
     window.events.closing += closing
     servers = []
