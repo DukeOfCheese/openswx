@@ -138,112 +138,122 @@ class SolidWorks:
         pythoncom, w = self.VT
         return w.VARIANT(pythoncom.VT_DISPATCH, None)
 
-    def run(self, case):
+    def new_doc(self):
+        """A new part from the default template."""
         m = self.app.NewDocument(self.template, 0, 0, 0)
         if m is None:
             raise RuntimeError("SOLIDWORKS could not create a part from the default template")
+        return m
+
+    def do(self, m, op):
+        """One modelling operation of a case (see CASES) on the part m."""
         ext, skm, fm = m.Extension, m.SketchManager, m.FeatureManager
         mm = 0.001
         sel = lambda name, typ, x=0, y=0, z=0, append=False, mark=0: ext.SelectByID2(name, typ, x * mm, y * mm, z * mm, append, mark, self._nothing(), 0)  # noqa: E731
-        for op in case["ops"]:
-            k = op[0]
-            if k == "sketch":
-                m.ClearSelection2(True)
-                sel(f"{op[1]} Plane", "PLANE")
-                skm.InsertSketch(True)
-            elif k == "sketch_face":
-                m.ClearSelection2(True)
-                sel("", "FACE", *op[1])
-                skm.InsertSketch(True)
-            elif k == "rect":
-                _, cx, cy, w, h = op
-                skm.CreateCenterRectangle(cx * mm, cy * mm, 0, (cx + w / 2) * mm, (cy + h / 2) * mm, 0)
-            elif k == "circle":
-                skm.CreateCircleByRadius(op[1] * mm, op[2] * mm, 0, op[3] * mm)
-            elif k == "centerline":
-                skm.CreateCenterLine(op[1] * mm, op[2] * mm, 0, op[3] * mm, op[4] * mm, 0)
-            elif k == "line":
-                skm.CreateLine(op[1] * mm, op[2] * mm, 0, op[3] * mm, op[4] * mm, 0)
-            elif k == "arc":
-                skm.CreateArc(op[1] * mm, op[2] * mm, 0, op[3] * mm, op[4] * mm, 0, op[5] * mm, op[6] * mm, 0, 1)
-            elif k == "ellipse":  # centre, major-axis end, minor-axis end
-                skm.CreateEllipse(op[1] * mm, op[2] * mm, 0, op[3] * mm, op[4] * mm, 0, op[5] * mm, op[6] * mm, 0)
-            elif k == "addtodb":  # True: sketch entities go in as given (no snapping, no automatic relations)
-                skm.AddToDB = bool(op[1])
-            elif k == "rel":  # add a relation (swConstraintType string, e.g. "sgHORIZONTAL2D") to the segments at points
-                m.ClearSelection2(True)
-                for i, (x, y) in enumerate(op[2]):
-                    sel("", "SKETCHSEGMENT", x, y, 0, i > 0)
-                m.SketchAddConstraints(op[1])
-                m.ClearSelection2(True)
-            elif k == "dim":  # dimension the sketch segment at (x, y) (Front-plane sketches: model = sketch), text at (tx, ty)
-                m.ClearSelection2(True)
-                sel("", "SKETCHSEGMENT", op[1], op[2], 0)
-                m.AddDimension2(op[3] * mm, op[4] * mm, 0)
-                m.ClearSelection2(True)
-            elif k == "spline":
-                pythoncom, w = self.VT
-                pts = [c * mm for q in op[1] for c in (q[0], q[1], 0.0)]
-                skm.CreateSpline2(w.VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_R8, pts), True)
-            elif k == "extrude":
-                draft = op[3] if len(op) > 3 else 0
-                rev = bool(op[4]) if len(op) > 4 else False  # (Sd, Flip, Dir: reverse the direction, ...)
-                fm.FeatureExtrusion3(True, False, rev, self.END[op[2]], 0, op[1] * mm, 0, bool(draft), False, False, False,
-                                     math.radians(draft), 0, False, False, False, False, True, True, True, 0, 0, False)
-            elif k == "cut":
-                fm.FeatureCut4(True, False, False, self.END[op[2]], 0, (op[1] or 10) * mm, 0, False, False, False, False, 0, 0,
-                               False, False, False, False, False, True, True, True, True, False, 0, 0, False, False)
-            elif k == "revolve":
-                fm.FeatureRevolve2(True, True, False, False, False, False, 0, 0, math.radians(op[1]), 0, False, False, 0, 0,
-                                   0, 0, 0, True, True, True)
-            elif k == "fillet":
-                m.ClearSelection2(True)
-                for i, p in enumerate(op[2]):
-                    # SelectByID2 only finds entities visible in the current view; cast a ray at the edge
-                    # from just outside the part instead (works for hidden edges too)
-                    d = [p[0], 0.0, p[2]]
-                    n = math.hypot(d[0], d[2]) or 1.0
-                    d = [d[0] / n, 0.0, d[2] / n]
-                    start = [(p[j] + 5 * d[j]) * mm for j in range(3)]
-                    ext.SelectByRay(*start, -d[0], -d[1], -d[2], 0.5 * mm, 1, i > 0, 1, 0)  # swSelEDGES
-                fm.FeatureFillet3(195, op[1] * mm, 0, 0, 0, 0, 0, None, None, None, None, None, None, None)
-            elif k == "fillet_ray":  # select each edge with a ray that ends on it
-                m.ClearSelection2(True)
-                for i, (pt, d) in enumerate(op[2]):
-                    start = [(pt[j] - 5 * d[j]) * mm for j in range(3)]
-                    ext.SelectByRay(*start, *d, 0.5 * mm, 1, i > 0, 1, 0)  # swSelEDGES
-                fm.FeatureFillet3(195, op[1] * mm, 0, 0, 0, 0, 0, None, None, None, None, None, None, None)
-            elif k == "chamfer":
-                m.ClearSelection2(True)
-                for i, p in enumerate(op[2]):
-                    d = [0.0, 1.0, p[2] / (abs(p[2]) or 1.0)]
-                    n = math.hypot(*d)
-                    d = [c / n for c in d]
-                    start = [(p[j] + 5 * d[j]) * mm for j in range(3)]
-                    ext.SelectByRay(*start, -d[0], -d[1], -d[2], 0.5 * mm, 1, i > 0, 1, 0)  # swSelEDGES
-                fm.InsertFeatureChamfer(4, 1, op[1] * mm, math.radians(45), 0, 0, 0, 0)  # swChamferAngleDistance = 1
-            elif k == "vertex_chamfer":
-                m.ClearSelection2(True)
-                p = op[2]
-                d = [1 / math.sqrt(3)] * 3
-                d = [d[0] * (1 if p[0] > 0 else -1), d[1], d[2] * (1 if p[2] > 0 else -1)]
-                start = [(p[j] + 5 * d[j]) * mm for j in range(3)]
-                ext.SelectByRay(*start, -d[0], -d[1], -d[2], 0.5 * mm, 3, False, 1, 0)  # swSelVERTICES
-                fm.InsertFeatureChamfer(4, 3, 0, 0, 0, op[1] * mm, op[1] * mm, op[1] * mm)  # swChamferVertex = 3
-            elif k == "pattern":
-                m.ClearSelection2(True)
-                p = op[3]
-                d = [0.0, 1 / math.sqrt(2), (1 if p[2] > 0 else -1) / math.sqrt(2)]
-                ext.SelectByRay(*[(p[j] + 5 * d[j]) * mm for j in range(3)], -d[0], -d[1], -d[2], 0.5 * mm, 1, False, 1, 0)
-                m.FeatureByPositionReverse(0).Select2(True, 4)  # the seed feature (last in the tree)
-                fm.FeatureLinearPattern5(op[2], op[1] * mm, 1, 0, False, False, "NULL", "NULL", False, False, False, False,
-                                         False, False, False, False, 0, 0, False, False, False, False)
-            elif k == "shell":
-                m.ClearSelection2(True)
-                p = op[2]
-                ext.SelectByRay(p[0] * mm, (p[1] + 5) * mm, p[2] * mm, 0, -1, 0, 0.5 * mm, 2, False, 1, 0)  # swSelFACES
-                m.InsertFeatureShell(op[1] * mm, False)
+        k = op[0]
+        if k == "sketch":
             m.ClearSelection2(True)
+            sel(f"{op[1]} Plane", "PLANE")
+            skm.InsertSketch(True)
+        elif k == "sketch_face":
+            m.ClearSelection2(True)
+            sel("", "FACE", *op[1])
+            skm.InsertSketch(True)
+        elif k == "rect":
+            _, cx, cy, w, h = op
+            skm.CreateCenterRectangle(cx * mm, cy * mm, 0, (cx + w / 2) * mm, (cy + h / 2) * mm, 0)
+        elif k == "circle":
+            skm.CreateCircleByRadius(op[1] * mm, op[2] * mm, 0, op[3] * mm)
+        elif k == "centerline":
+            skm.CreateCenterLine(op[1] * mm, op[2] * mm, 0, op[3] * mm, op[4] * mm, 0)
+        elif k == "line":
+            skm.CreateLine(op[1] * mm, op[2] * mm, 0, op[3] * mm, op[4] * mm, 0)
+        elif k == "arc":
+            skm.CreateArc(op[1] * mm, op[2] * mm, 0, op[3] * mm, op[4] * mm, 0, op[5] * mm, op[6] * mm, 0, 1)
+        elif k == "ellipse":  # centre, major-axis end, minor-axis end
+            skm.CreateEllipse(op[1] * mm, op[2] * mm, 0, op[3] * mm, op[4] * mm, 0, op[5] * mm, op[6] * mm, 0)
+        elif k == "addtodb":  # True: sketch entities go in as given (no snapping, no automatic relations)
+            skm.AddToDB = bool(op[1])
+        elif k == "rel":  # add a relation (swConstraintType string, e.g. "sgHORIZONTAL2D") to the segments at points
+            m.ClearSelection2(True)
+            for i, (x, y) in enumerate(op[2]):
+                sel("", "SKETCHSEGMENT", x, y, 0, i > 0)
+            m.SketchAddConstraints(op[1])
+            m.ClearSelection2(True)
+        elif k == "dim":  # dimension the sketch segment at (x, y) (Front-plane sketches: model = sketch), text at (tx, ty)
+            m.ClearSelection2(True)
+            sel("", "SKETCHSEGMENT", op[1], op[2], 0)
+            m.AddDimension2(op[3] * mm, op[4] * mm, 0)
+            m.ClearSelection2(True)
+        elif k == "spline":
+            pythoncom, w = self.VT
+            pts = [c * mm for q in op[1] for c in (q[0], q[1], 0.0)]
+            skm.CreateSpline2(w.VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_R8, pts), True)
+        elif k == "extrude":
+            draft = op[3] if len(op) > 3 else 0
+            rev = bool(op[4]) if len(op) > 4 else False  # (Sd, Flip, Dir: reverse the direction, ...)
+            fm.FeatureExtrusion3(True, False, rev, self.END[op[2]], 0, op[1] * mm, 0, bool(draft), False, False, False,
+                                 math.radians(draft), 0, False, False, False, False, True, True, True, 0, 0, False)
+        elif k == "cut":
+            fm.FeatureCut4(True, False, False, self.END[op[2]], 0, (op[1] or 10) * mm, 0, False, False, False, False, 0, 0,
+                           False, False, False, False, False, True, True, True, True, False, 0, 0, False, False)
+        elif k == "revolve":
+            fm.FeatureRevolve2(True, True, False, False, False, False, 0, 0, math.radians(op[1]), 0, False, False, 0, 0,
+                               0, 0, 0, True, True, True)
+        elif k == "fillet":
+            m.ClearSelection2(True)
+            for i, p in enumerate(op[2]):
+                # SelectByID2 only finds entities visible in the current view; cast a ray at the edge
+                # from just outside the part instead (works for hidden edges too)
+                d = [p[0], 0.0, p[2]]
+                n = math.hypot(d[0], d[2]) or 1.0
+                d = [d[0] / n, 0.0, d[2] / n]
+                start = [(p[j] + 5 * d[j]) * mm for j in range(3)]
+                ext.SelectByRay(*start, -d[0], -d[1], -d[2], 0.5 * mm, 1, i > 0, 1, 0)  # swSelEDGES
+            fm.FeatureFillet3(195, op[1] * mm, 0, 0, 0, 0, 0, None, None, None, None, None, None, None)
+        elif k == "fillet_ray":  # select each edge with a ray that ends on it
+            m.ClearSelection2(True)
+            for i, (pt, d) in enumerate(op[2]):
+                start = [(pt[j] - 5 * d[j]) * mm for j in range(3)]
+                ext.SelectByRay(*start, *d, 0.5 * mm, 1, i > 0, 1, 0)  # swSelEDGES
+            fm.FeatureFillet3(195, op[1] * mm, 0, 0, 0, 0, 0, None, None, None, None, None, None, None)
+        elif k == "chamfer":
+            m.ClearSelection2(True)
+            for i, p in enumerate(op[2]):
+                d = [0.0, 1.0, p[2] / (abs(p[2]) or 1.0)]
+                n = math.hypot(*d)
+                d = [c / n for c in d]
+                start = [(p[j] + 5 * d[j]) * mm for j in range(3)]
+                ext.SelectByRay(*start, -d[0], -d[1], -d[2], 0.5 * mm, 1, i > 0, 1, 0)  # swSelEDGES
+            fm.InsertFeatureChamfer(4, 1, op[1] * mm, math.radians(45), 0, 0, 0, 0)  # swChamferAngleDistance = 1
+        elif k == "vertex_chamfer":
+            m.ClearSelection2(True)
+            p = op[2]
+            d = [1 / math.sqrt(3)] * 3
+            d = [d[0] * (1 if p[0] > 0 else -1), d[1], d[2] * (1 if p[2] > 0 else -1)]
+            start = [(p[j] + 5 * d[j]) * mm for j in range(3)]
+            ext.SelectByRay(*start, -d[0], -d[1], -d[2], 0.5 * mm, 3, False, 1, 0)  # swSelVERTICES
+            fm.InsertFeatureChamfer(4, 3, 0, 0, 0, op[1] * mm, op[1] * mm, op[1] * mm)  # swChamferVertex = 3
+        elif k == "pattern":
+            m.ClearSelection2(True)
+            p = op[3]
+            d = [0.0, 1 / math.sqrt(2), (1 if p[2] > 0 else -1) / math.sqrt(2)]
+            ext.SelectByRay(*[(p[j] + 5 * d[j]) * mm for j in range(3)], -d[0], -d[1], -d[2], 0.5 * mm, 1, False, 1, 0)
+            m.FeatureByPositionReverse(0).Select2(True, 4)  # the seed feature (last in the tree)
+            fm.FeatureLinearPattern5(op[2], op[1] * mm, 1, 0, False, False, "NULL", "NULL", False, False, False, False,
+                                     False, False, False, False, 0, 0, False, False, False, False)
+        elif k == "shell":
+            m.ClearSelection2(True)
+            p = op[2]
+            ext.SelectByRay(p[0] * mm, (p[1] + 5) * mm, p[2] * mm, 0, -1, 0, 0.5 * mm, 2, False, 1, 0)  # swSelFACES
+            m.InsertFeatureShell(op[1] * mm, False)
+        m.ClearSelection2(True)
+
+    def run(self, case):
+        m = self.new_doc()
+        ext = m.Extension
+        for op in case["ops"]:
+            self.do(m, op)
         call0(m, "EditRebuild3")
         mp = call0(ext, "CreateMassProperty")
         out = {"volume": mp.Volume * 1e9, "area": mp.SurfaceArea * 1e6, "com": [c * 1e3 for c in mp.CenterOfMass]}

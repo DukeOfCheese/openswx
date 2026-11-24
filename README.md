@@ -36,6 +36,7 @@ here without retraining. Underneath, it is a different program, built on differe
 ## Contents
 
 - [What it does](#what-it-does)
+- [Lighter than SOLIDWORKS](#lighter-than-solidworks)
 - [Install](#install)
 - [Your first part](#your-first-part)
 - [Agents: how they get access](#agents-how-they-get-access)
@@ -82,6 +83,27 @@ here without retraining. Underneath, it is a different program, built on differe
 
 Geometry kernel: [OpenCASCADE](https://dev.opencascade.org/) through
 [build123d](https://github.com/gumyr/build123d) and OCP.
+
+## Lighter than SOLIDWORKS
+
+On the same laptop, doing the same work, openswx starts more than four times faster, uses less memory, models
+faster and needs under a tenth of the disk space. SOLIDWORKS is still faster at opening its own `.sldprt` files.
+
+| | openswx 0.4.1 | SOLIDWORKS 2025 SP5 |
+|---|---|---|
+| Start, until the window is usable | **5.3 s** | 24.4 s |
+| Memory, idle with an empty part (working set / private bytes) | **780 / 1,806 MB** | 1,636 / 2,991 MB |
+| Memory, opening the largest test part (peak working set / private bytes) | **1,149** / 3,075 MB | 1,736 / 3,108 MB |
+| Scripted sketch, extrude, fillet, hole, pattern and shell | **0.60 s** | 4.6 s |
+| Disk | **638 MB** installed (256 MB installer) | 7,149 MB program folder |
+| Native file for the largest test part | **8 KB** | 189 KB |
+| Opening a SOLIDWORKS `.sldprt` | 2.6 to 13.8 s | **1.1 to 1.4 s** |
+
+Medians of three launches each on an Intel i7-11800H laptop with 16 GB of RAM, an RTX 3070 Laptop GPU and
+Windows 11. Right after start, before any part is open, SOLIDWORKS commits less memory (926 MB against
+1,907 MB). openswx opens a `.sldprt` by rebuilding its feature history in a separate process and checking the
+result against the stored body. The method, every table and what isn't comparable are in
+[docs/benchmarks/resource-use.md](https://github.com/DukeOfCheese/openswx/blob/main/docs/benchmarks/resource-use.md).
 
 ## Install
 
