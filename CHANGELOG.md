@@ -6,6 +6,12 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Security
+
+- The live-collaboration presence endpoint (`/api/collab/presence`) checks its arguments before sending and
+  answers a failure with a fixed message; the details go to the log instead of back to the page
+  (code-scanning alert 12).
+
 ### Fixed
 
 - Save on a document that has never been saved to a file opens Save As, as in other programs, wherever Save is
