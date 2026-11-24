@@ -17,6 +17,7 @@ window.CHAT = {
       border-radius:999px;padding:3px 10px;display:flex;align-items:center;gap:6px}
     
     #chat .log{flex:1;overflow:hidden;padding:18px 18px 8px;display:flex;flex-direction:column;gap:9px;justify-content:flex-end}
+    #chat .log>*{flex-shrink:0}
     #chat .me{align-self:flex-end;max-width:90%;background:#f0eee6;border-radius:14px;padding:10px 14px;color:#1f1e1d;
       font:14.5px/1.5 system-ui,'Segoe UI',sans-serif;animation:cUp .45s cubic-bezier(.2,.8,.2,1) both}
     #chat .ai{max-width:98%;animation:cUp .4s both}
@@ -98,8 +99,11 @@ window.CHAT = {
   done() { document.querySelectorAll('#chat .chip:not(.done)').forEach((c) => c.classList.add('done')); },
   say(html) { if (this._think) { this._think.remove(); this._think = null; } clearInterval(this._spin); if (!this._logo) document.querySelector('#chat .hd .spark').textContent = '✻';
     const d = document.createElement('div'); d.className = 'ai msg'; d.innerHTML = html; this.log().append(d); this.trim(); },
-  trim() { const log = this.log(); while (log.scrollHeight > log.clientHeight + 2 && log.children.length > 2) {
-    const first = [...log.children].find((c) => !c.classList.contains('me')) || log.children[0]; first.remove(); } },
+  trim() {  // drop the oldest items while the log overflows at the top (layout positions: an entering item's
+    const log = this.log(), pad = parseFloat(getComputedStyle(log).paddingTop) || 0;  // slide-in transform would inflate scrollHeight)
+    const over = () => log.firstElementChild && log.firstElementChild.offsetTop < log.offsetTop + pad - 2;
+    while (over() && log.children.length > 2) {
+      const first = [...log.children].find((c) => !c.classList.contains('me')) || log.children[0]; first.remove(); } },
   fit(factor = 0.78) {  // fit the model, then zoom in a little closer than the app's own margin
     const vp = window.app.vp, h00 = vp.viewHeight; vp.zoomFit(false);  // (for the centre)
     const b = vp.bbox, diag = Math.hypot(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z);
