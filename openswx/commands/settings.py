@@ -1,0 +1,44 @@
+"""Settings commands (same registry as session.py, which re-exports them)."""
+from __future__ import annotations
+
+from openswx.system import settings
+from openswx.core.document import DocumentError
+from openswx.session import command
+
+__all__ = ["get_settings", "set_settings", "list_plugins", "check_for_updates"]
+
+
+@command(mutates=False, category="tools", mcp=False)
+def get_settings() -> dict:
+    """Tools > Options: the user's settings with, for each, its description, default and allowed values."""
+    return {"settings": settings.all_settings(), "file": str(settings.path()),
+            "about": {k: {kk: vv for kk, vv in v.items()} for k, v in settings.SETTINGS.items()}}
+
+
+@command(mutates=False, category="tools", mcp=False)
+def set_settings(values: dict | None = None, reset: bool = False) -> dict:
+    """Tools > Options: change settings ({"units": "in", "autosave_seconds": 120, ...}); reset=True puts
+    every setting back to its default. Saved for this user; nothing is saved if a value is not valid."""
+    try:
+        if reset:
+            settings.reset()
+        return {"settings": settings.update(values) if values else settings.all_settings()}
+    except settings.SettingsError as exc:
+        raise DocumentError(str(exc)) from exc
+
+
+@command(mutates=False, category="tools")
+def list_plugins() -> dict:
+    """Installed openswx plugins (packages with an `openswx.plugins` entry point): the commands each added,
+    or why it failed to load."""
+    from openswx.system import plugins
+    return {"plugins": plugins.load_all()}
+
+
+@command(mutates=False, category="tools", mcp=False)
+def check_for_updates() -> dict:
+    """Help > Check for Updates: ask the release feed (the GitHub repository in the update_repository setting)
+    whether a newer version exists. Only a version number and a link come back; nothing is downloaded. Not
+    run automatically."""
+    from openswx.system import updates
+    return updates.check()

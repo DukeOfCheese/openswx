@@ -14,11 +14,12 @@ anything not wrapped here is one call away: `part.run("draft", ...)`, and the wh
 command set is `openswx.session`. Errors are `openswx.api.Error` (the commands' CommandError). In a notebook a
 Part displays as a picture.
 """
+
 from __future__ import annotations
 
 import base64
 
-from . import session as _S
+from openswx import session as _S
 
 Error = _S.CommandError
 

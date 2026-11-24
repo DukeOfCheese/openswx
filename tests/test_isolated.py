@@ -1,7 +1,7 @@
-"""Foreign geometry is read in a child process with a time limit (openswx/isolated.py)."""
+"""Foreign geometry is read in a child process with a time limit (openswx/system/isolated.py)."""
 import pytest
 
-from openswx import isolated
+from openswx.system import isolated
 from openswx import session as S
 
 

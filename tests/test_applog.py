@@ -1,10 +1,10 @@
-"""The application log and the diagnostic report (openswx/applog.py)."""
+"""The application log and the diagnostic report (openswx/system/applog.py)."""
 import logging
 import zipfile
 
 import pytest
 
-from openswx import applog
+from openswx.system import applog
 from openswx import session as S
 
 

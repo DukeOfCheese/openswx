@@ -37,7 +37,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "httpx", "netgen-mesher>=6.2"]
+dev = ["pytest", "pytest-xdist", "httpx", "netgen-mesher>=6.2", "ruff"]
 mesh = ["netgen-mesher>=6.2"]  # curvature-based tetrahedral meshes for simulation (LGPL-2.1; fea_tet.py)
 desktop = ["pywebview>=6", "pyinstaller>=6"]  # the native window and the release build (packaging/build.py)
 difftest = ["pywin32; platform_system == 'Windows'"]  # tools/difftest only (development oracle); openswx itself never uses SOLIDWORKS
@@ -53,16 +53,25 @@ Source = "https://github.com/DukeOfCheese/openswx"
 [project.scripts]
 openswx = "openswx.__main__:main"
 
-[tool.setuptools]
-packages = ["openswx", "openswx.collab"]
+[tool.setuptools.packages.find]
+include = ["openswx*"]
 
 [tool.setuptools.package-data]
-openswx = ["web/*", "web/vendor/*"]
+openswx = ["web/*", "web/css/*", "web/svgs/*", "web/vendor/*", "web/js/*", "web/js/lib/*", "web/js/mixins/*"]
 
 [tool.ruff]
 line-length = 140
-# errors only for now (what CI checks): syntax, undefined names, misused comparisons
-lint.select = ["E9", "F63", "F7", "F82"]
+# syntax and undefined names, plus unused imports/variables and redefinitions
+lint.select = ["E9", "F63", "F7", "F82", "F401", "F811", "F841"]
+
+[tool.ruff.lint.per-file-ignores]
+# package aggregators and the shared test helper intentionally re-export names
+"openswx/__init__.py" = ["F401"]
+"openswx/**/__init__.py" = ["F401"]
+"tests/core_helpers.py" = ["F401"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+  "slow: heavy FEA and simulation runs; skip with -m 'not slow' for the fast loop",
+]

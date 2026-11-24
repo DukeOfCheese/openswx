@@ -1,8 +1,8 @@
-"""Dimension tolerances and ISO 286 fits (openswx/tolerance.py, commands_tol.py)."""
+"""Dimension tolerances and ISO 286 fits (openswx/analysis/tolerance.py, commands_tol.py)."""
 import pytest
 
 from openswx import session as S
-from openswx import tolerance as T
+from openswx.analysis import tolerance as T
 
 
 def um(pair):
@@ -111,7 +111,7 @@ def test_model_dimension_tolerances_are_saved_and_shown(tmp_path):
 def test_drawing_dimension_tolerance_reaches_the_inspection_report():
     plate()
     S.drawing_new(sheet="A3", scale=1)
-    from openswx import drawing_sheets as DS
+    from openswx.drawing import drawing_sheets as DS
     st = S.APP.doc.drawing
     view = next(v for v in st["sheets"][0]["views"] if v.get("orientation") == "top" or v.get("side") == "top")
     g = DS.view_geometry(S.APP.doc, st, view)
@@ -151,7 +151,7 @@ def test_baseline_chain_and_ordinate_dimension_sets(tmp_path):
         S.sketch_line(sk, a, b)
     S.extrude(sk, 5)
     S.drawing_new(sheet="A3", scale=1)
-    from openswx import drawing_sheets as DS
+    from openswx.drawing import drawing_sheets as DS
     st = S.APP.doc.drawing
     view = st["sheets"][0]["views"][0]  # the front view looks straight at the sketch
     g = DS.view_geometry(S.APP.doc, st, view)

@@ -4,6 +4,7 @@ open one, and work with the others in it (locks, history, versions, presence).
 They import nothing of the optional collab extra until they run, so they are listed (and documented) whether or
 not it is installed; without it they say how to install it.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -11,9 +12,9 @@ import re
 import time
 from typing import Any, Literal
 
-from ..document import DocumentError
-from ..session import APP, command, unlocked
-from . import MISSING, available
+from openswx.core.document import DocumentError
+from openswx.session import APP, command, unlocked
+from openswx.collab import MISSING, available
 
 __all__ = ["collab_sign_in", "collab_server_info", "collab_sign_out", "collab_status", "collab_projects", "collab_create_project",
            "collab_documents", "collab_enable", "collab_open", "collab_disable", "collab_lock", "collab_unlock",
@@ -26,7 +27,7 @@ __all__ = ["collab_sign_in", "collab_server_info", "collab_sign_out", "collab_st
 def _need():
     if not available():
         raise DocumentError(MISSING)
-    from . import auth, client
+    from openswx.collab import auth, client
     return auth, client
 
 
@@ -70,7 +71,6 @@ def _client(document: str | None = None):
     return c
 
 
-# ---------------------------------------------------------------------- account
 @command(mutates=False, category="collab")
 def collab_sign_in(server: str, email: str | None = None, password: str | None = None,
                    provider: Literal["google", "github"] | None = None, invite: str | None = None) -> dict:
@@ -229,7 +229,6 @@ def collab_documents(project: str) -> dict:
         return {"project": p, "documents": _ok(s.get(f"/api/projects/{p['id']}/documents"), "listing documents")}
 
 
-# ---------------------------------------------------------------------- sharing
 @command(category="collab")
 def collab_enable(project: str, name: str | None = None) -> dict:
     """Turn live collaboration on for the active part: it becomes a cloud document in the given project (id or
@@ -331,7 +330,7 @@ def collab_new_part(project: str, name: str = "Part") -> dict:
     """Create a new, empty part straight in the cloud, in a project (id or name; see collab_projects), and open
     it: everyone in the project can open it and edit it with you, at any time, whether or not you are online.
     Nothing is made if the server cannot be reached. Returns the document id and status."""
-    from ..document import PartDocument
+    from openswx.core.document import PartDocument
     auth, client = _need()
     name = (name or "").strip()[:200] or "Part"
     url = auth.server()
@@ -343,7 +342,6 @@ def collab_new_part(project: str, name: str = "Part") -> dict:
     return {**_open(info["id"], info), "project": p["name"]}
 
 
-# ---------------------------------------------------------------------- team: organisations, members, invites
 def _org(s, org: str | None) -> dict:
     orgs = _ok(s.get("/api/orgs"), "listing organisations")
     pick = [o for o in orgs if org is None or org == o["id"] or org.lower() == o["name"].lower()]
@@ -490,7 +488,6 @@ def collab_disable() -> dict:
     return {"stopped": c.document_id, "document": c.doc.name, "pending_dropped": pending}
 
 
-# ---------------------------------------------------------------------- working together
 @command(mutates=False, category="collab")
 def collab_lock(features: list[str], document: str | None = None, owner: str | None = None) -> dict:
     """Lock features or sketches of the active cloud document (by name) so nobody else can change them while you
@@ -563,7 +560,7 @@ def collab_restore(seq: int | None = None, version: str | None = None) -> dict:
             d, who = {}, []
         raise DocumentError(f"cannot restore: {d.get('message') or auth.error_text(r)}" + (f" ({', '.join(who)})" if who else ""))
     new = _ok(r, "restoring")["seq"]
-    from .client import wait_seconds
+    from openswx.collab.client import wait_seconds
     end = time.time() + max(wait_seconds(), 5.0)
     with c.cond:
         while (c.seq or 0) < new and c.connected and time.time() < end:

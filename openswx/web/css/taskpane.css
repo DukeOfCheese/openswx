@@ -1,0 +1,170 @@
+/* task pane */
+/* ---------------- task pane */
+#taskpane {
+  display: flex;
+  background: var(--panel);
+  width: 290px;
+  border-radius: var(--r-pane) var(--r-pane) 0 0;
+  box-shadow: var(--tray-shadow);
+  overflow: hidden;
+}
+#taskpane.collapsed {
+  width: 32px;
+}
+#taskpane.collapsed #tp-body {
+  display: none;
+}
+#tp-tabs {
+  width: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 5px;
+  background: var(--panel-2);
+  border-right: 1px solid var(--chrome-2);
+}
+#taskpane.collapsed #tp-tabs {
+  border-right: 0;
+}
+.tp-tab {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  background: none;
+  border-radius: var(--r-btn);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  margin-left: 3px;
+  position: relative;
+}
+.tp-tab:hover {
+  background: var(--hover);
+}
+.tp-tab.active {
+  background: var(--panel);
+  box-shadow: var(--lift-shadow);
+}
+.tp-tab svg {
+  width: 18px;
+  height: 18px;
+}
+.tp-tab .dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+#tp-body {
+  flex: 1;
+  overflow: auto;
+  min-width: 0;
+}
+.tp-pane {
+  padding: 8px;
+}
+.tp-h {
+  font-weight: 600;
+  font-size: 13px;
+  margin: 2px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tp-h svg,
+.mb-body .tp-h svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.act {
+  border-left: 3px solid var(--border);
+  padding: 5px 8px;
+  margin-bottom: 5px;
+  background: var(--panel-2);
+  border-radius: 0 6px 6px 0;
+}
+.act.agent {
+  border-left-color: var(--brand);
+}
+.act.fail {
+  background: var(--err-bg);
+}
+.act .cmd {
+  font-weight: 600;
+}
+.act .meta {
+  color: var(--muted);
+  font-size: 11px;
+}
+.act .args {
+  color: var(--text-2);
+  font-family: Consolas, monospace;
+  font-size: 10.5px;
+  word-break: break-all;
+  margin-top: 2px;
+}
+.kv {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 8px;
+}
+.kv div:nth-child(odd) {
+  color: var(--text-2);
+}
+.kv div:nth-child(even) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.copy-wrap {
+  position: relative;
+}
+.copy-wrap pre.code {
+  padding-right: 64px;
+  white-space: pre-wrap;
+} /* (long lines wrap: none runs under the button) */
+.copy-wrap .copy-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+.copy-btn {
+  font: 11px var(--font);
+  padding: 1px 7px;
+  margin-left: 4px;
+  border: 1px solid var(--chrome-2);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  vertical-align: 1px;
+}
+.copy-btn:hover {
+  background: var(--hover);
+}
+.copy-btn.done {
+  color: var(--accent-ink);
+  border-color: var(--accent-line);
+}
+.code {
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  background: var(--code-bg);
+  padding: 6px 8px;
+  border-radius: 6px;
+  word-break: break-all;
+  user-select: text;
+}
+/* in dialogs, long commands, JSON and paths wrap instead of scrolling sideways (copying keeps them whole) */
+#modal-box pre.code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+#modal-box code {
+  overflow-wrap: anywhere;
+}

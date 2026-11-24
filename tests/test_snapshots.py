@@ -1,9 +1,9 @@
-"""Undo snapshots share what did not change (openswx/snapshots.py)."""
+"""Undo snapshots share what did not change (openswx/system/snapshots.py)."""
 import gc
 import json
 
 from openswx import session as S
-from openswx import snapshots
+from openswx.system import snapshots
 
 
 def test_pack_round_trip_and_release():

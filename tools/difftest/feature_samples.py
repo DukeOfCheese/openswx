@@ -6,6 +6,7 @@ name in their properties: keep OUT_DIR outside the repository.
 
     python tools/difftest/feature_samples.py OUT_DIR [CASE ...]
 """
+
 from __future__ import annotations
 
 import sys

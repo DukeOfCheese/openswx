@@ -1,10 +1,10 @@
-"""The object API for scripts (openswx/api.py) and the update check (openswx/updates.py)."""
+"""The object API for scripts (openswx/api.py) and the update check (openswx/system/updates.py)."""
 import math
 import urllib.error
 
 import pytest
 
-from openswx import updates
+from openswx.system import updates
 from openswx import session as S
 from openswx.api import Error, Part
 

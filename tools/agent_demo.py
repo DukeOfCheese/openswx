@@ -3,6 +3,7 @@
     python -m openswx serve          # in one terminal (open the link it prints to watch)
     python tools/agent_demo.py       # in another (sends your openswx token: OPENSWX_TOKEN or `openswx token`)
 """
+
 from __future__ import annotations
 
 import asyncio

@@ -6,6 +6,7 @@ Needs a checkout of openswx-collab with its virtual environment, by default besi
 (../openswx-collab/.venv; OPENSWX_COLLAB_SERVER_REPO points elsewhere). Skipped without it. The tests run in
 order and share the server and the two peers.
 """
+
 import json
 import os
 import queue

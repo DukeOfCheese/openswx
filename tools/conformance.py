@@ -13,6 +13,7 @@ them: start a new part, run the commands in order, compare.
     python tools/conformance.py run [DIR]
         run every case and report (tests/test_conformance.py does the same under pytest)
 """
+
 from __future__ import annotations
 
 import json

@@ -3,6 +3,7 @@
 
 A stand-in socket answers the way the server would (docs/protocol.md in openswx-collab). The same scenarios
 against the real server, with two openswx processes, are in test_collab_live.py."""
+
 import json
 import os
 import urllib.parse
@@ -328,7 +329,7 @@ def test_a_preview_does_not_look_like_the_document_was_closed(cloud):
 def test_the_ui_reads_collaboration_state_over_rest(cloud):
     from fastapi.testclient import TestClient
 
-    from openswx.web_server import create_app
+    from openswx.server.web_server import create_app
     cloud.peers = {"u2.x": {"client_id": "u2.x", "user_id": "u2", "name": "Ada", "colour": "#e33",
                             "presence": {"tool": "fillet"}, "draft": None}}
     cloud.locks = {"f:f2": {"client_id": "u2.x", "user_id": "u2", "name": "Ada", "detached": False}}
@@ -612,7 +613,7 @@ def test_presence_does_not_wait_for_the_command_lock(cloud):
     from fastapi.testclient import TestClient
 
     from openswx.collab import commands_collab  # noqa: F401 (as after any collab_* command)
-    from openswx.web_server import create_app
+    from openswx.server.web_server import create_app
     held, release = threading.Event(), threading.Event()
 
     def busy():  # (a long rebuild, say)

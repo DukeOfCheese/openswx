@@ -8,6 +8,7 @@
   openswx-cli register-file-types [--exe EXE]  .oswprt/.oswasm open in openswx; Open with for CAD files
   openswx-cli unregister-file-types           remove those file associations again
 """
+
 from __future__ import annotations
 
 import argparse
@@ -50,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
     r = sub.add_parser("register-file-types", help="open .oswprt/.oswasm in openswx and add it to Open with (this user)")
     r.add_argument("--exe", help="program to register (default: openswx.exe next to this program)")
     sub.add_parser("unregister-file-types", help="remove the file associations register-file-types added")
-    from . import cli  # (headless one-shot tools: convert, render, massprops, check, drawing, script, diff)
+    from openswx.shell import cli  # (headless one-shot tools: convert, render, massprops, check, drawing, script, diff)
     cli.add_parsers(sub)
     argv = [x for x in (sys.argv[1:] if argv is None else argv) if not x.startswith("-psn_")]  # (macOS Finder launch)
     if not argv or (argv[0] not in ("desktop", "serve", "mcp", "token", "sldinfo", "register-file-types", "unregister-file-types", "-h", "--help", *cli.COMMANDS)):
@@ -65,11 +66,11 @@ def main(argv: list[str] | None = None) -> int:
         return cli.run(a)
 
     if a.cmd == "desktop":
-        from .desktop import run as run_desktop
+        from openswx.shell.desktop import run as run_desktop
         return run_desktop(a.port, a.file)
 
     if a.cmd == "serve":
-        from . import security
+        from openswx.server import security
         remote = not security.is_loopback(a.host)
         if remote and not a.allow_remote:
             print(f"openswx: --host {a.host} lets other computers reach openswx; add --allow-remote if that is intended",
@@ -79,8 +80,8 @@ def main(argv: list[str] | None = None) -> int:
             print("openswx: --no-token is only for this computer (not with --allow-remote)", file=sys.stderr)
             return 2
         token = None if a.no_token else security.user_token()
-        from . import session as S
-        from .web_server import run
+        from openswx import session as S
+        from openswx.server.web_server import run
         if a.file:
             S.open_part(a.file)
         url = f"http://{a.host}:{a.port}/"
@@ -100,21 +101,21 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if a.cmd == "token":
-        from . import security
+        from openswx.server import security
         print(security.user_token())
         return 0
 
     if a.cmd == "mcp":
-        from . import mcp_bridge
+        from openswx.server import mcp_bridge
         running = None if a.standalone or a.workspace or a.toolsets else mcp_bridge.find_running(a.port)
         if running:  # an openswx window is open: the agent works in it (its edits show there, live)
-            from . import security
+            from openswx.server import security
             print(f"openswx: relaying MCP to the running openswx at {running}", file=sys.stderr)
             mcp_bridge.run(running + "/mcp", security.user_token())
             return 0
-        from .mcp_server import build_mcp
+        from openswx.server.mcp_server import build_mcp
         if not a.no_ui:
-            from . import security
+            from openswx.server import security
             if not security.is_loopback(a.host):
                 print("openswx: the live UI of `mcp` is for this computer only (use `serve --allow-remote`)", file=sys.stderr)
                 return 2
@@ -122,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
 
             def ui():
                 try:
-                    from .web_server import run
+                    from openswx.server.web_server import run
                     run(a.host, a.port, mount_mcp=False, log_level="error", token=token)
                 except (OSError, SystemExit) as exc:  # port busy: agents still work headless
                     print(f"openswx: web UI not started ({exc})", file=sys.stderr)
@@ -132,14 +133,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if a.cmd == "sldinfo":
-        from .sldprt import extract, read_info
+        from openswx.exchange.sldprt import extract, read_info
         info = read_info(a.file)
         if a.extract:
             info["extracted"] = extract(a.file, a.extract)
         print(json.dumps(info, indent=1))
         return 0
     if a.cmd in ("register-file-types", "unregister-file-types"):
-        from . import fileassoc
+        from openswx.system import fileassoc
         if a.cmd == "unregister-file-types":
             print(json.dumps({"removed": fileassoc.unregister()}, indent=1))
             return 0

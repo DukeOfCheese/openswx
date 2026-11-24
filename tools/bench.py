@@ -5,6 +5,7 @@ something faster (or might make it slower); keep the JSON with a release to trac
 
 Each timing is the best of `--repeat` runs, in seconds. `import` is measured in a fresh interpreter.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -45,7 +46,7 @@ def main() -> int:
     a = ap.parse_args()
     results = {"import_session_cold": cold_import()}
     from openswx import session as S
-    from openswx.geom import tessellate
+    from openswx.core.geom import tessellate
 
     def first_part():
         S.new_part("bench")

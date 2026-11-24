@@ -1,6 +1,8 @@
 """Tests: analysis (split out of the former test_core.py; shared helpers in core_helpers.py)."""
 from core_helpers import *  # noqa: F401,F403
 
+pytestmark = pytest.mark.slow
+
 
 def test_failed_feature_is_rejected():
     block()
@@ -388,9 +390,9 @@ def test_pdm_vault_workflow(tmp_path, monkeypatch):
 def test_holes_do_not_give_spurious_modes_or_runaway_drop_nodes():
     # cut cells around holes with only a few inside points are under-integrated: they must not carry mass
     from build123d import Box, Cylinder, Pos, Rot
-    from openswx.fea import solve_modal
-    from openswx.fea_more import solve_drop
-    from openswx.materials import lookup
+    from openswx.analysis.fea import solve_modal
+    from openswx.analysis.fea_more import solve_drop
+    from openswx.core.materials import lookup
     mat = lookup("AISI 1020")
     solid = Pos(0, 10, 0) * Box(100, 20, 60)
     holed = solid - Pos(30, 10, 0) * Rot(90, 0, 0) * Cylinder(4, 40) - Pos(-30, 10, 0) * Rot(90, 0, 0) * Cylinder(4, 40)
@@ -427,7 +429,7 @@ def test_cam_toolpaths_gcode_and_stock_check(tmp_path):
 
 def test_plastics_fill_matches_slit_flow_and_finds_weld_lines():
     from build123d import Align, Box, Cylinder, Pos
-    from openswx.plastics import fill, material
+    from openswx.manufacturing.plastics import fill, material
     plate = Box(100, 20, 2, align=(Align.MIN, Align.MIN, Align.MIN))
     gate = [f for f in plate.faces() if abs(f.center().X) < 1e-6][0]
     # a line gate along the end: 1-D slit flow, dp = 12 eta Q L / (W t^3) (Newtonian) or the power-law form

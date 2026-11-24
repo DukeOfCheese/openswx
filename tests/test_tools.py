@@ -1,5 +1,6 @@
 """The survey runner's bookkeeping (tools/survey.py): resumable runs, classification, comparison.
 The rebuild itself is stood in for; no SOLIDWORKS files are needed or read."""
+
 import sys
 from pathlib import Path
 
@@ -103,7 +104,7 @@ def test_release_metadata_agrees():
 def test_material_library_entries_are_plausible():
     """Every library material has the fields the studies need, in sane ranges and units (kg/m^3, MPa, W/(m K),
     J/(kg K)): a slip of units (GPa for MPa, g/cm^3 for kg/m^3) shows up as an out-of-range value here."""
-    from openswx import materials
+    from openswx.core import materials
     lib = {n: m for n, m in materials.library().items() if m.get("category") != materials.CUSTOM_CATEGORY}
     assert len(lib) >= 90
     for name, m in lib.items():
