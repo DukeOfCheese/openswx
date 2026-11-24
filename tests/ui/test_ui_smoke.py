@@ -262,6 +262,30 @@ def test_macos_desktop_menus_go_to_the_menu_bar(page):
     assert got["titles"] == ["File", "Edit", "View", "Insert", "Tools", "Window", "Help"]
     assert got["hidden"] and got["shown"] and got["back"] and got["hasSub"]
 
+def test_agent_toasts(page):
+    """An agent's command shows a tidy toast (no markup shown as text, readable command name), failures included;
+    with the Agent activity pane open there is no toast (the pane lists it)."""
+    got = page.evaluate("""async () => {
+        document.querySelector('#toasts').innerHTML = '';
+        const tp = document.querySelector('#taskpane');
+        if (!tp.classList.contains('collapsed')) window.app.showTask('agent');  // (closed to start with)
+        tp.classList.add('collapsed');
+        window.app.onAgent({command: 'sketch_circle', ok: true});
+        window.app.onAgent({command: 'extrude', ok: false, message: 'unknown sketch <Sketch9>'});
+        const shown = [...document.querySelectorAll('#toasts .toast')].map((t) => t.innerText);
+        const dot = !!document.querySelector('.tp-tab[data-pane="agent"] .dot');
+        document.querySelector('#toasts').innerHTML = '';
+        window.app.showTask('agent');
+        window.app.onAgent({command: 'fillet', ok: true});
+        const whileOpen = document.querySelectorAll('#toasts .toast').length;
+        window.app.showTask('agent');  // (close it again)
+        return {shown, dot, whileOpen};
+    }""")
+    assert got["shown"][0].replace(" ", " ") == "Agent Sketch circle"
+    assert got["shown"][1].replace(" ", " ") == "Agent Extrude failed: unknown sketch <Sketch9>"
+    assert "<b>" not in "".join(got["shown"]) and got["dot"]
+    assert got["whileOpen"] == 0
+
 def test_no_script_errors(page):
     assert page.errors == []
 

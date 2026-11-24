@@ -174,9 +174,13 @@ class App {
 
   onAgent(entry) {
     this.homeHide(); // (an agent at work: show what it does)
-    this.toast(`<b>Agent</b> ${escapeHtml(entry.command)}${entry.ok ? "" : ` failed: ${escapeHtml(entry.message)}`}`, entry.ok ? "agent" : "err");
-    const dot = document.querySelector('.tp-tab[data-pane="agent"]');
-    if (dot && $("#taskpane").classList.contains("collapsed") && !dot.querySelector(".dot")) dot.append(el("span", "dot"));
+    const tab = document.querySelector('.tp-tab[data-pane="agent"]');
+    const watching = !$("#taskpane").classList.contains("collapsed") && tab?.classList.contains("active");
+    if (watching) return; // (the Agent activity pane is open and already lists it: no toast on top)
+    const what = String(entry.command || "").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()); // sketch_circle -> Sketch circle
+    const msg = entry.ok ? `<b>Agent</b>&ensp;${escapeHtml(what)}` : `<b>Agent</b>&ensp;${escapeHtml(what)} failed: ${escapeHtml(entry.message || "")}`;
+    this.toast(msg, entry.ok ? "agent" : "err", { html: true });
+    if (tab && !tab.querySelector(".dot")) tab.append(el("span", "dot")); // (unread, until the pane is opened)
   }
 
   // ================================================================== title / quick access / menus
@@ -2708,8 +2712,10 @@ class App {
     setTimeout(() => box.querySelector("input")?.focus());
   }
 
-  toast(msg, kind = "") {
-    const t = el("div", `toast ${kind}`, kind === "err" ? escapeHtml(msg) : msg); $("#toasts").append(t);
+  // msg is HTML, except error messages, which are escaped (they may carry text from files or the server) unless
+  // the caller built and escaped the HTML itself ({ html: true })
+  toast(msg, kind = "", { html = false } = {}) {
+    const t = el("div", `toast ${kind}`, kind === "err" && !html ? escapeHtml(msg) : msg); $("#toasts").append(t);
     setTimeout(() => t.remove(), kind === "err" ? 6000 : 3500);
   }
 
