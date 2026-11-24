@@ -45,7 +45,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1 libglu1-mesa libegl1
       - name: Install
         run: python -m pip install -e ".[dev]"
-      - name: The desktop window (macOS only: tests/test_desktop_menu.py checks the system menu bar)
+      - name: "The desktop window (macOS only, for the menu bar test in tests/test_desktop_menu.py)"
         if: runner.os == 'macOS'
         run: python -m pip install "pywebview>=6"
       - name: Errors only (syntax, undefined names)
