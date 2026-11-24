@@ -471,6 +471,10 @@ def test_home_s_cloud_tab_shows_the_project_its_parts_and_who_is_in_them(world):
     assert b.locator("#home .cl-acct").inner_text().startswith("Signed in as Bob")
     assert b.locator("#home #cl-ibtn").count() == 0  # (a member sees the team; owners and admins invite)
     shot(b, "home-cloud-bob")
+    if SHOTS:  # (and in the dark theme)
+        b.evaluate("document.documentElement.dataset.theme = 'dark'")
+        shot(b, "home-cloud-bob-dark")
+        b.evaluate("delete document.documentElement.dataset.theme")
     b.keyboard.press("Escape")
     b.wait_for_function("!window.app.homeOpen")
 

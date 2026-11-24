@@ -16,7 +16,8 @@ formats or commands; files are migrated automatically and the change is listed h
 - Home's Cloud tab: sign in (email and password, Google or GitHub), then browse your organisations, projects and
   their parts, with who is in each part right now. New Cloud Part makes a part straight on the server, so anyone
   in the project can open it at any time, whether or not you are online. The team list (members, roles,
-  invitations, who can open each project) is there too. You can also join with an invitation code.
+  invitations, who can open each project) is there too. You can also join with an invitation code. The "who is
+  here" avatars need an openswx-collab server newer than 0.1.0; against 0.1.0 they stay empty.
 - New Part asks Local or Cloud once a collaboration server is set up, and remembers the last choice
   (`new_part_location`).
 - Others' pointers are arrows in their colour with a name bubble that glide to where the person points, also over
