@@ -6,7 +6,7 @@ import re
 import sys
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 ROOT = Path(SPECPATH).parent
 IS_MAC = sys.platform == "darwin"
@@ -50,13 +50,14 @@ if _ng is not None and sys.platform in ("win32", "darwin"):
         binaries += [(str(f), "netgen_occt") for f in (Path(sys.prefix) / "lib").glob("libTK*.dylib")]
 else:
     NOT_BUNDLED = ["netgen", "pyngcore"]
-hidden += ["openswx.fea_tet", "openswx.mcp_bridge", "openswx.desktop", "openswx.web_server", "openswx.mcp_server", "openswx.assembly", "openswx.drawing",
-           "openswx.sldprt", "openswx.render", "openswx.equations", "openswx.sw_tree", "openswx.sw_sketch",
-           "openswx.sw_rebuild", "openswx.drawing_sheets", "openswx.fileassoc", "openswx.sw_drawing",
-           "openswx.advanced", "openswx.sheet_more", "openswx.commands_more", "openswx.drawing_more", "openswx.fea_more",
-           "openswx.analysis_more", "openswx.ecosystem", "openswx.piping", "openswx.cfd", "openswx.cam", "openswx.plastics", "openswx.inspection", "openswx.electrical", "openswx.commands_mfg",
-           "openswx.naming", "openswx.cache", "openswx.security", "openswx.recovery", "openswx.commands_app", "openswx.migrate", "openswx.applog", "openswx.tolerance", "openswx.commands_tol", "openswx.commands_review", "openswx.cli", "openswx.snapshots", "openswx.jobs", "openswx.settings", "openswx.recent", "openswx.commands_settings", "openswx.plugins", "openswx.isolated", "openswx.commands_asm", "openswx.commands_blocks", "openswx.commands_simreport", "openswx.commands_std", "openswx.fcstd", "openswx.updates", "openswx.api", "openswx.commands_document", "openswx.commands_sketch", "openswx.commands_features", "openswx.commands_assembly", "openswx.commands_drawing", "openswx.commands_simulation",
-           "openswx.collab", "openswx.collab.commands_collab", "openswx.collab.client", "openswx.collab.auth", "openswx.collab.backup"]
+# The package's modules are collected from the tree, so a new module needs no line here. (Third-party packages
+# above come from collect_all; netgen from its own block.) The source checkout is on the path first, so this
+# works without an editable install in the build environment.
+for _p in (str(ROOT), str(ROOT / "packaging")):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+hidden += collect_submodules("openswx")
+hidden = list(dict.fromkeys(hidden))
 
 a = Analysis([str(ROOT / "packaging" / "entry.py")], pathex=[str(ROOT)], datas=datas, binaries=binaries,
              hiddenimports=hidden, excludes=["tkinter", "matplotlib", "pytest", "jedi", "parso", *NOT_BUNDLED], noarchive=False)
@@ -70,7 +71,7 @@ coll = COLLECT(gui, cli, a.binaries, a.datas, name="openswx")
 
 if IS_MAC:
     # the same file types as the Windows installer (loaded by path: the package __init__ installs import stubs)
-    spec = importlib.util.spec_from_file_location("_fileassoc", ROOT / "openswx" / "fileassoc.py")
+    spec = importlib.util.spec_from_file_location("_fileassoc", ROOT / "openswx" / "system" / "fileassoc.py")
     fa = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(fa)
     version = re.search(r'^version\s*=\s*"([^"]+)"', (ROOT / "pyproject.toml").read_text(encoding="utf-8"), re.M).group(1)

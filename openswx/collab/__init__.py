@@ -9,6 +9,7 @@ as it does alone: nothing here is imported until a collab_* command runs.
     backup.py            local .oswprt snapshots of every cloud document
     commands_collab.py   the collab_* commands
 """
+
 from __future__ import annotations
 
 MISSING = ("live collaboration needs the collab extra: pip install openswx[collab] (packages openswx-collab-protocol "

@@ -5,8 +5,8 @@ import os
 import pytest
 
 from openswx import session as S
-from openswx.geom import STD_PLANES
-from openswx.sketch import Sketch
+from openswx.core.geom import STD_PLANES
+from openswx.core.sketch import Sketch
 
 PI = math.pi
 

@@ -19,7 +19,7 @@ openswx is in alpha: only the latest release (and `main`) gets security fixes.
 openswx runs a local web server, accepts commands from AI agents and reads files from other programs, so these
 are the areas we care most about:
 
-- **The local server** (`openswx/security.py`): reaching the REST or MCP endpoints without the token, from
+- **The local server** (`openswx/server/security.py`): reaching the REST or MCP endpoints without the token, from
   another computer without `--allow-remote`, or from a web page in the browser (DNS rebinding, cross-site
   requests); a view-only `--share` link that can change anything.
 - **Agent confinement**: an agent reading or writing files outside `--workspace` / `OPENSWX_WORKSPACE`.

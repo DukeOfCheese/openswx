@@ -3,13 +3,14 @@
 No SOLIDWORKS file is in the repository, so this runs against the sample parts of a local SOLIDWORKS
 installation and is skipped where there is none (set OPENSWX_SW_SAMPLES to the folder to point it elsewhere).
 """
+
 import os
 from pathlib import Path
 
 import pytest
 
 from openswx import session as S
-from openswx.sldprt import configurations
+from openswx.exchange.sldprt import configurations
 
 SAMPLES = Path(os.environ.get("OPENSWX_SW_SAMPLES") or "C:/Users/Public/Documents/SOLIDWORKS")
 

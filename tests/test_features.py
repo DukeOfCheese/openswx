@@ -536,7 +536,7 @@ def test_revolve_half_section():
     leave the most - revolving it gives the body before the cuts."""
     import numpy as np
     from build123d import Cylinder, Pos, Rot
-    from openswx import sw_rebuild as R
+    from openswx.exchange import sw_rebuild as R
     turned = Rot(0, 90, 0) * Cylinder(5, 20)  # along X, x -10..10
     holes = [Pos(10, 0, z) * Rot(0, 90, 0) * Cylinder(0.5, 4) for z in (3, -3)]  # off the axis, in the XZ plane
     body = turned - holes[0] - holes[1]
@@ -569,7 +569,7 @@ def test_revolve_half_section():
 def test_hole_from_faces(htype, extra):
     """Hole Wizard features are rebuilt as openswx holes read off the faces they made (cylinders, cone): a
     cone as wide as the hole is a blind hole's drill point (entered from the other end), not a countersink."""
-    from openswx.sw_rebuild import _hole_variants
+    from openswx.exchange.sw_rebuild import _hole_variants
     S.new_part()
     sk = S.create_sketch("Top")["sketch"]
     S.sketch_rectangle(sk, [-20, -20], [20, 20])

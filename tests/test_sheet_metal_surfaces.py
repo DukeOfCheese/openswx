@@ -72,7 +72,7 @@ def test_hem_and_sketched_bend():
 def test_more_surfaces():
     S.new_part()
     sk = S.create_sketch("Front")["sketch"]
-    ln = S.sketch_line(sk, [10, 0], [10, 20])
+    S.sketch_line(sk, [10, 0], [10, 20])
     rs = S.revolved_surface(sk, "Y")
     assert rs["info"]["surface_area"] == pytest.approx(2 * PI * 10 * 20, rel=1e-6)
     bot = S.create_sketch("Top")["sketch"]
@@ -135,7 +135,6 @@ def test_structural_member_profile_sketch():
 
 def test_structural_member_3d_path():
     """A structural member along a 3D sketch (a diagonal and a vertical line): one 10 x 10 bar per line."""
-    import math
     S.new_part()
     S.create_3d_sketch([[0, 0, 0], [30, 40, 0], [30, 40, -60]], name="Path3D")
     prof = S.create_sketch("Top")["sketch"]
@@ -221,7 +220,6 @@ def test_corner_relief_dimple_miter_flange():
     S.base_flange(sk, thickness=2)
     edge = [e for e in S.get_topology()["edges"] if e["type"] == "line" and abs(e["point"][0] - 100) < 1e-6
             and abs(e["point"][1] - 2) < 1e-6][0]
-    z0 = min(edge["point"][2] - 25, edge["point"][2] + 25)
     S.reference_plane("Front", offset=0)
     prof = S.create_sketch("Plane1")["sketch"]
     S.sketch_line(prof, [100, 2], [100, 17])

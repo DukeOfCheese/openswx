@@ -3,6 +3,7 @@
 
     python tools/difftest/xt_samples.py OUT_DIR [CASE ...]
 """
+
 from __future__ import annotations
 
 import json

@@ -1,13 +1,14 @@
 """Static stress on the curvature-based tetrahedral mesh (fea_tet), checked against closed-form results.
 Needs the optional Netgen mesher (installed with the dev extra); skipped without it."""
+
 import numpy as np
 import pytest
 from build123d import Box, Cylinder
 
-from openswx import fea_tet
+from openswx.analysis import fea_tet
 from openswx import session as S
 
-pytestmark = pytest.mark.skipif(not fea_tet.available(), reason="the Netgen mesher is not installed")
+pytestmark = [pytest.mark.slow, pytest.mark.skipif(not fea_tet.available(), reason="the Netgen mesher is not installed")]
 
 STEEL = {"elastic_modulus": 200000.0, "poisson": 0.3, "yield_strength": 250.0}
 

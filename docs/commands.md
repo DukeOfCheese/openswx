@@ -1261,6 +1261,22 @@ helix(pitch: float, radius: float, revolutions: float = 1.0, height: float | Non
 
 Curves > Helix/Spiral: pitch (mm/rev), radius, revolutions (or height), about `axis` (X/Y/Z, axis name, 'EdgeN') through `origin`; taper (deg) gives a conical helix. Usable as a sweep path.
 
+### `connection_point`
+
+```
+connection_point(point: Vec3, direction: str | Vec3 = 'Y', name: str | None = None)
+```
+
+Connection point for magnetic mates (Asset Publisher): a point of this part and the direction a mating part comes in from.
+
+### `mate_reference`
+
+```
+mate_reference(face: str, type: Literal['coincident', 'concentric', 'tangent', 'parallel'] = 'coincident', reference: str | None = None, aligned: bool = False)
+```
+
+Mate Reference: name a face of this part and the mate it takes; in an assembly, parts whose mate references have the same name are mated automatically (apply_mate_references).
+
 ### `flex`
 
 ```
@@ -1324,22 +1340,6 @@ cosmetic_thread(face: str, label: str | None = None, length: float | None = None
 ```
 
 Cosmetic Thread on a cylindrical face ('FaceN', a hole or a shaft): label like 'M8x1.25' (default from the diameter), length (default the face's length). Shown on the model and in drawings; no geometry.
-
-### `connection_point`
-
-```
-connection_point(point: Vec3, direction: str | Vec3 = 'Y', name: str | None = None)
-```
-
-Connection point for magnetic mates (Asset Publisher): a point of this part and the direction a mating part comes in from.
-
-### `mate_reference`
-
-```
-mate_reference(face: str, type: Literal['coincident', 'concentric', 'tangent', 'parallel'] = 'coincident', reference: str | None = None, aligned: bool = False)
-```
-
-Mate Reference: name a face of this part and the mate it takes; in an assembly, parts whose mate references have the same name are mated automatically (apply_mate_references).
 
 ### `defeature`
 

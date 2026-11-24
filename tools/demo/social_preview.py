@@ -1,6 +1,7 @@
 """Social preview (1280x640) for the GitHub repository: logo, tagline and a frame of the demo.
     python tools/demo/social_preview.py docs/media/demo-poster.png docs/media/social-preview.png
 Upload the result under Settings > General > Social preview (GitHub has no API for it)."""
+
 import sys
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont

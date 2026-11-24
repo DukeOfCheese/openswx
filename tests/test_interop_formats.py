@@ -94,8 +94,8 @@ def test_parasolid_reader(name):
     """Clean-room XT reader against SOLIDWORKS 2025 exports (Parasolid 36.1): volume and area match
     SOLIDWORKS' own mass properties."""
     import json
-    from openswx.features import mass_properties
-    from openswx.parasolid import read_xt_shape
+    from openswx.core.features import mass_properties
+    from openswx.exchange.parasolid import read_xt_shape
     truth = json.loads((XT_DATA / "truth.json").read_text())[name.split(".")[0]]
     shape, notes = read_xt_shape(str(XT_DATA / name))
     mp = mass_properties(shape)
@@ -107,9 +107,9 @@ def test_parasolid_reader(name):
 def test_parasolid_writer_roundtrip(tmp_path):
     """openswx -> .x_t -> clean-room reader gives the same solid (SOLIDWORKS import of the same files is
     checked by tools/difftest/xt_roundtrip.py)."""
-    from openswx.features import mass_properties
-    from openswx.parasolid import read_xt_shape
-    from openswx.parasolid_write import write_xt
+    from openswx.core.features import mass_properties
+    from openswx.exchange.parasolid import read_xt_shape
+    from openswx.exchange.parasolid_write import write_xt
     from build123d import Box, Cone, Cylinder, Sphere, Torus
     for shape in (Box(40, 30, 20) - Cylinder(5, 40), Sphere(10), Torus(20, 5), Cone(10, 4, 15),
                   Box(40, 40, 40) - Box(10, 10, 10)):
@@ -130,8 +130,8 @@ def test_parasolid_rolling_ball_blend():
     """SOLIDWORKS fillet between a plane and a B-surface: BLENDED_EDGE (exact tube around the spine, the
     intersection of the offset supports), BLEND_BOUND contact curves (spine feet on the supports)."""
     import json
-    from openswx.features import mass_properties
-    from openswx.parasolid import read_xt_shape
+    from openswx.core.features import mass_properties
+    from openswx.exchange.parasolid import read_xt_shape
     truth = json.loads((XT_DATA / "truth.json").read_text())["spline_fillet"]
     shape, notes = read_xt_shape(str(XT_DATA / "spline_fillet.x_t"))
     mp = mass_properties(shape)
@@ -145,7 +145,7 @@ def test_parasolid_extent_counts_edge_circles():
     rejected), so the edges' circles count; a construction circle no edge uses (500 m, on a sample bat)
     does not."""
     from types import SimpleNamespace
-    from openswx.parasolid import _Builder
+    from openswx.exchange.parasolid import _Builder
     nodes = {1: (31, {"centre": [0.0, 0.0, 5.4864], "radius": 0.05715}), 2: (16, {"curve": 1}),
              3: (31, {"centre": [0.0, 0.0, 0.0], "radius": 500.0}), 4: (29, {"pvec": [0.01, 0.0, 0.0]})}
     reach = _Builder(SimpleNamespace(nodes=nodes)).extent()
@@ -163,7 +163,7 @@ def test_parasolid_band_of_ring_loops_on_closed_bspline():
     from OCP.TopoDS import TopoDS, TopoDS_Face, TopoDS_Wire
     from OCP.gp import gp_Ax2, gp_Circ, gp_Dir, gp_Pnt, gp_Vec
     from build123d import Shape
-    from openswx.parasolid import _Builder
+    from openswx.exchange.parasolid import _Builder
     circ = GeomConvert.CurveToBSplineCurve_s(Geom_Circle(gp_Circ(gp_Ax2(gp_Pnt(0, 0, 0), gp_Dir(0, 0, 1)), 10.0)))
     circ.SetNotPeriodic()  # closed, not periodic: as XT stores it
     surf = _Builder._bspline_extrusion(circ, (0, 0, 1), 100.0)

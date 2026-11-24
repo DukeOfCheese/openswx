@@ -14,6 +14,7 @@ Browser sign-in (Google, GitHub): a one-off HTTP listener on 127.0.0.1 receives 
 browser back with; the code is worth nothing without the `code_verifier` that only this process knows (PKCE:
 the server was given its SHA-256, in lower-case hex).
 """
+
 from __future__ import annotations
 
 import hashlib

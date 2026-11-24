@@ -14,23 +14,21 @@ icons are original. Interop facts come from docs/re/README.md.
 
 ```
 openswx/
-  sketch/solver.py      constraint solver (scipy least squares, DOF/status via Jacobian nullspace)
-  sketch/model.py       sketch entities, relations, dimensions, profile (wire/face) extraction
-  model/refs.py         geometric references to faces/edges (point+normal signatures, survive rebuild)
-  model/features.py     feature types: Sketch, Extrude (boss/cut), Revolve (boss/cut), Fillet,
-                        Chamfer, Shell, Hole, LinearPattern, CircularPattern, Mirror, RefPlane, Import
-  model/document.py     PartDocument: tree, rebuild, rollback, suppress, errors, undo/redo, save/load
-  geom/tess.py          tessellation -> mesh JSON (per-face ids, edges) for the viewer
-  app/commands.py       single command registry (used by REST + MCP + tests)
-  app/session.py        Application: documents, active doc, event bus
-  server/web.py         FastAPI: static UI, /api/command, /api/doc, /api/mesh, SSE /api/events
-  server/mcp_server.py  FastMCP tools wrapping the command registry (stdio + streamable HTTP)
-  io/sldprt.py          SOLIDWORKS container reader (streams, preview, properties, Parasolid XT)
-  io/exchange.py        STEP/STL export, STEP import
-  web/                  SOLIDWORKS-style UI (three.js): menu bar, CommandManager, FeatureManager,
-                        PropertyManager, heads-up view toolbar, confirmation corner, sketcher, status bar
-tools/difftest/         same cases on openswx and SOLIDWORKS (COM), compare mass properties
-tests/                  pytest
+  core/                the model: document (tree, rebuild, undo), features, sketch solver, assembly,
+                        geom (tessellation, persistent face/edge references), naming, materials, equations
+  commands/            one module per command area; importing the package registers every @command
+  exchange/            file formats: SOLIDWORKS (sldprt/sw_*), Parasolid, DXF, FreeCAD, format versions
+  drawing/             drawings: views, sheets, annotations, PDF/DXF export
+  analysis/            FEA (fea*), CFD, tolerance, inspection reports, headless render
+  manufacturing/       CAM, plastics, piping, electrical routing, ecosystem/PDM tools
+  system/              settings, recovery, snapshots, jobs, cache, logging, updates, plugins, file types
+  server/              FastAPI web/MCP server, MCP bridge, access rules
+  shell/               CLI and the native desktop window
+  session.py           Application + @command registry (shared by UI, MCP, tests)
+  api.py, icons.py     the scripting API and the inlined icon sprite
+  collab/ web/         live collaboration and the three.js UI (no build step)
+tools/difftest/        same cases on openswx and SOLIDWORKS (COM), compare mass properties
+tests/                 pytest
 ```
 
 Conventions (match SOLIDWORKS): mm (MMGS) in UI/MCP; Front=XY(+Z), Top=XZ(+Y), Right=YZ(+X);
@@ -48,7 +46,7 @@ Sketch colours: blue under-defined, black fully defined, red over-defined/unsolv
 - [x] M4 web server + UI written (web_server.py; web/{index.html,style.css,icons.js,viewport.js,propman.js,sketcher.js,app.js});
       backend extras: /api/preview (S.preview clones doc), redefine_feature (Edit Feature), origin tagging ui/agent,
       sketch_set_construction. NEXT: run `python -m openswx serve`, test in browser, fix bugs.
-- [x] M5 SLDPRT container reader (openswx/sldprt.py; `python -m openswx sldinfo FILE --extract DIR`)
+- [x] M5 SLDPRT container reader (openswx/exchange/sldprt.py; `python -m openswx sldinfo FILE --extract DIR`)
 - [x] M6 differential harness (tools/difftest/difftest.py --solidworks): 7/7 cases match SOLIDWORKS 2025
       (volume/area ~1e-15 rel). COM notes: late-bound zero-arg methods are property reads (call0 uses
       inspect.ismethod); SelectByID2 only picks visible entities -> use SelectByRay for edges.
@@ -109,7 +107,7 @@ Fix found: anti-aligned mates need flips -> assembly.solve retries with 180-degr
       verified in Chrome (frame + cut list 100x2/200x2; gear 90 deg on A -> -45 deg on B). 91 MCP tools.
 
 ## Phase 4 — desktop .exe + feature parity backlog (user: "should become an .exe", "build out all the other features")
-Desktop: openswx/desktop.py (pywebview native window + embedded server/MCP, native file dialogs via
+Desktop: openswx/shell/desktop.py (pywebview native window + embedded server/MCP, native file dialogs via
 window.pywebview.api: open_file/save_as/export/save_drawing/save_image); `openswx` with no args = desktop;
 packaging/{entry.py,make_icon.py,openswx.spec} -> dist/openswx/openswx.exe (windowed) + openswx-cli.exe (console,
 for `openswx-cli mcp` stdio + sldinfo). Status: [x] built and verified — openswx.exe opens window "openswx",
@@ -171,7 +169,7 @@ Backlog in priority order (tick as done; each needs backend cmd + MCP + UI butto
 - [x] B11 (part) DXF: import into a sketch (LINE/CIRCLE/ARC/(LW)POLYLINE bulges/SPLINE/ELLIPSE/POINT, merged
       end points), sketch -> DXF, sheet-metal flat pattern -> DXF (developed length verified), drawing -> DXF/PDF
       (B7). File menu items with native dialogs in the exe.
-- [x] B11 remainder (reader): native Parasolid XT reader (openswx/parasolid.py, written from the published
+- [x] B11 remainder (reader): native Parasolid XT reader (openswx/exchange/parasolid.py, written from the published
       2006 XT Format Reference): text .x_t, neutral/bare binary .x_b, embedded schema edit scripts (V14+),
       partition files; analytic, B-spline, swept, spun, offset surfaces, B-/SP-/trimmed/intersection curves,
       void shells; metres -> mm. .sldprt geometry is read natively from Config-<n>-Partition (no SOLIDWORKS). Writer: see pass 7.
@@ -218,7 +216,7 @@ Pass 6: transient thermal (BDF2 time stepping, lumped capacity from the new spec
 lumped-capacitance cooling within 0.05% at 50 steps; study options + temperature-vs-time chart in the UI),
 forming tools Extruded Flange (flanged hole) and Rib (embossed bead), miter-flange profiles bent with the sheet
 bend radius (inner r, outer r + t; exact volumes), B_SURFACE + INTERSECTION-curve parts read exactly (16/16).
-Pass 7: Parasolid XT writer (openswx/parasolid_write.py; export_file format x_t, File > Export Parasolid):
+Pass 7: Parasolid XT writer (openswx/exchange/parasolid_write.py; export_file format x_t, File > Export Parasolid):
 base schema 13006 text files, analytic + B-spline geometry, seams/degenerate edges dropped, cavities and
 multiple lumps. tools/difftest/xt_roundtrip.py imports the written files into SOLIDWORKS 2025: 23/23 match
 (primitives, cavity, two lumps, B-spline loft, and all 13 difftest parts built with openswx commands).
@@ -266,7 +264,7 @@ Still open:
 Audit: 197 commands (35 features, 33 sketch, 20 assembly, 16 sheet metal, 11 surfaces, 19 simulation, 9
 drawing, ...), 182 reachable from the UI (the rest are query / API commands for agents). Gaps against
 SOLIDWORKS, in the order they will be worked:
-- [x] R1 Drawings as documents (2026-10-24; openswx/drawing_sheets.py). Sheets with model / projected /
+- [x] R1 Drawings as documents (2026-10-24; openswx/drawing/drawing_sheets.py). Sheets with model / projected /
       section / detail / auxiliary views placed by clicking, view properties, cascading delete, multi-page PDF
       (part 1). Smart Dimension in views: drawing_pick / drawing_add_dimension (auto: horizontal / vertical /
       aligned by placement, diameter / radius; picks snap to corners and face-on circles; values are model
@@ -317,7 +315,7 @@ SOLIDWORKS, in the order they will be worked:
       Coupler mate (a dragged part leads: solve with its pose held, then settle), Replace Components
       (test_thickness_undercut_clearance_coupler_replace).
 - [x] R4 UI completeness and distribution (2026-10-24). The configuration pane and equations dialog were
-      already in place. File associations: openswx/fileassoc.py (per user, HKCU\Software\Classes: .oswprt /
+      already in place. File associations: openswx/system/fileassoc.py (per user, HKCU\Software\Classes: .oswprt /
       .oswasm open in openswx with its icon; Open with for .sldprt/.sldasm/.step/.stp/.x_t/.x_b without taking
       them over; unregister removes exactly that) via `openswx-cli register-file-types` /
       `unregister-file-types`; test with an in-memory registry. Installer: packaging/openswx.iss (Inno Setup:
@@ -369,7 +367,7 @@ SOLIDWORKS, in the order they will be worked:
       test_design_table, test_custom_materials, test_redefine_mate, test_dimension_configuration_scope,
       test_face_features, test_named_views; UI driven in headless Edge over the DevTools protocol.
 - [ ] R5 SOLIDWORKS file fidelity: feature history coverage (489/841 sample parts exact), .slddrw drawings.
-      .slddrw (2026-10-24, openswx/sw_drawing.py): the referenced model (the one named like the drawing, else the
+      .slddrw (2026-10-24, openswx/exchange/sw_drawing.py): the referenced model (the one named like the drawing, else the
       first named in the view records; found at its stored path or beside the drawing) is opened natively and
       the sheets and views recreated - model views in their named orientations (*Front, *Isometric, ...), views
       without one projected from the model view before them, each on the sheet whose record precedes it, at a
@@ -455,12 +453,12 @@ see the passes below).
 Goal: rebuild an editable openswx feature tree from a part's `Contents/Config-<n>-ResolvedFeatures` stream.
 Method: clean-room format analysis; SOLIDWORKS is only a development oracle (tools/difftest/feature_samples.py
 builds pairs differing in one parameter; diff the streams). Every milestone is verified by rebuilding and
-comparing with the part's own Parasolid body (read exactly by openswx/parasolid.py).
+comparing with the part's own Parasolid body (read exactly by openswx/exchange/parasolid.py).
 - [x] F1 tree scan: tree objects in order (class, name, feature id), tagged and untagged; the object class
-      word (`04 80` / `05 80`) is learned per stream (openswx/sw_tree.py)
+      word (`04 80` / `05 80`) is learned per stream (openswx/exchange/sw_tree.py)
 - [x] F2 dimensions: length / angle (double) and integer (u32) parameters, attached to their feature;
       end conditions from the end spec
-- [x] F3 sketches (openswx/sw_sketch.py): frames (plane record, face planes, older layouts), points, lines,
+- [x] F3 sketches (openswx/exchange/sw_sketch.py): frames (plane record, face planes, older layouts), points, lines,
       arcs / circles (shared centres), splines (exact B-spline poles / knots). Open: construction flags
       (lone lines are taken as centerlines), relations, dimensions placement, converted / external entities
 - [~] F4 features: extrude / cut (Blind, Through All, Mid Plane, Through All Both; up-to conditions as Blind
@@ -468,7 +466,7 @@ comparing with the part's own Parasolid body (read exactly by openswx/parasolid.
       circular pattern, planar surface, scale, split line (reported, left out). Open: extrude direction flag,
       fillet / chamfer / shell selections (found from the stored body instead), sweep, loft, hole wizard,
       mirror, sheet metal, weldments, surface features, multi-body
-- [x] F5 rebuild in openswx (openswx/sw_rebuild.py); what is not decoded yet is settled against the stored
+- [x] F5 rebuild in openswx (openswx/exchange/sw_rebuild.py); what is not decoded yet is settled against the stored
       Parasolid body (direction, boss vs cut for moICE_c, arc sweep side, face-sketch plane, revolve axis,
       fillet edges, shell faces); accepted only when volume / area or a two-way edge sampling match.
       open_part(history=True) uses it and falls back to the imported body
@@ -641,7 +639,7 @@ not path traced.
       the plain onedir layout. Verified: silent install, launch from AppData, MCP initialize, clean uninstall.
 
 ## Follow-up pass (2026-10-26, user approved: more exact rebuilds, .slddrw, a real flow solver, fittings)
-- [x] Navier-Stokes flow (openswx/cfd.py; cfd_external / cfd_internal / cfd_results; Flow Simulation dialog
+- [x] Navier-Stokes flow (openswx/analysis/cfd.py; cfd_external / cfd_internal / cfd_results; Flow Simulation dialog
       asks for external NS, internal NS or the old potential flow): lattice Boltzmann D3Q19 on the voxel grid,
       He-Luo incompressible equilibrium (a long passage's pressure drop no longer changes the velocities),
       TRT collision with the magic parameter 3/16 for laminar flow, regularised collision + Smagorinsky
@@ -654,7 +652,7 @@ not path traced.
       open (zero-gradient) sides beat free-stream sides (blockage: +40 % at 1 D margins). At Re 1e4 the
       coarse LES gives sphere Cd 0.7-0.9 for 0.4: results carry a `warning` there. Under 10 cells across the
       wall is too coarse (Cd 0.8 at 8 cells). test_cfd_pipe_flow_and_sphere_drag.
-- [x] Piping library (openswx/piping.py; list_pipe_standards, route_pipe_standard, insert_fitting; Insert >
+- [x] Piping library (openswx/manufacturing/piping.py; list_pipe_standards, route_pipe_standard, insert_fitting; Insert >
       Routing > Pipe (Standard) / Insert Fitting): NPS 1/4-12 sch 40 / 80 (B36.10), B16.9 long / short radius
       elbows at any corner angle, equal tees, concentric reducers, caps, B16.5 class 150 weld-neck flanges
       (nominal values, for layout and BOM). A route cuts its runs to length between the fittings (corner:

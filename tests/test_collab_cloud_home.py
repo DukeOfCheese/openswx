@@ -6,6 +6,7 @@ cloud part neither opens nor is made, leaving nothing behind.
 Same requirements as test_collab_live.py (an openswx-collab checkout with its environment). The tests run in
 order and share the server and the two peers.
 """
+
 import pytest
 
 from test_collab_live import SERVER_PY, Peer, Server, httpx  # noqa: F401 (skips like test_collab_live)

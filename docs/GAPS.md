@@ -43,9 +43,9 @@ since 2026-11-23 the suite also runs green in CI on Linux and macOS; the desktop
 | D4 conformance | done | `tests/conformance/*.json` (7 cases), `tools/conformance.py record / run` |
 | D5 static checks, deps | partly | ruff (errors only) in CI and `pyproject.toml`; `ezdxf` declared. **Left:** a lock file, type checking, the `sklearn` stub |
 | D6 survey in the repo | partly | `tools/survey.py` run on the installed SOLIDWORKS samples: the 300 smallest files (277 distinct parts) give 243 exact, 224 fully parametric; table in `docs/survey/2026-11-23-smallest-300.json`. The rest of the corpus (the slow, large parts) is still running at the time of writing |
-| E1 split `session.py` | done | 273 commands moved into `commands_document`, `_sketch`, `_features`, `_assembly`, `_drawing`, `_simulation` (AST-driven, no behaviour change); `session.py` keeps the dispatcher and helpers (1,270 lines). `commands_more.py` and `commands_mfg.py` were left as they are |
+| E1 split `session.py` | done | 273 commands moved into `commands/document`, `commands/sketch`, `commands/features`, `commands/assembly`, `commands/drawing`, `commands/simulation` (AST-driven, no behaviour change); `session.py` keeps the dispatcher and helpers (1,270 lines). `commands/more.py` and `commands/mfg.py` were left as they are |
 | E2 MCP toolsets | done | Core set under 50 tools, `list_toolsets` / `enable_toolset`, annotations, `batch`, persistent names in `get_topology`, resources. **Left:** machine-readable error codes, output schemas, resource-changed notifications |
-| E3 settings, i18n, a11y | partly | `settings.py` + Tools > User Settings (units, autosave, toolsets, close prompt, tolerance class, picture size, view colours, mouse preset and wheel direction, Home page at start-up); Tools > Customize Keyboard (32 actions, `web/keys.js`, saved as `shortcuts`); keyboard navigation of the FeatureManager tree (Alt+T) and the menu bar (F10); the Task Pane lists the keys in use. **Left:** translation, keyboard navigation of the CommandManager and the PropertyManager beyond Tab, screen-reader labels |
+| E3 settings, i18n, a11y | partly | `system/settings.py` + Tools > User Settings (units, autosave, toolsets, close prompt, tolerance class, picture size, view colours, mouse preset and wheel direction, Home page at start-up); Tools > Customize Keyboard (32 actions, `web/js/keys.js`, saved as `shortcuts`); keyboard navigation of the FeatureManager tree (Alt+T) and the menu bar (F10); the Task Pane lists the keys in use. **Left:** translation, keyboard navigation of the CommandManager and the PropertyManager beyond Tab, screen-reader labels |
 | F SOLIDWORKS interop | partly | Custom properties from `.sldprt`; `import_sw_configurations`: every configuration with stored geometry becomes an openswx configuration (checked on sample parts: volumes match, the saved configuration keeps its editable history). The owner has allowed the development oracle and survey runs (2026-11-23). **Left:** feature-history coverage by feature class (sweep and loft as base features first), remaining mate types, large-assembly loading, `.slddrw` dimension positions - each needs SOLIDWORKS-made test files |
 | F neutral formats | partly | `.stl` / `.3mf` import as faceted solids. **Left:** STEP AP242 with colours and structure, OBJ, binary Parasolid writer |
 | G sketch | partly | Equation-driven curves; sketch blocks (make / insert / list / delete); dimension tolerances and fits. **Left:** sketch picture, style / fit splines, sketch dimension chains, spline relations |
@@ -53,7 +53,7 @@ since 2026-11-23 the suite also runs green in CI on Linux and macOS; the desktop
 | G assembly | partly | Assembly configurations (component suppression and mate values per configuration) and display states, with dialogs. **Left:** flexible subassemblies, lightweight components, belt / chain, collision and physics while dragging, physics-based motion, mate controller, layout sketches, exploded line sketch |
 | G drawings | partly | Ordinate / baseline / chain dimensions; tolerance display. **Left:** the rest of the list |
 | H1 C++ port decision | decided | Parked (2026-11-23): the owner's reason for the port was macOS support, which the Python application already has through `packaging/build.py`. Recorded in `PLAN.md`. Hot loops go to compiled extensions case by case if the benchmarks call for it |
-| H2 simulation | partly | Result probes, an HTML study report and a mesh-convergence study (`simulation_probe`, `simulation_report`, `simulation_convergence`). Curvature-based quadratic tetrahedra (Netgen, optional `mesh` extra, `fea_tet.py`) for static, frequency, buckling and thermal (steady and transient) studies and bonded assemblies, each checked against a closed form. Contact, springs and bolts too (bodies meshed apart; a spring ties each node to the point straight across on the other face). Nonlinear, drop, harmonic and step-response studies too. **Left:**  mesh controls, remote and bearing loads, shells and beams |
+| H2 simulation | partly | Result probes, an HTML study report and a mesh-convergence study (`simulation_probe`, `simulation_report`, `simulation_convergence`). Curvature-based quadratic tetrahedra (Netgen, optional `mesh` extra, `analysis/fea_tet.py`) for static, frequency, buckling and thermal (steady and transient) studies and bonded assemblies, each checked against a closed form. Contact, springs and bolts too (bodies meshed apart; a spring ties each node to the point straight across on the other face). Nonlinear, drop, harmonic and step-response studies too. **Left:**  mesh controls, remote and bearing loads, shells and beams |
 | H3 sketch solver | partly | No search when every relation already holds; grouped-column Jacobian from 12 unknowns; one SVD: 2.9 s -> 1.3 s on the benchmark. Checked against the previous solver (`OPENSWX_SKETCH_SOLVER=legacy`) on 277 SOLIDWORKS sample parts: identical outcomes, none gained or lost. **Left:** decomposition into rigid clusters, minimal conflicting sets |
 | H4 CAM | partly | 3D parallel finishing with ball, bull-nose and flat tools on a drop-cutter surface (`cam_finish_3d`). **Left:** rest machining, adaptive roughing, 2D operations from picked faces, tabs, lead-in / out, setup sheets, turning |
 | H5 flow, plastics | partly | `plastics_gate_advisor`: ranks candidate gate positions by injection pressure, weld lines and air traps. **Left:** non-isothermal fill with a frozen layer, packing; flow: wall refinement, rotating regions, conjugate heat transfer |
@@ -134,7 +134,7 @@ a public release, **P1** is a correctness or data-loss risk, **P2** is parity, *
 ## B. Security (P0 for anything other people install)
 
 ### B1. The local HTTP API has no authentication and no origin check
-- Evidence (`openswx/web_server.py`): `POST /api/command` runs any registered command, including ones marked
+- Evidence (`openswx/server/web_server.py`): `POST /api/command` runs any registered command, including ones marked
   `mcp=False`, and parses the body with `req.json()` whatever the `Content-Type`. There is no token, no
   `Origin` / `Host` check and no CORS policy. A page open in the user's browser can therefore send a
   cross-site "simple" POST to `http://127.0.0.1:8765/api/command` and drive the app: `save_part`,
@@ -193,7 +193,7 @@ a public release, **P1** is a correctness or data-loss risk, **P2** is parity, *
 ### C2. Native files have a version number but no migration path
 - Evidence: `.oswprt` / `.oswasm` write `"version": 1`; `load_dict` has no version dispatch, and feature
   parameter shapes changed across passes.
-- Spec: `openswx/migrate.py` with ordered `vN -> vN+1` functions over the JSON; load runs them, refuses
+- Spec: `openswx/exchange/migrate.py` with ordered `vN -> vN+1` functions over the JSON; load runs them, refuses
   files newer than the program with a clear message, and keeps unknown keys on round trip. Publish a JSON
   Schema (`docs/format/oswprt.schema.json`) generated from the feature builders. Keep a golden file per
   released version in `tests/data/native/` that must still open to the same volume.
@@ -289,11 +289,11 @@ sketch_offset sketch_polygon sketch_slot sketch_trim swept_surface`
 - Spec: package `openswx/commands/` with one module per category (the category names already exist in the
   registry: document, sketch, features, surfaces, sheet_metal, weldments, assembly, drawing, simulation,
   ...). `session.py` keeps `Application`, `call`, `preview`, the `@command` decorator and re-exports the
-  names, so `S.extrude` and the MCP tool names do not change. `commands_more.py` / `commands_mfg.py` fold
+  names, so `S.extrude` and the MCP tool names do not change. `commands/more.py` / `commands/mfg.py` fold
   into it. Mechanical move, no behaviour change, one category per commit.
 
 ### E2. 366 tools in one flat MCP list
-- Evidence: `mcp_server.py` registers every command; most clients load all tool schemas into context, and
+- Evidence: `server/mcp_server.py` registers every command; most clients load all tool schemas into context, and
   several cap the tool count well below this. `INSTRUCTIONS` still describes the phase-1 workflow and says
   ids "change after every model edit" although `naming.py` now gives persistent names.
 - Spec:

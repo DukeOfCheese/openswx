@@ -1,0 +1,771 @@
+/* context menus, modals, toasts, drawing editor, measure, view cube, keyboard focus */
+/* ---------------- menus, modal, toasts */
+#ctxmenu {
+  position: fixed;
+  background: var(--panel);
+  border: 1px solid var(--chrome-2);
+  border-radius: var(--r-tray);
+  box-shadow: var(--pop-shadow);
+  padding: 4px;
+  z-index: 100;
+  min-width: 190px;
+}
+.cx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 8px;
+  cursor: default;
+  white-space: nowrap;
+  border-radius: 5px;
+}
+.cx-item svg {
+  width: 16px;
+  height: 16px;
+}
+.cx-item:hover {
+  background: var(--hover);
+}
+.cx-sep {
+  height: 1px;
+  background: var(--chrome-2);
+  margin: 4px 6px;
+}
+#modal {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  display: grid;
+  place-items: center;
+  z-index: 90;
+}
+#modal-box {
+  background: var(--panel);
+  border: 1px solid var(--chrome-2);
+  border-radius: var(--r-pane);
+  box-shadow: var(--dlg-shadow);
+  min-width: 340px;
+  max-width: 560px;
+}
+#modal-box:has(.mat-dlg) {
+  width: min(720px, 94vw);
+  max-width: min(720px, 94vw);
+}
+.mb-title {
+  padding: 10px 14px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--chrome-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mb-title svg {
+  width: 18px;
+  height: 18px;
+}
+.mb-body {
+  padding: 14px;
+  max-height: 70vh;
+  overflow: auto;
+}
+.mb-foot {
+  padding: 10px 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  border-top: 1px solid var(--chrome-2);
+}
+.btn {
+  height: 28px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: var(--r-btn);
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(23, 32, 48, 0.06);
+}
+.btn:hover {
+  background: var(--lift);
+  box-shadow: var(--lift-shadow);
+}
+/* plain buttons some dialogs build without a class look like .btn */
+#modal-box button:not([class]) {
+  height: 28px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: var(--r-btn);
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(23, 32, 48, 0.06);
+}
+#modal-box button:not([class]):hover {
+  background: var(--lift);
+  box-shadow: var(--lift-shadow);
+}
+.btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.btn.primary:hover {
+  background: var(--accent);
+  filter: brightness(1.08);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.field input,
+.field select {
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-field);
+  padding: 0 8px;
+  font: inherit;
+  background: var(--field);
+}
+.field textarea {
+  border: 1px solid var(--border);
+  border-radius: var(--r-field);
+  padding: 6px 8px;
+  font: inherit;
+  background: var(--field);
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.field input[type="checkbox"],
+.field input[type="radio"] {
+  height: auto;
+  box-shadow: none;
+}
+#toasts {
+  position: fixed;
+  right: 40px;
+  bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 120;
+}
+.toast {
+  background: var(--panel);
+  border: 1px solid var(--chrome-2);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: var(--pop-shadow);
+  max-width: 380px;
+  animation: tin 0.18s ease-out;
+}
+.toast.err {
+  border-left-color: var(--cancel);
+}
+.toast.agent {
+  border-left-color: var(--brand);
+}
+@keyframes tin {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+
+/* Modify (dimension) box, like the SOLIDWORKS Modify dialog */
+#modify {
+  position: absolute;
+  z-index: 40;
+  background: var(--panel);
+  border: 1px solid var(--chrome-2);
+  box-shadow: var(--pop-shadow);
+  border-radius: var(--r-tray);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: auto;
+  color: var(--text);
+}
+#modify .mrow {
+  display: flex;
+  gap: 2px;
+}
+#modify button {
+  width: 24px;
+  height: 22px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+}
+#modify button:hover {
+  background: var(--hover);
+}
+#modify svg {
+  width: 16px;
+  height: 16px;
+}
+#modify input {
+  width: 130px;
+  height: 24px;
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  font: 12px var(--font);
+  padding: 0 6px;
+  background: var(--field);
+}
+#modify .mname {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- drawing sheet editor */
+.dw-pane {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: #8d939b;
+}
+.dw-pane.hidden {
+  display: none;
+}
+.dw-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--chrome-2);
+  flex-wrap: wrap;
+  color: var(--text);
+}
+.dw-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  border-radius: var(--r-btn);
+  font: 12px var(--font);
+  cursor: pointer;
+}
+.dw-btn svg {
+  width: 20px;
+  height: 20px;
+}
+.dw-btn:hover {
+  background: var(--lift);
+  box-shadow: var(--lift-shadow);
+}
+.dw-btn.on {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.dw-sel {
+  height: 26px;
+  font: 12px var(--font);
+  border: 1px solid var(--border);
+  border-radius: var(--r-field);
+  background: var(--field);
+}
+.dw-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--chrome-2);
+  margin: 0 4px;
+}
+.dw-grow {
+  flex: 1;
+}
+.dw-hint {
+  color: var(--muted);
+  font: 12px var(--font);
+  margin-right: 8px;
+}
+.dw-host {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.dw-host svg {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: calc(100vh - 80px);
+  aspect-ratio: 1.414;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+.dw-view {
+  cursor: move;
+}
+.dw-view:hover .view-box {
+  stroke: #2f7be0;
+  stroke-dasharray: 2 1;
+  stroke-width: 0.3;
+}
+.dw-ann {
+  cursor: move;
+}
+.dw-ann:hover {
+  stroke: #2f7be0;
+}
+.dw-dragging {
+  opacity: 0.7;
+}
+.dw-err {
+  background: var(--panel);
+  padding: 16px;
+  color: var(--cancel);
+  border-radius: var(--r-tray);
+}
+.dw-host .view-box {
+  pointer-events: all;
+}
+.vp-legend {
+  position: absolute;
+  left: 12px;
+  top: 40px;
+  background: var(--float);
+  color: var(--text);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(23, 32, 48, 0.14);
+  padding: 6px 9px;
+  font: 11px var(--font);
+  z-index: 5;
+}
+.vp-legend b {
+  display: block;
+}
+.vp-legend small {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.vp-legend div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 15px;
+}
+.vp-legend span {
+  width: 18px;
+  height: 13px;
+  display: inline-block;
+  border: 1px solid #888;
+  border-radius: 2px;
+}
+.dw-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.dw-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 8px 4px;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-2);
+}
+.dw-tab {
+  font: 12px var(--font);
+  padding: 4px 14px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 0 0 8px 8px;
+}
+.dw-tab:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.dw-tab.on {
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--tray-shadow);
+}
+.dw-tab.dw-add {
+  padding: 4px 10px;
+  font-weight: 700;
+}
+.dw-host .dw-rubber {
+  stroke: #2a62c9;
+  stroke-width: 0.4;
+  stroke-dasharray: 3 1.5;
+  fill: none;
+  pointer-events: none;
+}
+.dw-bom {
+  border-collapse: collapse;
+  width: 100%;
+}
+.dw-bom th {
+  text-align: left;
+  font-weight: 600;
+  padding: 2px 4px;
+}
+.dw-bom td {
+  padding: 2px 4px;
+}
+.dw-bom input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* box selection: window (left to right) solid, crossing (right to left) dashed, as SOLIDWORKS */
+.selbox {
+  position: absolute;
+  z-index: 35;
+  border: 1px solid #1f6fd1;
+  background: rgba(31, 111, 209, 0.08);
+  pointer-events: none;
+}
+.selbox.crossing {
+  border: 1px dashed #2e9e44;
+  background: rgba(46, 158, 68, 0.08);
+}
+/* mouse gestures */
+.gesture {
+  position: absolute;
+  z-index: 45;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.gesture .g-item {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px 3px 4px;
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 14px;
+  box-shadow: var(--pop-shadow);
+  white-space: nowrap;
+  font-size: 12px;
+  transform: translate(-50%, -50%);
+}
+.gesture .g-item svg {
+  width: 18px;
+  height: 18px;
+}
+.gesture .g-up {
+  left: 0;
+  top: -54px;
+}
+.gesture .g-down {
+  left: 0;
+  top: 54px;
+}
+.gesture .g-left {
+  left: -80px;
+  top: 0;
+}
+.gesture .g-right {
+  left: 80px;
+  top: 0;
+}
+.gesture .g-item.on {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  box-shadow:
+    inset 0 0 0 1px var(--accent-line),
+    var(--pop-shadow);
+}
+/* S-key shortcut bar */
+.sbar {
+  position: absolute;
+  z-index: 45;
+  display: grid;
+  grid-template-columns: repeat(6, 32px);
+  gap: 2px;
+  padding: 5px;
+  background: var(--panel);
+  border-radius: var(--r-tray);
+  box-shadow: var(--pop-shadow);
+}
+.sbar button {
+  width: 32px;
+  height: 30px;
+  border: 0;
+  background: none;
+  border-radius: var(--r-btn);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+.sbar button:hover {
+  background: var(--lift);
+  box-shadow: var(--lift-shadow);
+}
+.sbar svg {
+  width: 22px;
+  height: 22px;
+}
+/* Measure panel */
+.measure-panel {
+  position: absolute;
+  z-index: 38;
+  right: 56px;
+  top: 44px;
+  width: 300px;
+  background: var(--panel);
+  color: var(--text);
+  border-radius: var(--r-tray);
+  box-shadow: var(--pop-shadow);
+  font-size: 12px;
+}
+.measure-panel .mp-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border-bottom: 1px solid var(--chrome-2);
+  font-weight: 600;
+}
+.measure-panel .mp-head svg {
+  width: 18px;
+  height: 18px;
+}
+.measure-panel .mp-x {
+  margin-left: auto;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  border-radius: 5px;
+}
+.measure-panel .mp-x:hover {
+  background: var(--hover);
+}
+.measure-panel .mp-body {
+  padding: 6px 9px 9px;
+  max-height: 340px;
+  overflow: auto;
+}
+/* FeatureManager drag-reorder */
+.tree-drop {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  height: 2px;
+  background: var(--accent);
+  pointer-events: none;
+  border-radius: 1px;
+}
+#tree.dragging-feature {
+  cursor: grabbing;
+}
+.cx-title {
+  font-weight: 600;
+  cursor: default;
+}
+.cx-title:hover {
+  background: none;
+}
+/* Instant3D drag handle */
+.i3d-handle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #2f7be0;
+  cursor: grab;
+  pointer-events: auto;
+  z-index: 36;
+}
+.i3d-handle:hover {
+  background: #d6e6fb;
+}
+.dw-selected {
+  filter: drop-shadow(0 0 2px #1f6fd1) drop-shadow(0 0 1px #1f6fd1);
+}
+.pc-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.pc-cols svg {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+}
+.pm-sel-item.dangling {
+  color: #8a6516;
+}
+.dt-grid {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.dt-grid th,
+.dt-grid td {
+  border: 1px solid var(--chrome-2);
+  padding: 2px 4px;
+  white-space: nowrap;
+}
+.dt-grid th {
+  background: var(--panel-2);
+  font-weight: 600;
+}
+.dt-grid input {
+  width: 86px;
+  border: none;
+  font: inherit;
+}
+.mat-dlg {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+}
+.mat-tree {
+  border: 1px solid var(--border);
+  border-radius: var(--r-field);
+  height: clamp(330px, 55vh, 400px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-size: 12px;
+  padding: 4px;
+}
+.mat-tree svg {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+}
+.mt-root {
+  font-weight: 600;
+  padding: 2px;
+}
+.mt-cat {
+  padding: 2px 2px 2px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.mt-mat {
+  padding: 2px 2px 2px 24px;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 4px;
+}
+.mt-mat:hover,
+.mt-cat:hover {
+  background: var(--hover);
+}
+.mt-mat.selected {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.mat-props {
+  width: 100%;
+  table-layout: fixed;
+}
+.mat-props input {
+  width: 100%;
+  max-width: 120px;
+}
+#modify .mscope {
+  font-size: 11px;
+}
+#modify .mcfgs {
+  max-height: 110px;
+  overflow: auto;
+  font-size: 11px;
+}
+.t-row.related {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+/* view cube (turns with the camera; click a face for that view) */
+.vcube {
+  position: absolute;
+  right: 18px;
+  bottom: 34px;
+  width: 60px;
+  height: 60px;
+  z-index: 20;
+}
+.vc-body {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+.vc-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+  background: rgba(240, 244, 250, 0.93);
+  border: 1px solid #9eb1cb;
+  color: #34465f;
+  font: 600 10px var(--font);
+  cursor: pointer;
+  user-select: none;
+}
+.vc-face:hover {
+  background: #d6e6fb;
+  color: #1f6fd1;
+}
+.vc-iso {
+  position: absolute;
+  left: 50%;
+  bottom: -26px;
+  transform: translateX(-50%);
+  font: 10px var(--font);
+  padding: 1px 8px;
+  border: 0;
+  background: var(--float);
+  color: var(--text);
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(23, 32, 48, 0.15);
+  cursor: pointer;
+}
+.vc-iso:hover {
+  background: var(--panel);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-big,
+  .cm-small {
+    transition: none;
+  }
+  .toast {
+    animation: none;
+  }
+}
+
+/* keyboard navigation: the FeatureManager row and menu item that have the keyboard */
+.t-row:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.menu-item.kfocus {
+  background: var(--hover);
+}
+.menu-item.has-sub.kopen > .menu-sub {
+  display: block;
+}

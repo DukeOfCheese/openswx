@@ -7,6 +7,7 @@ SOLIDWORKS is driven only through its documented automation interface (SldWorks.
 openswx side uses the same command layer as the MCP server. Results go to docs/difftest_report.md.
 Cases are written in a neutral form: faces/edges are selected by a point on them (model mm).
 """
+
 from __future__ import annotations
 
 import argparse

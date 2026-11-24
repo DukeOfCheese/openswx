@@ -1,5 +1,6 @@
 """Conformance cases (tests/conformance/*.json): command sequences with the body they must produce.
 The format and the recorder are in tools/conformance.py; the same files can drive another implementation."""
+
 import json
 import sys
 from pathlib import Path

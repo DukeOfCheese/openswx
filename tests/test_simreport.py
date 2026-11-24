@@ -3,6 +3,8 @@ import pytest
 
 from openswx import session as S
 
+pytestmark = pytest.mark.slow
+
 
 def cantilever():
     S.new_part("Beam")

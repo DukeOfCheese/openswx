@@ -10,13 +10,15 @@ it while you watch, and live collaboration so your team can edit the same part a
 ![platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![status: alpha](https://img.shields.io/badge/status-alpha-orange)
 
-https://github.com/user-attachments/assets/442086e2-4e71-4d49-8bb5-408b3b027d70
+https://github.com/user-attachments/assets/a2f0469a-6fc6-4da8-857d-d7ce00e8c905
 
-<sub>30 s ([4K original](https://github.com/DukeOfCheese/openswx/blob/main/docs/media/demo.mp4)). Recorded in
+<sub>39 s ([4K original](https://github.com/DukeOfCheese/openswx/blob/main/docs/media/demo.mp4)). Recorded in
 openswx: every feature is built by a real MCP tool call, the same calls Claude makes through Claude Code or any
-other MCP client. The chat panel illustrates the conversation and is replayed by a script
-([`tools/demo/`](https://github.com/DukeOfCheese/openswx/blob/main/tools/demo)). Claude is made by
-[Anthropic](https://www.anthropic.com/).</sub>
+other MCP client. Then the part moves to the cloud and a second person joins it from their own openswx, through
+a local [openswx-collab](https://github.com/DukeOfCheese/openswx-collab) server: their pointer, their fillet
+and the history arrive live, each from a real command. The chat panel illustrates the conversation and is
+replayed by a script ([`tools/demo/`](https://github.com/DukeOfCheese/openswx/blob/main/tools/demo)); the
+people are made-up demo accounts. Claude is made by [Anthropic](https://www.anthropic.com/).</sub>
 
 openswx is an alternate CAD program for engineers. Its screen is laid out the way many mechanical engineers
 already know from SOLIDWORKS: a command bar across the top, a design tree on the left, a property panel for
@@ -186,9 +188,10 @@ What an agent sees and can do:
   saving over or deleting something.
 - **Limits you can set.** `--workspace DIR` (or `OPENSWX_WORKSPACE`) confines agents' file reads and writes to
   one folder. `--share` prints a separate view-only link for people watching. The rules are in
-  [`openswx/security.py`](https://github.com/DukeOfCheese/openswx/blob/main/openswx/security.py).
+  [`openswx/server/security.py`](https://github.com/DukeOfCheese/openswx/blob/main/openswx/server/security.py).
 - **Your own tools.** A Python package can add commands through the `openswx.plugins` entry point; they become
-  MCP tools in the `plugins` toolset ([`openswx/plugins.py`](https://github.com/DukeOfCheese/openswx/blob/main/openswx/plugins.py)).
+  MCP tools in the `plugins` toolset ([`openswx/system/plugins.py`](https://github.com/DukeOfCheese/openswx/blob/main/openswx/system/plugins.py),
+  example: [`examples/openswx-gears/`](https://github.com/DukeOfCheese/openswx/tree/main/examples/openswx-gears)).
 
 Try: *"Make a 120×60×10 mm mounting plate with four Ø8 holes 12 mm from the edges and a Ø36 boss with a
 counterbored hole, fillet the corners R6, material 6061."* [`tools/agent_demo.py`](https://github.com/DukeOfCheese/openswx/blob/main/tools/agent_demo.py) is a
@@ -290,16 +293,22 @@ form that asks for exactly what is needed to act on them. Coding agents should a
 | | |
 |---|---|
 | `openswx/session.py` | the application object, the `@command` registry and dispatcher |
-| `openswx/commands_*.py` | the commands, by area |
-| `openswx/document.py`, `assembly.py` | part and assembly models: rebuild, undo, save / load |
-| `openswx/sketch.py`, `features.py`, `geom.py`, `naming.py` | constraint solver, feature builders, references, persistent names |
-| `openswx/drawing*.py` | drawings |
-| `openswx/fea*.py`, `cfd.py`, `plastics.py`, `cam.py` | solvers |
-| `openswx/sldprt.py`, `sw_*.py`, `parasolid*.py` | SOLIDWORKS and Parasolid readers / writer (clean-room; notes in [`docs/re/`](https://github.com/DukeOfCheese/openswx/blob/main/docs/re/README.md)) |
-| `openswx/web_server.py`, `mcp_server.py`, `security.py` | REST + live-update server, MCP server, access rules |
+| `openswx/commands/` | the commands, by area |
+| `openswx/core/document.py`, `assembly.py` | part and assembly models: rebuild, undo, save / load |
+| `openswx/core/sketch.py`, `openswx/core/features/`, `geom.py`, `naming.py` | constraint solver, feature builders, references, persistent names |
+| `openswx/drawing/` | drawings, sheets, annotations and PDF/DXF export |
+| `openswx/analysis/` | FEA, CFD, tolerances, inspection and headless rendering |
+| `openswx/manufacturing/` | CAM, plastics, piping, electrical routing and the ecosystem tools |
+| `openswx/exchange/sldprt.py`, `sw_*.py`, `parasolid*.py` | SOLIDWORKS and Parasolid readers / writer (clean-room; notes in [`docs/re/`](https://github.com/DukeOfCheese/openswx/blob/main/docs/re/README.md)) |
+| `openswx/system/` | settings, recovery, undo storage, jobs, cache and plugins |
+| `openswx/server/web_server.py`, `mcp_server.py`, `security.py` | REST + live-update server, MCP server, access rules |
+| `openswx/shell/` | CLI and desktop entry points |
 | `openswx/web/` | the UI (three.js) |
 | `tools/` | command reference generator, conformance cases, benchmarks, SOLIDWORKS survey |
 | `tests/` | the test suite (`python -m pytest`) |
+
+How those pieces fit together — the command lifecycle from UI or MCP to rebuild, mesh and SSE, plus jobs,
+undo, persistence, MCP and collaboration — is in [`docs/ARCHITECTURE.md`](https://github.com/DukeOfCheese/openswx/blob/main/docs/ARCHITECTURE.md).
 
 ## Licence
 

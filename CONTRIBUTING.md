@@ -110,9 +110,9 @@ The full list with colours is in [`.github/labels.yml`](.github/labels.yml).
 - A new or changed **command** needs: typed arguments, a docstring (it becomes the MCP tool description, so
   write it for an agent that has never seen the code), a test, a UI entry where one makes sense, and
   `python tools/gen_command_docs.py` re-run so `docs/commands.md` and the counts in the README stay current.
-- Changes to the **SOLIDWORKS history rebuild** (`sw_rebuild.py`, `sw_sketch.py`, `sw_tree.py`) must include
-  a survey comparison (`tools/survey.py compare before.jsonl after.jsonl`): parts gained and, especially,
-  parts lost.
+- Changes to the **SOLIDWORKS history rebuild** (`openswx/exchange/sw_rebuild/`, `sw_sketch.py`,
+  `sw_tree.py`) must include a survey comparison (`tools/survey.py compare before.jsonl after.jsonl`): parts
+  gained and, especially, parts lost.
 - CI must pass: the test suite on Linux, Windows and macOS, and the UI smoke tests.
 - Fill in the pull request template; the checklist is the review checklist.
 
@@ -125,10 +125,14 @@ commit summary.
 ```bash
 python -m venv .venv
 .venv/bin/pip install -e .[dev]      # Windows: .venv\Scripts\pip
-python -m pytest -q                  # the whole suite, about five minutes
-python -m pytest -q tests/test_sketch.py   # one file while you work
+python -m pytest -q -m "not slow"    # the fast loop: skips the FEA and simulation runs
+python -m pytest -q -n auto --dist loadscope   # the whole suite, as CI runs it
+python -m pytest -q tests/test_sketch.py       # one file while you work
 python -m openswx serve --open       # the UI against your working copy
 ```
+
+Mark a heavy test module with `pytestmark = pytest.mark.slow` (the files that take minutes, not seconds), so
+the fast loop stays quick.
 
 The UI smoke tests need Playwright: `pip install playwright && playwright install chromium`, then
 `python -m pytest tests/ui`.

@@ -65,7 +65,7 @@ def test_equations_and_configurations(tmp_path):
 def test_file_associations():
     """register-file-types: .oswprt / .oswasm open in openswx with its icon, openswx is offered in Open with
     for SOLIDWORKS / STEP / Parasolid files without taking them over; unregister removes exactly that."""
-    from openswx import fileassoc
+    from openswx.system import fileassoc
     reg = _FakeReg()
     reg.CreateKey(reg.HKEY_CURRENT_USER, r"Software\Classes\.sldprt")  # SOLIDWORKS owns .sldprt
     with reg.OpenKey(reg.HKEY_CURRENT_USER, r"Software\Classes\.sldprt") as k:
@@ -141,8 +141,8 @@ def test_named_views(tmp_path):
 
 def test_persistent_names_follow_moved_edges():
     from build123d import Vector
-    from openswx.geom import edge_ref
-    from openswx.naming import labels_of
+    from openswx.core.geom import edge_ref
+    from openswx.core.naming import labels_of
     S.new_part("Step")
     sk = S.create_sketch("Front")["sketch"]
     S.sketch_rectangle(sk, [0, 0], [40, 10])
@@ -168,7 +168,7 @@ def test_persistent_names_follow_moved_edges():
 
 def test_disk_cache_for_files(tmp_path, monkeypatch):
     from build123d import Box
-    from openswx import cache
+    from openswx.system import cache
     src = tmp_path / "part.bin"
     src.write_bytes(b"one")
     monkeypatch.setenv("OPENSWX_CACHE", "off")
@@ -184,6 +184,46 @@ def test_disk_cache_for_files(tmp_path, monkeypatch):
     src.write_bytes(b"two")  # the file changed: a new key, nothing cached for it
     assert cache.key(str(src), "x") != k and cache.get_json("history", cache.key(str(src), "x")) is None
     assert cache.clear() == 3
+
+
+def test_disk_cache_rehashes_recent_files(tmp_path, monkeypatch):
+    import os
+    import time
+    from openswx.system import cache
+    src = tmp_path / "part.bin"
+    src.write_bytes(b"x" * 1000)
+    monkeypatch.setenv("OPENSWX_CACHE", str(tmp_path / "cache"))
+    calls = []
+    digest = cache.hashlib.file_digest
+
+    def counted(*args, **kwargs):
+        calls.append(1)
+        return digest(*args, **kwargs)
+
+    monkeypatch.setattr(cache.hashlib, "file_digest", counted)
+    before = cache.key(str(src), "body")
+    src.write_bytes(b"y" * 1000)
+    assert cache.key(str(src), "body") != before
+    old = time.time() - 10
+    os.utime(src, (old, old))
+    calls.clear()
+    first = cache.key(str(src), "body")
+    assert cache.key(str(src), "history") and len(calls) == 1
+    assert first
+
+
+def test_disk_cache_prunes_at_most_once_a_minute(tmp_path, monkeypatch):
+    from openswx.system import cache
+    monkeypatch.setenv("OPENSWX_CACHE", str(tmp_path / "cache"))
+    pruned = []
+    monkeypatch.setattr(cache, "_prune", pruned.append)
+    monkeypatch.setattr(cache, "_PRUNE_AT", __import__("time").monotonic())
+    cache.put_json("history", "a", {})
+    cache.put_json("history", "b", {})
+    assert pruned == []
+    monkeypatch.setattr(cache, "_PRUNE_AT", 0.0)
+    cache.put_json("history", "c", {})
+    assert len(pruned) == 1
 
 
 def test_save_without_a_path_on_a_never_saved_document(tmp_path):
@@ -209,7 +249,7 @@ def test_desktop_save_as_uses_the_native_dialog(tmp_path, monkeypatch):
     """The desktop app's Save As (what Save does for a document with no file yet): the native dialog's path is
     saved to; cancelling it saves nothing and is not an error; a folder that cannot be written is reported."""
     pytest.importorskip("webview", reason="pywebview (the desktop extra) is not installed")
-    from openswx.desktop import DesktopApi
+    from openswx.shell.desktop import DesktopApi
     api = DesktopApi()
     S.call("new_part", {"name": "Unsaved"})
     asked = []

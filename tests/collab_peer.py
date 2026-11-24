@@ -8,6 +8,7 @@ Requests are JSON lines:
     {"offline": s}                      wait until the connection is seen to be lost; -> {"state": ...}
 Every answer is one JSON line.
 """
+
 from __future__ import annotations
 
 import faulthandler

@@ -6,6 +6,12 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Security
+
+- The live-collaboration presence endpoint (`/api/collab/presence`) checks its arguments before sending and
+  answers a failure with a fixed message; the details go to the log instead of back to the page
+  (code-scanning alert 12).
+
 ### Changed
 
 - In a cloud part, who is online is now a **People** pane in the Task Pane on the right, beside Agent activity,

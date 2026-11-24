@@ -17,6 +17,7 @@ changes queue up and are sent again, with their original change ids, on reconnec
 New features take their id and name from the server (`ids.reserve`): the client keeps a small pool and
 `PartDocument` draws on it through `take_id` / `take_name` (document.py's allocator).
 """
+
 from __future__ import annotations
 
 import copy
@@ -31,9 +32,9 @@ import uuid
 from openswx_collab_protocol import ops as O
 from openswx_collab_protocol.messages import PROTOCOL_VERSION
 
-from .. import session as S
-from ..document import VERSION, DocumentError
-from . import auth
+from openswx import session as S
+from openswx.core.document import VERSION, DocumentError
+from openswx.collab import auth
 
 log = logging.getLogger("openswx.collab")
 
@@ -158,7 +159,6 @@ class DocClient:
         self.blobs: dict[str, bytes] = {}
         self._threads: list[threading.Thread] = []
 
-    # ------------------------------------------------------------------ life
     def start(self) -> None:
         for target, name in ((self._run, "net"), (self._viewer, "view")):
             t = threading.Thread(target=target, name=f"openswx-collab-{name}-{self.document_id[:8]}", daemon=True)
@@ -207,7 +207,6 @@ class DocClient:
             if self.welcomes == 0:
                 raise DocumentError(f"could not open the cloud document: {self.error or 'the server did not answer'}")
 
-    # ------------------------------------------------------------------ network thread
     def _url(self) -> str:
         base = self.server.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
         return f"{base}/api/documents/{self.document_id}/ws"
@@ -324,7 +323,6 @@ class DocClient:
         except Exception:  # noqa: BLE001 - the network thread notices and reconnects
             return False
 
-    # ------------------------------------------------------------------ messages
     def _welcome(self, w: dict) -> None:
         if w.get("project_id"):  # (blobs in the content are fetched through it)
             self.project_id = w["project_id"]
@@ -518,7 +516,6 @@ class DocClient:
             self.view_due.set()
         self.cond.notify_all()
 
-    # ------------------------------------------------------------------ explaining refusals
     def _feature_name(self, fid: str) -> str:
         for f in (self.confirmed or {}).get("features") or []:
             if f.get("id") == fid:
@@ -558,7 +555,6 @@ class DocClient:
             return f"this cloud document is read-only for you ({m.get('message', '')}): your {cmd} was not applied"
         return f"the collaboration server refused your {cmd}: {m.get('message') or code} ({code})"
 
-    # ------------------------------------------------------------------ blobs (long strings travel separately)
     def _http(self):
         return auth.shared(self.server, self.token)  # (kept open: blobs come and go without a handshake each)
 
@@ -596,7 +592,6 @@ class DocClient:
             self._trim_blobs()
         return wire
 
-    # ------------------------------------------------------------------ the open document
     def reload_view_locked(self, force: bool = False) -> bool:
         """Show confirmed + pending in the open document (call with APP.lock held). True if it changed."""
         with self.mu:
@@ -683,7 +678,6 @@ class DocClient:
             with self.mu:
                 self.last_report = max(self.last_report, seq)
 
-    # ------------------------------------------------------------------ local changes (command thread, APP.lock held)
     def submit(self, ops: list, command: str, args: dict | None) -> str:
         """Queue a change and send it (with the changes queued before it, in order); the open document already
         shows it. Its long strings are uploaded when it is sent: offline it simply waits in the queue."""
@@ -792,7 +786,6 @@ class DocClient:
             with self.cond:
                 self.requests.pop(rid, None)
 
-    # ------------------------------------------------------------------ ids and names
     def _reserve_async(self, features: int, names: list[str], tag: str = "pool") -> None:
         with self.mu:
             if features and tag == "pool":
@@ -882,7 +875,6 @@ class DocClient:
                 elif kind == "name" and value not in names:
                     self.pool_names.setdefault(prefix, []).insert(0, value)
 
-    # ------------------------------------------------------------------ undo / redo (command thread)
     def _settle_pending(self) -> None:
         end = time.time() + wait_seconds()
         with self.cond:
@@ -941,7 +933,6 @@ class DocClient:
         self.reload_view_locked()
         return {**self.doc.summary(), "redone": seq, "seq": res["seq"]}
 
-    # ------------------------------------------------------------------ locks, presence
     def feature_target(self, name: str) -> str:
         if name == "structure" or name.startswith(("f:", "k:", "i:")):
             return name
@@ -968,7 +959,6 @@ class DocClient:
     def draft(self, data: dict | None) -> bool:
         return self.connected and self._try_send({"type": "draft", "data": data})
 
-    # ------------------------------------------------------------------ reading
     def settled(self) -> bool:
         with self.mu:
             return self.connected and not self.pending and self.view_gen == self.gen
@@ -1000,7 +990,6 @@ class DocClient:
             }
 
 
-# ---------------------------------------------------------------------- the command hook
 class Hook:
     """Turns each outermost mutating command into one change per cloud document it changed (see
     session.COMMAND_HOOKS). Every open cloud document is written out before the command, not only the active one:
@@ -1084,13 +1073,12 @@ def attach(doc, document_id: str, server: str, token: str, info: dict, timeout: 
         c.close()
         raise
     c.reload_view_locked(force=True)
-    from . import backup
+    from openswx.collab import backup
     backup.start()
     changed()
     return c
 
 
-# ---------------------------------------------------------------------- locks a page of the UI holds
 OWNED: dict[str, set[tuple[str, str]]] = {}  # owner (a browser page's id) -> {(cloud document id, lock target)}
 _OWNED_MU = threading.Lock()
 

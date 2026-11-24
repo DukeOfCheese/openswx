@@ -9,6 +9,7 @@ openswx-collab with its virtual environment beside this repository (OPENSWX_COLL
 skipped without any of them. The tests run in order and share the servers and pages. With OPENSWX_COLLAB_SHOTS
 set to a folder, screenshots of Bob's window are saved there.
 """
+
 import json
 import os
 import socket
@@ -87,7 +88,7 @@ def world(tmp_path_factory):
         for who in ("ada", "bob"):
             p = free_port()
             env = dict(os.environ, OPENSWX_HOME=tempfile.mkdtemp(prefix=f"openswx-ui-{who}-"), OPENSWX_TOKEN=TOKEN,
-                       OPENSWX_AUTOSAVE="off", OPENSWX_LOG="off", OPENSWX_PLUGINS="off", OPENSWX_COLLAB_RETRY_MAX="1", OPENSWX_COLLAB_PAGE_GRACE="1",
+                       OPENSWX_AUTOSAVE="off", OPENSWX_LOG="off", OPENSWX_PLUGINS="off", OPENSWX_UI_EVAL="1", OPENSWX_COLLAB_RETRY_MAX="1", OPENSWX_COLLAB_PAGE_GRACE="1",
                        PYTHONPATH=os.pathsep.join([str(ROOT), proto, os.environ.get("PYTHONPATH", "")]))
             procs.append(subprocess.Popen([sys.executable, "-m", "openswx", "serve", "--port", str(p)], cwd=ROOT, env=env,
                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))

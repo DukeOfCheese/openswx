@@ -15,6 +15,7 @@ only. openswx reads the files natively: SOLIDWORKS is not started.
 Outcome of a part: exact (rebuilt history gives the stored body) - with `parametric` true when no feature
 had to be imported from the stored body; inexact; timeout; crash; error (with the reason).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -59,7 +60,7 @@ def run(corpus: str, out: str, timeout: float, limit: int | None, smallest_first
     if rebuild is None:
         sys.path.insert(0, str(ROOT))
         os.environ.setdefault("OPENSWX_CACHE", "off")  # (measure the rebuild, not the cache)
-        from openswx.sw_rebuild import RebuildError, rebuild_isolated
+        from openswx.exchange.sw_rebuild import RebuildError, rebuild_isolated
 
         def rebuild(path):
             try:

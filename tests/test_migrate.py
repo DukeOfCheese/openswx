@@ -1,11 +1,11 @@
-"""Native file versions (openswx/migrate.py): old files keep opening, newer ones are refused, unknown keys survive."""
+"""Native file versions (openswx/exchange/migrate.py): old files keep opening, newer ones are refused, unknown keys survive."""
 import json
 import math
 from pathlib import Path
 
 import pytest
 
-from openswx import migrate
+from openswx.exchange import migrate
 from openswx import session as S
 
 NATIVE = Path(__file__).parent / "data" / "native"
