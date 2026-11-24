@@ -1,9 +1,3 @@
-"""Is there a newer release? Asked only when the user asks (Help > Check for Updates): nothing is sent or
-fetched on its own, and nothing is downloaded or installed - the answer is a version number and a link.
-
-The releases are those of the GitHub repository named by the `update_repository` setting ("owner/name") or
-`OPENSWX_UPDATE_REPO`. With neither set there is nowhere to ask, and the check says so.
-"""
 from __future__ import annotations
 
 import json

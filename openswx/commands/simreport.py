@@ -8,7 +8,8 @@ import math
 from pathlib import Path
 
 from openswx.core.document import DocumentError
-from openswx.session import APP, Vec3, _sim_doc, command
+from openswx.commands.support import _sim_doc
+from openswx.session import APP, Vec3, command
 
 __all__ = ["simulation_probe", "simulation_report", "simulation_convergence"]
 

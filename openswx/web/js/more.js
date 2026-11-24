@@ -1,6 +1,3 @@
-// More commands: PropertyManagers and dialogs for Flex/Deform, fillet profiles, mold tools, Insert Part, the extra
-// surface tools, assembly tools (SmartMates, routing, SpeedPak...), analysis studies, costing, sustainability,
-// DimXpert, rendering, PDM, the Design Library and macros. Mixed into the App class by installMore().
 import * as THREE from "three";
 import { el, escapeHtml } from "./propman.js";
 
@@ -625,7 +622,7 @@ const MIXIN = {
    *  is kept and reused), then "tracing"; isCancelled() stops it. Resolves to a PNG data URL, or null if
    *  cancelled. */
   async renderPathTraced(s, scale = 1, samples = 256, onProgress = () => {}, isCancelled = () => false) {
-    const { WebGLPathTracer, GradientEquirectTexture } = await import("./vendor/three-gpu-pathtracer.module.js");
+    const { WebGLPathTracer, GradientEquirectTexture } = await import("../vendor/three-gpu-pathtracer.module.js");
     const vp = this.vp, S = SCENES[s.scene] || SCENES.studio;
     const W = Math.round(vp.w * scale), H = Math.round(vp.h * scale);
     if (!this._pathTracer) { // one WebGL context and tracer for the session: its shader takes long to compile

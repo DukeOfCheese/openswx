@@ -1,5 +1,3 @@
-"""The speed-ups give the same answers as the slow ways they replace (each checked against an independent
-result: the per-item method, brute force, or an analytic volume)."""
 import math
 
 import numpy as np

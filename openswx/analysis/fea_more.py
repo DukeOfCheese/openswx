@@ -1,8 +1,3 @@
-"""More simulation studies on fea.py's voxel finite-cell mesh: nonlinear static (elastic-plastic material,
-bilinear hardening, incremental secant iterations), linear dynamics by modal superposition (harmonic response
-sweep and step-load time history), a drop test (energy method: the impact's kinetic energy taken up as strain
-energy under an equivalent inertial load) and fatigue (S-N curve from the material's strengths, Goodman mean
-stress correction, Miner's rule). Units: mm, N, MPa, tonne, s."""
 from __future__ import annotations
 
 import math

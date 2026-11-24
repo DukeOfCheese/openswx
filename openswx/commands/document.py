@@ -1,20 +1,13 @@
-"""Document, query, history, configuration and equation commands (same registry as session.py, which re-exports them).
-
-Moved out of session.py; helpers come from it by name, and other commands through `_S` at call time."""
 from __future__ import annotations
 
+import json
+import math
+import re
 from typing import Literal
 
 from openswx import session as _S
-from openswx.session import (
-    APP,
-    COMMANDS,
-    DocumentError,
-    END_CONDITIONS,
-    PartDocument,
-    Path,
-    Vec3,
-    _TL,
+from openswx.core.features import END_CONDITIONS, mass_properties
+from openswx.commands.support import (
     _context_meshes,
     _edge,
     _face,
@@ -25,11 +18,16 @@ from openswx.session import (
     _open_sldasm_native,
     _recreate_drawing,
     _sw_properties,
+)
+from openswx.session import (
+    APP,
+    COMMANDS,
+    DocumentError,
+    PartDocument,
+    Path,
+    Vec3,
+    _TL,
     command,
-    json,
-    mass_properties,
-    math,
-    re,
 )  # noqa: F401
 
 __all__ = ["new_part", "open_part", "save_part", "recent_files", "clear_recent_files", "save_drawing_document", "list_documents", "activate_document",

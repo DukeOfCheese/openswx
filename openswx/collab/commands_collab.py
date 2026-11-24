@@ -1,9 +1,3 @@
-"""Live collaboration commands (collab_*): sign in to an openswx-collab server, share a part as a cloud document,
-open one, and work with the others in it (locks, history, versions, presence).
-
-They import nothing of the optional collab extra until they run, so they are listed (and documented) whether or
-not it is installed; without it they say how to install it.
-"""
 from __future__ import annotations
 
 import contextlib

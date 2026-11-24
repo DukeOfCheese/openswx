@@ -1,12 +1,3 @@
-"""Differential test: build the same parametric parts in openswx and in SOLIDWORKS, compare results.
-
-    python tools/difftest/difftest.py                 # openswx vs analytic values
-    python tools/difftest/difftest.py --solidworks    # also drive a licensed SOLIDWORKS via its public COM API
-
-SOLIDWORKS is driven only through its documented automation interface (SldWorks.Application); the
-openswx side uses the same command layer as the MCP server. Results go to docs/difftest_report.md.
-Cases are written in a neutral form: faces/edges are selected by a point on them (model mm).
-"""
 from __future__ import annotations
 
 import argparse

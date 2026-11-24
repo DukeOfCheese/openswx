@@ -1,5 +1,3 @@
-"""`openswx mcp` relays to an openswx already running on this computer (mcp_bridge): a chat app that only
-starts local stdio servers (Claude Desktop) then works in the open window. Real processes on both sides."""
 import asyncio
 import io
 import json

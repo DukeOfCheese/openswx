@@ -1,12 +1,3 @@
-// The Home page: a full-window page over the editor where you start (New Part, New Assembly, Open, recent
-// files, tutorials). It shows at start-up (User Settings > show_home) when openswx opened without a file, and
-// from File > Home. It never blocks anything: it hides when you pick something on it, press Escape, when the
-// active document changes (features, a file, another document) or when an agent acts.
-// Start-up order: the server serves index.html with #home already up (class "starting") when Home will show, so
-// it is the first thing painted, never the empty graphics area. New Part / New Assembly / Open / a recent file
-// leave Home up while the document loads: it goes once refresh() has the new document in the view.
-// Other code adds tabs with this.homeTabs.push({ id, label, icon, render(panel) }); render fills the panel.
-// Mixed into the App class by installHome().
 import { icon } from "./icons.js";
 import { escapeHtml } from "./propman.js";
 import { TUTORIALS } from "./more.js";

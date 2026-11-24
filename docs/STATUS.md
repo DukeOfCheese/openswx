@@ -28,7 +28,7 @@ state), and how the program got here, pass by pass, in [`PLAN.md`](PLAN.md) (a l
 | `session.py` | the application object, the `@command` registry and dispatcher, shared helpers |
 | `commands/` | the commands, by area (document, sketch, features, assembly, drawing, simulation, review, ...) |
 | `core/document.py`, `core/assembly.py` | the part and assembly models: rebuild, undo, save / load |
-| `core/sketch.py`, `core/features.py`, `core/geom.py`, `core/naming.py` | constraint solver, feature builders, references, persistent names |
+| `core/sketch.py`, `core/features/`, `core/geom.py`, `core/naming.py` | constraint solver, feature builders, references, persistent names |
 | `drawing/`, `analysis/inspection.py`, `analysis/tolerance.py` | drawings, inspection reports, tolerances and ISO 286 fits |
 | `analysis/fea*.py`, `analysis/cfd.py`, `manufacturing/plastics.py`, `manufacturing/cam.py` | the solvers and manufacturing tools |
 | `exchange/sldprt.py`, `exchange/sw_*.py`, `exchange/parasolid*.py` | SOLIDWORKS and Parasolid readers / writer (clean-room; see `re/README.md`) |

@@ -1,18 +1,3 @@
-"""Conformance cases: a command sequence and what it must produce, as language-neutral JSON.
-
-    tests/conformance/<name>.json = {"name", "description", "kind": "part", "commands": [{"name", "args"}],
-                                     "expect": {"volume", "surface_area", "faces", "edges", "vertices",
-                                                "bounding_box": {"min", "max"}, "bodies"},
-                                     "tolerance": {"relative": 1e-6, "absolute": 1e-6}}
-
-Any implementation of the openswx commands (this one, a port, or SOLIDWORKS through tools/difftest) can run
-them: start a new part, run the commands in order, compare.
-
-    python tools/conformance.py record FILE.oswprt [-o tests/conformance/NAME.json] [--description TEXT]
-        make a case from a part built in openswx (its recorded history is the command sequence)
-    python tools/conformance.py run [DIR]
-        run every case and report (tests/test_conformance.py does the same under pytest)
-"""
 from __future__ import annotations
 
 import json

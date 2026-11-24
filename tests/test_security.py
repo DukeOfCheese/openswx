@@ -1,5 +1,6 @@
 """The local server's guard: token, Host, Origin and content type (openswx/server/security.py)."""
 import json
+import re
 
 from fastapi.testclient import TestClient
 
@@ -134,3 +135,60 @@ def test_view_only_link(tmp_path, monkeypatch):
     with TestClient(create_app(token=TOKEN, view_token=view), base_url=BASE) as c:  # agents' endpoint stays closed to viewers
         c.cookies.set(security.VIEW_COOKIE, view)
         assert c.post("/mcp/", json={}).status_code == 403
+
+
+def test_every_response_carries_the_security_headers():
+    """Page, static file, API answer and even a refusal: one policy everywhere (no site may embed or sniff it)."""
+    auth = {"Authorization": f"Bearer {TOKEN}"}
+    with client() as c:
+        page = c.get(f"/?token={TOKEN}")
+        c.cookies.set(security.COOKIE, TOKEN)
+        loaded = c.get("/")
+        static = c.get("/static/js/app.js")
+        api = c.get("/api/state", headers=auth)
+    with client() as anon:  # no cookie and no token: the guard's own 401 goes through the same middleware
+        refused = anon.get("/api/state")
+    assert refused.status_code == 401
+    for r in (page, loaded, static, api, refused):
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+        assert r.headers["Referrer-Policy"] == "no-referrer"
+        assert r.headers["X-Frame-Options"] == "DENY"
+        csp = r.headers["Content-Security-Policy"]
+        assert "default-src 'self'" in csp
+        assert "frame-ancestors 'none'" in csp
+
+
+def test_the_policy_fits_the_ui():
+    with client() as c:
+        c.cookies.set(security.COOKIE, TOKEN)
+        first, second = c.get("/"), c.get("/")
+    csp = first.headers["Content-Security-Policy"]
+    assert "script-src 'self' 'nonce-" in csp and "'unsafe-inline'" not in csp.split("style-src")[0]
+    assert "style-src 'self' 'unsafe-inline'" in csp  # the UI sets style attributes
+    assert "img-src 'self' data: blob:" in csp  # a canvas' picture shown in a dialog
+    assert "connect-src 'self'" in csp  # the API and the event stream
+    assert "worker-src 'self' blob:" in csp
+    assert "object-src 'none'" in csp
+    nonce = csp.split("'nonce-", 1)[1].split("'", 1)[0]
+    assert len(nonce) >= 16
+    # the page's one inline script (the import map) carries that nonce, and it is fresh for each page load
+    importmap = re.search(r'<script[^>]*type="importmap"[^>]*>', first.text).group(0)
+    assert f'nonce="{nonce}"' in importmap
+    assert nonce not in second.headers["Content-Security-Policy"]
+    assert "unsafe-inline" not in second.headers["Content-Security-Policy"].split("style-src")[0]
+
+
+def test_vendored_libraries_are_cached_but_the_ui_is_revalidated():
+    with client() as c:
+        c.cookies.set(security.COOKIE, TOKEN)
+        page = c.get("/")
+        vendor = c.get("/static/vendor/three.module.min.js")
+        vendor_two = c.get("/static/vendor/three-gpu-pathtracer.module.js")
+        ui = c.get("/static/js/app.js")
+        css = c.get("/static/css/style.css")
+    assert page.status_code == vendor.status_code == vendor_two.status_code == 200
+    assert ui.status_code == css.status_code == 200
+    for r in (vendor, vendor_two):
+        assert r.headers["Cache-Control"] == "public, max-age=31536000, immutable"
+    for r in (page, ui, css):  # a changed module shows up on the next load, index.html included
+        assert r.headers["Cache-Control"] == "no-cache"

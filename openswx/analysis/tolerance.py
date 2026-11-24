@@ -1,15 +1,3 @@
-"""Dimension tolerances: symmetric, bilateral, limit and ISO 286 fits (H7, g6, ...).
-
-A tolerance is a dictionary {"type": ..., ...}:
-  none                              no tolerance of its own (general tolerances apply)
-  symmetric  plus                   nominal +/- plus
-  bilateral  plus, minus            nominal +plus / -minus   (both given as positive amounts; either may be 0)
-  limit      plus, minus            shown as the two limits, nominal + plus over nominal - minus
-  fit        fit ("H7", "g6", ...)  ISO 286-1 tolerance class; the deviations come from the nominal size
-
-Values are millimetres (degrees on an angle). ISO 286-1 data: standard tolerance grades IT5-IT12 and the
-fundamental deviations of the common classes, for sizes up to 500 mm.
-"""
 from __future__ import annotations
 
 import re

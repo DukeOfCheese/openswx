@@ -1,5 +1,3 @@
-"""Passwords, invitation codes and tokens given to a command never reach the log (session._short is what the
-command log writes)."""
 from openswx import session as S
 
 

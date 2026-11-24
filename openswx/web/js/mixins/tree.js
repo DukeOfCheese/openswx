@@ -1,4 +1,3 @@
-// FeatureManager design tree, assembly tree, mates and components, and the ConfigurationManager.
 import { icon } from "../icons.js";
 import { el, escapeHtml, SPECS } from "../propman.js";
 import { $ } from "../lib/dom.js";
@@ -569,7 +568,7 @@ const MIXIN = {
   // the context toolbar a click on a feature shows, as in SOLIDWORKS
   treeToolbar(f, e) {
     const tb = $("#minitb"); tb.innerHTML = "";
-    const add = (k, t, fn) => { const b = el("button", "", icon(k)); b.title = t; b.onclick = (ev) => { ev.stopPropagation(); tb.classList.add("hidden"); fn(); }; tb.append(b); };
+    const add = (k, t, fn) => { const b = el("button", "", icon(k)); b.title = t; b.setAttribute("aria-label", t); b.onclick = (ev) => { ev.stopPropagation(); tb.classList.add("hidden"); fn(); }; tb.append(b); };
     const sk = f.type === "sketch" ? f.name : this.model.features.find((k) => k.absorbed_by === f.name && k.type === "sketch")?.name;
     if (f.type !== "sketch") add("edit", "Edit Feature", () => this.editFeature(f.name));
     if (sk) add("sketch", "Edit Sketch", () => this.enterSketch(sk));

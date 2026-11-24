@@ -48,6 +48,8 @@ OPENSWX_PLUGINS=off` when you run the program from a script.
   `js/icons.js` needs no name list (just drop the file in).
 - A new Python module must be listed in `hiddenimports` in `packaging/openswx.spec`, or the desktop build
   will not include it.
+- Keep code comments short and only for non-obvious behavior. Do not add banner separators or multi-line
+  file-header blocks.
 - Vendored JavaScript goes in `openswx/web/vendor/` with its licence file and an entry in `NOTICE`.
 
 ## Checking results
@@ -56,7 +58,7 @@ Compare against something independent: an analytic volume or area, a closed-form
 in a SOLIDWORKS file. Don't assert a value that was copied from the code's own output. Geometry
 comparisons use a relative tolerance (about 1e-6 for volumes).
 
-For changes to `openswx/exchange/sw_rebuild.py`, `sw_sketch.py` or `sw_tree.py`, run the survey before and after
+For changes to `openswx/exchange/sw_rebuild/`, `sw_sketch.py` or `sw_tree.py`, run the survey before and after
 (`tools/survey.py run CORPUS -o before.jsonl --jobs 3`, then `compare`) and report parts gained and lost. The
 corpus is the user's own SOLIDWORKS installation; the result files hold names and outcomes only.
 

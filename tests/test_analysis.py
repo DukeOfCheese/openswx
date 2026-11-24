@@ -1,6 +1,8 @@
 """Tests: analysis (split out of the former test_core.py; shared helpers in core_helpers.py)."""
 from core_helpers import *  # noqa: F401,F403
 
+pytestmark = pytest.mark.slow
+
 
 def test_failed_feature_is_rejected():
     block()

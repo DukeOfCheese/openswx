@@ -1,10 +1,3 @@
-"""Background jobs: long commands (simulation, flow, CAM, plastics) run on a worker thread, report progress and
-can be cancelled, while the application keeps answering.
-
-A solver calls `jobs.progress(fraction, message)` now and then; when the job was cancelled that call raises
-`Cancelled`, which ends the command. Called outside a job it does nothing, so solvers need not care how they
-were started.
-"""
 from __future__ import annotations
 
 import itertools

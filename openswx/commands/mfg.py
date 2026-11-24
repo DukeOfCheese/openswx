@@ -1,6 +1,3 @@
-"""Manufacturing and documentation commands (registered with session.py's @command registry, which
-re-exports them): CAM toolpaths and G-code, the plastics fill analysis, Inspection (characteristics, results
-and first-article reports), electrical harness routing and Composer-style animated instructions."""
 from __future__ import annotations
 
 import csv
@@ -194,7 +191,7 @@ def plastics_fill(gates: list, material: str = "ABS", melt_temperature: float | 
     Returns the fill time, injection pressure (short shot above max_pressure MPa), clamp force along
     clamp_axis, cooling time, weld lines, air traps, sink-mark risk and warnings; plot with plastics_results."""
     from openswx.manufacturing.plastics import fill, material as plastic
-    from openswx.session import _measure_item
+    from openswx.commands.support import _measure_item
     doc = _part()
     if not gates:
         raise DocumentError("give at least one gate: a point [x, y, z] or a face 'FaceN'")
@@ -235,7 +232,7 @@ def plastics_results(field: Literal["fill_time", "pressure", "thickness", "weld"
 
 
 def _insp_doc():
-    from openswx.session import _drawing_state
+    from openswx.commands.support import _drawing_state
     doc = APP.active_doc
     if getattr(doc, "kind", "part") == "assembly":
         raise DocumentError("Inspection works on a part and its drawing: open the part")

@@ -182,7 +182,8 @@ What an agent sees and can do:
   one folder. `--share` prints a separate view-only link for people watching. The rules are in
   [`openswx/server/security.py`](https://github.com/DukeOfCheese/openswx/blob/main/openswx/server/security.py).
 - **Your own tools.** A Python package can add commands through the `openswx.plugins` entry point; they become
-  MCP tools in the `plugins` toolset ([`openswx/system/plugins.py`](https://github.com/DukeOfCheese/openswx/blob/main/openswx/system/plugins.py)).
+  MCP tools in the `plugins` toolset ([`openswx/system/plugins.py`](https://github.com/DukeOfCheese/openswx/blob/main/openswx/system/plugins.py),
+  example: [`examples/openswx-gears/`](https://github.com/DukeOfCheese/openswx/tree/main/examples/openswx-gears)).
 
 Try: *"Make a 120×60×10 mm mounting plate with four Ø8 holes 12 mm from the edges and a Ø36 boss with a
 counterbored hole, fillet the corners R6, material 6061."* [`tools/agent_demo.py`](https://github.com/DukeOfCheese/openswx/blob/main/tools/agent_demo.py) is a
@@ -272,7 +273,7 @@ form that asks for exactly what is needed to act on them. Coding agents should a
 | `openswx/session.py` | the application object, the `@command` registry and dispatcher |
 | `openswx/commands/` | the commands, by area |
 | `openswx/core/document.py`, `assembly.py` | part and assembly models: rebuild, undo, save / load |
-| `openswx/core/sketch.py`, `features.py`, `geom.py`, `naming.py` | constraint solver, feature builders, references, persistent names |
+| `openswx/core/sketch.py`, `openswx/core/features/`, `geom.py`, `naming.py` | constraint solver, feature builders, references, persistent names |
 | `openswx/drawing/` | drawings, sheets, annotations and PDF/DXF export |
 | `openswx/analysis/` | FEA, CFD, tolerances, inspection and headless rendering |
 | `openswx/manufacturing/` | CAM, plastics, piping, electrical routing and the ecosystem tools |
@@ -283,6 +284,9 @@ form that asks for exactly what is needed to act on them. Coding agents should a
 | `openswx/web/` | the UI (three.js) |
 | `tools/` | command reference generator, conformance cases, benchmarks, SOLIDWORKS survey |
 | `tests/` | the test suite (`python -m pytest`) |
+
+How those pieces fit together — the command lifecycle from UI or MCP to rebuild, mesh and SSE, plus jobs,
+undo, persistence, MCP and collaboration — is in [`docs/ARCHITECTURE.md`](https://github.com/DukeOfCheese/openswx/blob/main/docs/ARCHITECTURE.md).
 
 ## Licence
 

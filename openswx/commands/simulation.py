@@ -1,15 +1,9 @@
-"""Simulation and evaluation commands (same registry as session.py, which re-exports them).
-
-Moved out of session.py; helpers come from it by name, and other commands through `_S` at call time."""
 from __future__ import annotations
 
 from typing import Literal
 
 from openswx import session as _S
-from openswx.session import (
-    APP,
-    DocumentError,
-    Vec3,
+from openswx.commands.support import (
     _direction,
     _eval_body,
     _face,
@@ -19,6 +13,11 @@ from openswx.session import (
     _sim_face,
     _study_edit,
     _thermal,
+)
+from openswx.session import (
+    APP,
+    DocumentError,
+    Vec3,
     command,
     unlocked,
 )  # noqa: F401

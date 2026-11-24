@@ -1,6 +1,3 @@
-"""The UI's mixin files (js/mixins/*.js, plus more.js, mfg.js, home.js and collab.js) add methods to the App
-class: none may silently replace one the class already has (a second "optionsDialog" once took the place of the
-System Options dialog)."""
 import re
 from pathlib import Path
 

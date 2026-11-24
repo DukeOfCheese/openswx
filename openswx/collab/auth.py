@@ -1,19 +1,3 @@
-"""Signing in to a collaboration server, and remembering it.
-
-Kept in `<home>/collab/` (home: OPENSWX_HOME, else ~/.openswx):
-    config.json   {"server": "https://...", "user": {...}}
-    token         the session token, readable by this user only (POSIX: mode 0600; Windows: an access list
-                  that names this user alone, set with icacls)
-
-`client_id` is one random string per run of openswx (made when it is first needed, kept across reconnects of
-that run): the server uses it (with the user id) to recognise this app across a dropped connection, so locks
-and reserved ids survive it. Per run, not per installation: the desktop app and an MCP process on the same
-machine are two clients, and two apps with one id would keep disconnecting each other.
-
-Browser sign-in (Google, GitHub): a one-off HTTP listener on 127.0.0.1 receives the code the server sends the
-browser back with; the code is worth nothing without the `code_verifier` that only this process knows (PKCE:
-the server was given its SHA-256, in lower-case hex).
-"""
 from __future__ import annotations
 
 import hashlib

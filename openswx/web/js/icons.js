@@ -7,5 +7,5 @@ const known = (name) => {
 
 export function icon(name) {
   const n = known(name) ? name : "part";
-  return `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="none" stroke-linejoin="round" stroke-linecap="round"><use href="#icon-${n}" width="100%" height="100%"></use></svg>`;
+  return `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="none" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" focusable="false"><use href="#icon-${n}" width="100%" height="100%"></use></svg>`;
 }

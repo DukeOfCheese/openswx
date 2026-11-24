@@ -1,12 +1,3 @@
-"""Inspection (like SOLIDWORKS Inspection): a numbered characteristic list from a part's drawing - every
-dimension, geometric tolerance and surface finish - and its 3D PMI (DimXpert), with the tolerance each one
-carries (ISO 2768 general tolerances for untoleranced dimensions unless overridden), balloons on the drawing,
-measured results with pass / fail, and a first-article inspection report (AS9102-style forms 1-3, HTML) or CSV.
-
-Stored in the part's drawing state as `inspection`: {"general": "m", "order": [source ids], "chars": {source id:
-{"upper", "lower", "measured": [...], "note"}}, "balloons": bool, "header": {...}}. The order keeps a
-characteristic's number when others are added or deleted (deleted ones drop out, new ones go at the end).
-"""
 from __future__ import annotations
 
 import csv

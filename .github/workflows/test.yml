@@ -48,12 +48,24 @@ jobs:
       - name: "The desktop window (macOS only, for the menu bar test in tests/test_desktop_menu.py)"
         if: runner.os == 'macOS'
         run: python -m pip install "pywebview>=6"
-      - name: Errors only (syntax, undefined names)
+      - name: Lint
         run: |
           python -m pip install ruff
-          ruff check --select E9,F63,F7,F82 openswx tests tools packaging
+          ruff check openswx tests tools packaging
       - name: Test
-        run: python -m pytest -q --durations=20
+        run: python -m pytest -q -n auto --dist loadscope --durations=20
+
+  css:
+    # the stylesheets are the only files Prettier checks (config in .prettierrc)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Prettier
+        run: npx --yes prettier@3.10.1 --check "openswx/web/css/*.css"
 
   ui:
     # the real page in a headless browser against a real server (tests/ui; skipped where Playwright is absent)

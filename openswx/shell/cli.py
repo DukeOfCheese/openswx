@@ -1,13 +1,3 @@
-"""Headless command-line tools: one-shot jobs on a file, for scripts and CI (no window, no server).
-
-  openswx convert IN OUT              any format openswx opens -> .step .iges .stl .3mf .glb .brep .x_t .oswprt
-  openswx render FILE -o out.png      a picture (--view isometric|front|top|..., --size 1600x1200)
-  openswx massprops FILE              mass properties as JSON
-  openswx check FILE                  the file's requirements and a rebuild check; exit status 1 if any fails
-  openswx drawing FILE -o out.pdf     the file's drawing (or a standard three-view one) as .pdf .dxf .svg
-  openswx script FILE [-o out.py]     the document as a Python script (when its history was recorded)
-  openswx diff A B                    what changed between two .oswprt / .oswasm files
-"""
 from __future__ import annotations
 
 import base64

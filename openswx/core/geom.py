@@ -297,3 +297,42 @@ def interior_point(face: Face) -> Vector:
                 if BRepClass_FaceClassifier(face.wrapped, gp_Pnt(p.X, p.Y, p.Z), 1e-7).State() == TopAbs_IN:
                     return p
     return face.center()
+
+
+def defeature_shape(body, max_hole: float | None = None, max_fillet: float | None = None):
+    """Remove holes up to max_hole diameter and fillets / rounds up to max_fillet radius (defaults: 10% and 3%
+    of the part's size) with OCC's defeaturing; if that fails the body is returned unchanged."""
+    from OCP.BRepAdaptor import BRepAdaptor_Surface
+    from OCP.BRepAlgoAPI import BRepAlgoAPI_Defeaturing
+    size = body.bounding_box().diagonal
+    max_hole = size * 0.10 if max_hole is None else max_hole
+    max_fillet = size * 0.03 if max_fillet is None else max_fillet
+    remove = []
+    for f in body.faces():
+        k = geom_name(f)
+        ad = BRepAdaptor_Surface(f.wrapped)
+        if k == "cylinder":
+            cyl = ad.Cylinder()
+            r = cyl.Radius()
+            full = ad.LastUParameter() - ad.FirstUParameter() > 6.28
+            q = interior_point(f)
+            o, dd = cyl.Axis().Location(), cyl.Axis().Direction()
+            axis_d = Vector(dd.X(), dd.Y(), dd.Z())
+            to_axis = Vector(o.X(), o.Y(), o.Z()) - q
+            to_axis = to_axis - axis_d * to_axis.dot(axis_d)
+            hole = f.normal_at(q).dot(to_axis) > 0  # the face looks at its own axis: a hole
+            if (full and hole and 2 * r <= max_hole) or (not full and r <= max_fillet):
+                remove.append(f)
+        elif k == "torus" and ad.Torus().MinorRadius() <= max_fillet:
+            remove.append(f)
+    if not remove:
+        return body
+    df = BRepAlgoAPI_Defeaturing()
+    df.SetShape(body.wrapped)
+    for f in remove:
+        df.AddFaceToRemove(f.wrapped)
+    df.SetRunParallel(False)
+    df.Build()
+    if not df.IsDone():
+        return body
+    return Shape.cast(df.Shape())

@@ -1,12 +1,10 @@
-"""Assembly commands (same registry as session.py, which re-exports them).
-
-Moved out of session.py; helpers come from it by name, and other commands through `_S` at call time."""
 from __future__ import annotations
 
 from typing import Literal
 
 from openswx import session as _S
-from openswx.session import APP, DocumentError, PartDocument, Path, Vec3, _BOLT_LENGTHS, _asm_ref, _import_file, command, json  # noqa: F401
+from openswx.commands.support import _BOLT_LENGTHS, _asm_ref, _import_file
+from openswx.session import APP, DocumentError, PartDocument, Path, Vec3, command, json  # noqa: F401
 
 __all__ = ["new_assembly", "insert_component", "add_mate", "redefine_mate", "edit_mate", "delete_mate",
            "move_component", "rotate_component", "fix_component", "delete_component", "component_pattern",

@@ -1,18 +1,9 @@
-"""Linear static stress analysis (Simulation > Static) on a voxel hexahedral mesh.
-
-The solid is voxelised on a uniform grid (columns ray-cast through the B-rep), meshed with 8-node
-hexahedra enhanced with Wilson-Taylor incompatible modes (no shear locking in bending), assembled with
-scipy.sparse and solved directly. On a uniform grid every element has the same 24x24 stiffness, so the
-assembly is fully vectorised. Boundary faces are stair-stepped at the voxel size: results converge as
-the element size shrinks (report element_size with any number you rely on).
-"""
 from __future__ import annotations
 
 import math
 
 import numpy as np
 from scipy.sparse import coo_matrix
-from scipy.sparse.linalg import spsolve
 
 _CORNERS = np.array([(-1, -1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1),
                      (-1, -1, 1), (1, -1, 1), (1, 1, 1), (-1, 1, 1)], float)
@@ -253,7 +244,7 @@ def solve_static(body, material: dict, fixtures: list, loads: list, element_size
         raise ValueError("add at least one load")
     separate = any(c.get("contact") for c in connectors or []) or bool(connectors and len(body.solids()) > 1)
     m = (_build_structural_separate if separate else _build_structural)(body, E, nu, element_size, target_elements, regions)
-    h, hh, frac, mask, I, J, K = m["h"], m["hh"], m["frac"], m["mask"], m["I"], m["J"], m["K"]
+    h, hh, _frac, mask, I, J, K = m["h"], m["hh"], m["frac"], m["mask"], m["I"], m["J"], m["K"]
     used, conn, nn, coords, edofs, fr, scale, Kg = (m[k] for k in ("used", "conn", "nn", "coords", "edofs", "fr", "scale", "Kg"))
     origin, n, nodes_near = m["origin"], m["n"], m["nodes_near"]
     fixed = set()

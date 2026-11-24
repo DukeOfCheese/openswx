@@ -1,11 +1,3 @@
-"""Cloud-first parts and the team, end to end against a real openswx-collab server (the commands behind Home's
-Cloud tab): Ada makes an organisation, a project and invitations, Bob joins; a part made straight in the cloud
-opens for Bob after Ada's openswx has quit; saving a cloud part writes a local copy; and with the server gone a
-cloud part neither opens nor is made, leaving nothing behind.
-
-Same requirements as test_collab_live.py (an openswx-collab checkout with its environment). The tests run in
-order and share the server and the two peers.
-"""
 import pytest
 
 from test_collab_live import SERVER_PY, Peer, Server, httpx  # noqa: F401 (skips like test_collab_live)

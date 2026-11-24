@@ -1,7 +1,3 @@
-"""Release notes for a version: its CHANGELOG.md section plus how to install the downloads.
-
-    python tools/release_notes.py 0.1.0 > notes.md      (the release workflow does this for each v* tag)
-"""
 from __future__ import annotations
 
 import re

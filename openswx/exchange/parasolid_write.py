@@ -1,11 +1,3 @@
-"""Clean-room Parasolid XT writer: OpenCASCADE solids -> text transmit file (.x_t).
-
-Written from the published "Parasolid XT Format Reference" (2006), like parasolid.py, and checked by reading
-the output back with that reader and by importing it into SOLIDWORKS (tools/difftest/xt_roundtrip.py). The
-file uses the plain base schema SCH_13006 (no embedded schema edits), which every Parasolid V13 or later
-reads. Geometry: planes, cylinders, cones, spheres, tori and B-spline surfaces; lines, circles, ellipses and
-B-spline curves (other kinds are converted to B-splines first). Lengths are written in metres.
-"""
 from __future__ import annotations
 
 import math

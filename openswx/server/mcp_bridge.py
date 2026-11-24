@@ -1,12 +1,3 @@
-"""Relay MCP between stdio and a running openswx's HTTP endpoint (`openswx mcp`, when openswx is already open).
-
-Chat apps such as Claude Desktop start MCP servers as local programs over stdio; they cannot always reach
-an HTTP address, and Claude on the web cannot reach this computer's at all. When an openswx window (or
-`openswx serve`) is already running, `openswx mcp` relays each JSON-RPC message from stdin to its
-http://127.0.0.1:<port>/mcp, with the user's token, and writes the replies (plain JSON or a server-sent event
-stream) back to stdout. The agent then works in the open window, and the edits show live. Without a running
-openswx, `openswx mcp` serves MCP itself, as before.
-"""
 from __future__ import annotations
 
 import json

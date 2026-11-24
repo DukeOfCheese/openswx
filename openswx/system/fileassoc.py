@@ -1,9 +1,3 @@
-"""Windows file associations for openswx, per user (HKCU\\Software\\Classes - no administrator rights).
-
-`openswx register-file-types` makes .oswprt / .oswasm open in openswx (double-click) with its icon, and adds
-openswx to "Open with" for SOLIDWORKS and neutral CAD files; `openswx unregister-file-types` removes exactly
-what was added. The installer (packaging/openswx.iss) registers the same keys machine-wide.
-"""
 from __future__ import annotations
 
 import sys

@@ -1,9 +1,3 @@
-"""UI smoke tests: the real page in a real browser against a real server.
-
-Needs Playwright (`pip install playwright && playwright install chromium`); skipped where it is not
-installed. CI installs it (see .github/workflows/test.yml). The steps are the ones first driven by hand:
-open through the token link, build a part, and open each dialog that is not covered by any other test.
-"""
 import os
 import socket
 import subprocess
@@ -27,7 +21,7 @@ def server(tmp_path_factory):
         port = s.getsockname()[1]
     env = dict(os.environ, OPENSWX_HOME=str(tmp_path_factory.mktemp("home")), OPENSWX_TOKEN=TOKEN,
                OPENSWX_AUTOSAVE="off", OPENSWX_LOG="off", OPENSWX_PLUGINS="off",
-               OPENSWX_SHOW_HOME="0")  # (Home has its own tests: test_ui_home.py)
+               OPENSWX_SHOW_HOME="0", OPENSWX_UI_EVAL="1")  # (Home has its own tests: test_ui_home.py)
     proc = subprocess.Popen([sys.executable, "-m", "openswx", "serve", "--port", str(port)], cwd=ROOT, env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     base = f"http://127.0.0.1:{port}"

@@ -1,5 +1,3 @@
-"""DXF interchange (ezdxf): import 2D DXF geometry into a sketch, export sketches and sheet-metal flat
-patterns to DXF. Units are millimetres; the DXF XY plane maps to the sketch's local XY."""
 from __future__ import annotations
 
 import math

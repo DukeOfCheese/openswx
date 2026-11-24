@@ -1,4 +1,3 @@
-// Sketch mode: drawing tools, snapping, inference, Smart Dimension, Modify box, relation glyphs, dragging.
 import { icon } from "./icons.js";
 import { el, escapeHtml, UNITS } from "./propman.js";
 

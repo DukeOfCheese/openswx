@@ -1,4 +1,3 @@
-// Sketch commands and the sketch PropertyManager panels (offset, mirror, patterns, convert entities, corners).
 import { escapeHtml } from "../propman.js";
 import { $ } from "../lib/dom.js";
 

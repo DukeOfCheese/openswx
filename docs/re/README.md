@@ -291,7 +291,7 @@ SOLIDWORKS' own mass properties as ground truth):
   the rest are surface-only parts, honest failures (geometry that cannot be rebuilt) or timeouts.
 - Feature tree (`Contents/Config-<n>-ResolvedFeatures`; method: pairs of parts built in SOLIDWORKS that
   differ in one parameter, diffed byte by byte, `tools/difftest/feature_samples.py`; reader in
-  `openswx/exchange/sw_tree.py`, `openswx/exchange/sw_sketch.py`, rebuild in `openswx/exchange/sw_rebuild.py`):
+  `openswx/exchange/sw_tree.py`, `openswx/exchange/sw_sketch.py`, rebuild in `openswx/exchange/sw_rebuild/`):
   - MFC-style archive. A new class is `FF FF`, schema word (1), length word, ASCII class name; later objects
     of a class start with its class word `0x8000 | index` (indices are archive-wide). Strings are Unicode
     CStrings `FF FE FF`, length byte, UTF-16.

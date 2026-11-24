@@ -1,15 +1,3 @@
-"""Record the README demo (docs/media/demo.mp4, 4K): an MCP client builds a mounting plate in a running openswx while
-a chat panel illustrates the conversation. Every feature is made by a real MCP tool call; the chat text is scripted.
-
-    pip install playwright && playwright install chromium     (plus ffmpeg on PATH)
-    python tools/demo/record.py OUT_DIR    -> OUT_DIR/demo.mp4 (3840x2160), demo-1080p.mp4 and poster.png
-
-Frames come from the browser's screencast (1920x1080 CSS pixels at device scale 2), timestamped, then encoded
-at a constant 30 fps by ffmpeg.
-
-Uses the GPU when the browser can (headless Chromium with ANGLE). An optional claude-logo.svg next to this file,
-if you have the right to use it, replaces the spinner glyph in the chat header.
-"""
 import asyncio
 import base64
 import json
@@ -69,7 +57,6 @@ async def main():
                 frames.append((ev["metadata"]["timestamp"], f))
                 asyncio.ensure_future(cdp.send("Page.screencastFrameAck", {"sessionId": ev["sessionId"]}))
             cdp.on("Page.screencastFrame", on_frame)
-            t_video = time.time()
             await page.goto(f"{base}/?token={TOKEN}")
             await page.wait_for_function("window.app && window.app.version >= 0")
             here = Path(__file__).parent

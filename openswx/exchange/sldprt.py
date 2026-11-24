@@ -1,9 +1,3 @@
-"""Reader for the SOLIDWORKS 2015+ document container (.sldprt/.sldasm/.slddrw).
-
-Implements the format described in docs/re/README.md: ZIP-like local records (method 8, raw deflate)
-with a non-standard signature and nibble-swapped stream names; geometry is Parasolid binary transmit
-data inside zlib streams. Every stream is verified against its CRC-32 and size.
-"""
 from __future__ import annotations
 
 import re
@@ -193,7 +187,7 @@ def _read_sldprt(path: str, config: int | None = None):
     otherwise sheet bodies; several bodies come back as a Compound."""
     from build123d import Compound, Shape
 
-    from openswx.exchange.parasolid import XTError, _Builder, read_xt_bytes
+    from openswx.exchange.parasolid import XTError
     streams = read_streams(path)
     parts = sorted((int(m.group(1)), n) for n in streams if (m := re.fullmatch(r"Contents/Config-(\d+)-Partition", n)))
     if not parts:

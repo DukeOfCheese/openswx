@@ -1,7 +1,3 @@
-// Keyboard shortcuts: the actions that can have one, their default keys, and how a key press is written
-// ("Ctrl+Shift+Z": modifiers in the order Ctrl, Alt, Shift, then the key). User Settings > shortcuts keeps the
-// keys that differ from these defaults; Tools > Customize Keyboard edits them. settings.py checks the same format.
-
 export const SHORTCUTS = [
   // [action, label, default keys, group]
   ["new_part", "New part", "Ctrl+N", "File"], ["open", "Open", "Ctrl+O", "File"], ["save", "Save", "Ctrl+S", "File"],

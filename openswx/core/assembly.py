@@ -1,9 +1,3 @@
-"""Assemblies: components (part documents placed with 6-DOF transforms) and mates solved by least squares.
-
-Mate types follow SOLIDWORKS standard mates: coincident, parallel, perpendicular, distance, angle,
-concentric (cylindrical faces / circular edges), with aligned / anti-aligned options for planar mates.
-The first inserted component is fixed, as in SOLIDWORKS.
-"""
 from __future__ import annotations
 
 import copy
@@ -17,8 +11,7 @@ from scipy.optimize import least_squares
 from scipy.spatial.transform import Rotation
 
 from openswx.core.document import DocumentError, PartDocument
-from openswx.core.features import mass_properties
-from openswx.core.geom import face_normal, face_ref, resolve_face, tessellate
+from openswx.core.geom import defeature_shape, face_normal, face_ref, resolve_face, tessellate
 
 from openswx.system import snapshots  # noqa: E402
 
@@ -922,7 +915,6 @@ class AssemblyDocument:
         return out
 
     def speedpak_body(self, c):
-        from openswx.commands.more import defeature_shape
         body = self._local_body(c)
         cache = self.__dict__.setdefault("_speedpak", {})
         if cache.get(c.name, (None,))[0] is not body:
@@ -1100,7 +1092,7 @@ def _mechanical_residual(m, ea, eb, xa, xb, extra, xextra) -> list[float]:
         conc = list(np.cross(Na, Nb)) + list(w - Na * np.dot(w, Na))
         (c3, _, p3, n3, _), (c4, _, p4, n4, _) = extra
         P3, N3 = c3.to_world(p3, xextra[0]), c3.dir_to_world(n3, xextra[0])
-        P4, N4 = c4.to_world(p4, xextra[1]), c4.dir_to_world(n4, xextra[1])
+        P4, _N4 = c4.to_world(p4, xextra[1]), c4.dir_to_world(n4, xextra[1])
         return conc + [float(np.dot(P4 - P3, N3))]  # the faces touch (they are square to the hinge axis)
     xa0, xb0 = (np.array(v, float) for v in m["init6"])
     if t == "linear_coupler":  # B travels along its direction `ratio` times A's travel along its own

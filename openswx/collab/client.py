@@ -1,22 +1,3 @@
-"""The connection of one cloud document to the collaboration server (docs/protocol.md of openswx-collab).
-
-Each cloud document has a `DocClient`, with two threads of its own:
-  * the network thread connects, reads every message and keeps `confirmed`, the document as the server has
-    it (it never touches the openswx document, so it never waits for a command);
-  * the view thread brings the open document up to date (confirmed + this user's changes the server has not
-    answered yet) whenever `confirmed` moved on. It does that under `APP.lock`, the lock every command holds,
-    so a change from someone else never lands in the middle of a command.
-
-Local changes come from `Hook`, registered with session.py's command hooks while any cloud document is open:
-the document is written out (to_dict) before and after each outermost mutating command, and the difference
-(`ops.diff`) goes to the server as one change. The command then waits (up to OPENSWX_COLLAB_WAIT seconds,
-default 15) for the answer, so a change the server refuses fails the command, the document goes back to the
-server's state, and the reason ("Ada changed Fillet1 first") is the command's error. Without a connection
-changes queue up and are sent again, with their original change ids, on reconnecting.
-
-New features take their id and name from the server (`ids.reserve`): the client keeps a small pool and
-`PartDocument` draws on it through `take_id` / `take_name` (document.py's allocator).
-"""
 from __future__ import annotations
 
 import copy

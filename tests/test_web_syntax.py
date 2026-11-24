@@ -1,5 +1,3 @@
-"""Syntax-check the web UI modules. `node --check file.js` silently accepts ES-module files with errors,
-so each file is copied to .mjs (forcing module parsing) before checking."""
 import shutil
 import subprocess
 from pathlib import Path

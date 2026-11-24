@@ -1,6 +1,3 @@
-"""Material library: typical published engineering properties (SI: kg/m^3, MPa, W/(m K), J/(kg K)) plus a default
-appearance colour. Values are generic handbook figures for common grades, adequate for mass properties and
-first-pass linear static analysis; check a supplier datasheet for design-critical work."""
 from __future__ import annotations
 
 # name: (category, density, E [MPa], poisson, yield [MPa], tensile [MPa], conductivity, colour,

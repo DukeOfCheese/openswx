@@ -1,5 +1,3 @@
-"""Run by tests/test_desktop_menu.py on macOS: open a hidden pywebview window, install a menu tree with
-openswx.shell.desktop.install_native_menu and print the system menu bar's titles (and the Edit menu's) as JSON."""
 import json
 import threading
 

@@ -1,11 +1,3 @@
-"""Development-time oracle for decoding SOLIDWORKS feature streams: build pairs of parts in a licensed
-SOLIDWORKS (public COM API) that differ in exactly one feature parameter and save them as .SLDPRT, so the
-bytes that encode that parameter can be located by diffing Contents/Config-<n>-ResolvedFeatures.
-openswx itself never uses SOLIDWORKS; this only produces test data. The saved parts carry the Windows user
-name in their properties: keep OUT_DIR outside the repository.
-
-    python tools/difftest/feature_samples.py OUT_DIR [CASE ...]
-"""
 from __future__ import annotations
 
 import sys

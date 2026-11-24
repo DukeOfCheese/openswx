@@ -1,8 +1,3 @@
-"""2D parametric sketch: entities, relations, dimensions, constraint solver and profile extraction.
-
-Coordinates are in the sketch plane (mm). The sketch origin "ORIGIN" is a fixed point at (0, 0).
-Status mirrors SOLIDWORKS colouring: under_defined (blue), fully_defined (black), over_defined (red).
-"""
 from __future__ import annotations
 
 import copy

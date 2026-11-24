@@ -1,8 +1,3 @@
-"""2D drawings: standard projected views (hidden-line removal), overall dimensions, border and title block.
-
-Third-angle projection (ANSI) places Top above and Right to the right of Front; first-angle (ISO)
-places Top below and Left to the right. Output is an SVG sheet in millimetres.
-"""
 from __future__ import annotations
 
 import datetime as _dt

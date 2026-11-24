@@ -1,14 +1,3 @@
-"""Local backups of cloud documents.
-
-The server is where a cloud document lives; this keeps copies on this machine as well, in case the server is
-lost or unreachable: every autosave interval (OPENSWX_AUTOSAVE / Tools > Options, like recovery.py; `off`: no
-backups), each open cloud document that changed since its last backup is written as an ordinary .oswprt to
-
-    <home>/cloud-backups/<server host>/<document id>/<date>-<time>-seq<N>.oswprt
-
-and only the newest KEEP (OPENSWX_COLLAB_BACKUPS, default 20) are kept. A backup is the document as the
-server had it (changes not yet answered are not in it), and opens with open_part like any other file.
-"""
 from __future__ import annotations
 
 import hashlib

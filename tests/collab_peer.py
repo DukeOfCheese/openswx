@@ -1,13 +1,3 @@
-"""One openswx for test_collab_live.py: a separate process (each has its own APP), driven over stdin/stdout.
-
-Requests are JSON lines:
-    {"call": name, "args": {...}}       run a command as the UI would; -> {"result": ...} or {"error": "..."}
-    {"settle": seq, "timeout": s}       wait until the active cloud document is up to date with the server (at
-                                        least at `seq`, nothing pending, shown on screen); -> {"digest": ...}
-    {"digest": true}                    -> {"digest": ...} now
-    {"offline": s}                      wait until the connection is seen to be lost; -> {"state": ...}
-Every answer is one JSON line.
-"""
 from __future__ import annotations
 
 import faulthandler

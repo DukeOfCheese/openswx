@@ -184,3 +184,37 @@ def test_disk_cache_for_files(tmp_path, monkeypatch):
     src.write_bytes(b"two")  # the file changed: a new key, nothing cached for it
     assert cache.key(str(src), "x") != k and cache.get_json("history", cache.key(str(src), "x")) is None
     assert cache.clear() == 3
+
+
+def test_disk_cache_hashes_a_file_once(tmp_path, monkeypatch):
+    from openswx.system import cache
+    src = tmp_path / "part.bin"
+    src.write_bytes(b"x" * 1000)
+    monkeypatch.setenv("OPENSWX_CACHE", str(tmp_path / "cache"))
+    calls = []
+    digest = cache.hashlib.file_digest
+
+    def counted(*args, **kwargs):
+        calls.append(1)
+        return digest(*args, **kwargs)
+
+    monkeypatch.setattr(cache.hashlib, "file_digest", counted)
+    assert cache.key(str(src), "body") and cache.key(str(src), "history")
+    assert len(calls) == 1
+    src.write_bytes(b"y" * 1000)
+    cache.key(str(src), "body")
+    assert len(calls) == 2
+
+
+def test_disk_cache_prunes_at_most_once_a_minute(tmp_path, monkeypatch):
+    from openswx.system import cache
+    monkeypatch.setenv("OPENSWX_CACHE", str(tmp_path / "cache"))
+    pruned = []
+    monkeypatch.setattr(cache, "_prune", pruned.append)
+    monkeypatch.setattr(cache, "_PRUNE_AT", __import__("time").monotonic())
+    cache.put_json("history", "a", {})
+    cache.put_json("history", "b", {})
+    assert pruned == []
+    monkeypatch.setattr(cache, "_PRUNE_AT", 0.0)
+    cache.put_json("history", "c", {})
+    assert len(pruned) == 1

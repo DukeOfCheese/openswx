@@ -1,17 +1,9 @@
-"""Drawing commands (same registry as session.py, which re-exports them).
-
-Moved out of session.py; helpers come from it by name, and other commands through `_S` at call time."""
 from __future__ import annotations
 
+import math
 from typing import Literal
 
-from openswx import session as _S
-from openswx.session import (
-    APP,
-    DocumentError,
-    Path,
-    SheetSize,
-    Vec2,
+from openswx.commands.support import (
     _PICK_MM,
     _beside,
     _drawing_edit,
@@ -21,8 +13,14 @@ from openswx.session import (
     _new_balloon,
     _next_ann,
     _views_edit,
+)
+from openswx.session import (
+    APP,
+    DocumentError,
+    Path,
+    SheetSize,
+    Vec2,
     command,
-    math,
 )  # noqa: F401
 
 __all__ = ["create_drawing", "drawing_settings", "drawing_move_view", "drawing_add_note", "drawing_add_datum",

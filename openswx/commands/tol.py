@@ -85,7 +85,7 @@ def drawing_dimension_set(view: str, kind: Literal["baseline", "chain", "ordinat
     further out. chain: each point from the one before, all on one line. ordinate: the distance of each point
     from the zero written at the end of an extension line, no dimension lines (the zero shows 0).
     direction: measure horizontally or vertically in the view. offset: sheet mm from the geometry."""
-    from openswx import session as S
+    from openswx.commands.support import _PICK_MM, _views_edit
     if len(points) < 2:
         raise DocumentError("give at least two points: the datum and one to dimension")
 
@@ -93,7 +93,7 @@ def drawing_dimension_set(view: str, kind: Literal["baseline", "chain", "ordinat
         v = DS.find_view(st, view)
         sh = DS.sheet_of(st, view)
         g = DS.view_geometry(APP.active_doc, st, v)
-        tol = S._PICK_MM / DS.view_scale(st, v)
+        tol = _PICK_MM / DS.view_scale(st, v)
         snapped = []
         for p in points:
             q = DS.snap_vertex(g, DS.sheet_to_view(st, APP.active_doc, v, p), tol)
@@ -124,4 +124,4 @@ def drawing_dimension_set(view: str, kind: Literal["baseline", "chain", "ordinat
                 add({"view": view, "kind": lin, "a": a, "b": q, "offset": offset + (spacing * n if kind == "baseline" else 0.0)})
                 prev = q
         return made
-    return {"kind": kind, "dimensions": S._views_edit(f)}
+    return {"kind": kind, "dimensions": _views_edit(f)}

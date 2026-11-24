@@ -1,4 +1,3 @@
-// User settings, keyboard shortcuts, tree/menu keyboard navigation, the orientation menu and command search.
 import { icon } from "../icons.js";
 import { el, escapeHtml } from "../propman.js";
 import { SHORTCUTS, DEFAULT_KEYS, comboOf, effectiveKeys, keyTable, conflicts } from "../keys.js";

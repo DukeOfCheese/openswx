@@ -1,8 +1,3 @@
-"""Evaluate tools: draft analysis, curvature map, section view (with cap), geometry check, body interference.
-
-Face ids match tessellate() / get_topology() ("Face<i>" in body.faces() order); curvature values are given
-per tessellation vertex in the same order the viewport mesh uses.
-"""
 from __future__ import annotations
 
 import math

@@ -1,9 +1,3 @@
-"""Clean-room Parasolid XT (.x_t text transmit file) reader -> OpenCASCADE B-rep.
-
-Written from the published "Parasolid XT Format Reference" (UGS, 2006): file layout, node schema, embedded
-schema edit scripts (V14+ writers describe their schema as edits against base schema 13006), geometry
-definitions and topology. No Parasolid code is used. Lengths are converted from metres to millimetres.
-"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -123,30 +117,48 @@ class _Text:
         self.s = data.replace("\r", "").replace("\n", "")
         self.i = 0
 
+    def _need(self, n: int) -> None:
+        """Refuse to read past the end: a truncated file must be a format error, not a slice short of data."""
+        if n < 0 or self.i + n > len(self.s):
+            raise XTError(f"transmit data ends in the middle of a record (at character {self.i})")
+
     def char(self) -> str:
+        self._need(1)
         c = self.s[self.i]
         self.i += 1
         return c
 
     def peek(self) -> str:
+        self._need(1)
         return self.s[self.i]
 
     def word(self) -> str:
-        j = self.s.index(" ", self.i)
+        j = self.s.find(" ", self.i)
+        if j < 0:
+            raise XTError(f"transmit data ends in the middle of a field (at character {self.i})")
         w = self.s[self.i:j]
         self.i = j + 1
         return w
 
     def int(self) -> int:
-        return int(self.word())
+        at, w = self.i, self.word()
+        try:
+            return int(w)
+        except ValueError:
+            raise XTError(f"expected an integer, found {w[:24]!r} (at character {at})") from None
 
     def real(self):
         if self.peek() == "?":
             self.i += 1
             return None
-        return float(self.word())
+        at, w = self.i, self.word()
+        try:
+            return float(w)
+        except ValueError:
+            raise XTError(f"expected a real number, found {w[:24]!r} (at character {at})") from None
 
     def chars(self, n: int) -> str:
+        self._need(n)
         c = self.s[self.i:self.i + n]
         self.i += n
         return c
@@ -208,13 +220,20 @@ class _Binary:
         self.d, self.i = data, 0
         self.S = {k: struct.Struct(order + k) for k in "hiBd"}
 
+    def _need(self, n: int) -> None:
+        """Refuse to read past the end: struct.unpack_from raises struct.error, which is not a format error."""
+        if n < 0 or self.i + n > len(self.d):
+            raise XTError(f"transmit data ends in the middle of a record (at byte {self.i})")
+
     def _get(self, k):
         st = self.S[k]
+        self._need(st.size)
         v = st.unpack_from(self.d, self.i)[0]
         self.i += st.size
         return v
 
     def chars(self, n: int) -> str:
+        self._need(n)
         c = self.d[self.i:self.i + n].decode("latin-1")
         self.i += n
         return c
@@ -373,7 +392,10 @@ def read_xt_text(text: str) -> Model:
     end = text.find("**END_OF_HEADER")
     if end < 0:
         raise XTError("not a Parasolid transmit file (no header)")
-    return _read_stream(_Text(text[text.index("\n", end) + 1:]))
+    nl = text.find("\n", end)
+    if nl < 0:
+        raise XTError("not a Parasolid transmit file (the header is not terminated)")
+    return _read_stream(_Text(text[nl + 1:]))
 
 
 def read_xt_bytes(raw: bytes) -> Model:
@@ -383,7 +405,10 @@ def read_xt_bytes(raw: bytes) -> Model:
         end = raw.find(b"**END_OF_HEADER")
         if end < 0:
             raise XTError("not a Parasolid transmit file (no header)")
-        start = raw.index(b"\n", end) + 1
+        nl = raw.find(b"\n", end)
+        if nl < 0:
+            raise XTError("not a Parasolid transmit file (the header is not terminated)")
+        start = nl + 1
     body = raw[start:]
     if body[:1] == b"T":
         return _read_stream(_Text(body.decode("latin-1")))
@@ -688,7 +713,7 @@ class _Builder:
         """Blend boundary (an intersection with a BLEND_BOUND): the rolling ball touches the supporting surface
         at the foot of its centre, so the curve is the projection of the spine onto that surface, sampled
         densely and interpolated."""
-        from OCP.GeomAPI import GeomAPI_Interpolate, GeomAPI_ProjectPointOnCurve, GeomAPI_ProjectPointOnSurf
+        from OCP.GeomAPI import GeomAPI_Interpolate, GeomAPI_ProjectPointOnSurf
         from OCP.collections import HArray1_gp_Pnt
         bb = next((si for si in r["surface"] if self.node(si)[0] == 59), None)
         if bb is None:
@@ -762,7 +787,6 @@ class _Builder:
         """The surface, with B-splines (also under an offset) extended on all four sides by the part size:
         used only for intersections, never as face geometry (extension may re-parametrise)."""
         from OCP.Geom import Geom_BSplineSurface, Geom_OffsetSurface
-        from OCP.GeomLib import GeomLib
         t, r = self.node(idx)
         s = self.surface(idx)
         if t == 60 and s is not None:
@@ -944,7 +968,6 @@ class _Builder:
             return self.edges[idx]
         from OCP.BRep import BRep_Tool
         from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeEdge
-        from OCP.GeomAPI import GeomAPI_ProjectPointOnCurve
         er = self.node(idx)[1]
         cidx = er["curve"]
         if not cidx:  # tolerant edge: use the curve of one of its fins

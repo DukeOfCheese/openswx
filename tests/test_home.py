@@ -1,5 +1,3 @@
-"""The Home page's backend: the recent-files list, the show_home setting, and the untouched part made on
-demand that gives way to the next new or opened document."""
 import json
 
 import pytest

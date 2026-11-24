@@ -1,13 +1,3 @@
-"""openswx command line.
-
-  openswx [FILE]                               desktop application (native window; default)
-  python -m openswx serve [--port 8765]        web UI + REST + MCP (streamable HTTP at /mcp)
-  python -m openswx mcp [--port 8765] [--no-ui] MCP over stdio for agents, plus the live web UI
-  python -m openswx sldinfo FILE.SLDPRT [--extract DIR]
-  python -m openswx token                      the token agents send to MCP over HTTP (Authorization: Bearer)
-  openswx-cli register-file-types [--exe EXE]  .oswprt/.oswasm open in openswx; Open with for CAD files
-  openswx-cli unregister-file-types           remove those file associations again
-"""
 from __future__ import annotations
 
 import argparse

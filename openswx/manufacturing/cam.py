@@ -1,14 +1,3 @@
-"""CAM: 3-axis milling and drilling toolpaths for a part, with G-code (like SOLIDWORKS CAM / CAMWorks Standard).
-
-The part is seen from the tool side as a height map (the highest material over each point, from the
-tessellated body). Z-level roughing clears every level down to the part's bottom with a zig-zag and a
-contour pass that keep `leave` mm of stock on walls and floors; finishing then takes the walls (a contour
-pass at each level) and the flat floors (found from the B-rep's upward planar faces) to size. The tool
-centre is kept `tool radius + leave + one cell` from the nearest material cell, so the raster never lets the
-tool into the part: the cell size (`tolerance`) is the precision. Holes along the tool axis (B-rep cylinders,
-grouped by axis and radius, reachable from above) are drilled with canned cycles and left out of the
-milling. A stock-removal simulation on the same raster reports gouges (none expected) and the material left.
-"""
 from __future__ import annotations
 
 import math

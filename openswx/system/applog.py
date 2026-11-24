@@ -1,6 +1,3 @@
-"""The application log: every command (name, who asked, how long it took) and every error with its traceback,
-in `<home>/logs/openswx.log` (1 MB x 3 files). `OPENSWX_LOG=off` disables it; `OPENSWX_LOG=debug` adds the
-arguments of each command."""
 from __future__ import annotations
 
 import logging

@@ -1,9 +1,3 @@
-"""User settings (Tools > Options), kept in `<home>/settings.json`.
-
-Each setting has a default, a type and a one-line description; unknown keys in the file are ignored and
-kept. Environment variables win over the file where one exists (OPENSWX_AUTOSAVE, OPENSWX_TOOLSETS, and
-OPENSWX_SHOW_HOME for show_home), so a launch can still be configured from outside.
-"""
 from __future__ import annotations
 
 import json

@@ -1,8 +1,3 @@
-"""Check the Parasolid writer against SOLIDWORKS: write test solids with openswx.exchange.parasolid_write, import each
-.x_t into a licensed SOLIDWORKS through its public COM API, and compare SOLIDWORKS' mass properties.
-
-    python tools/difftest/xt_roundtrip.py OUT_DIR
-"""
 from __future__ import annotations
 
 import sys

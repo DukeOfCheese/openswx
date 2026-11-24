@@ -1,11 +1,3 @@
-"""Electrical routing (like SOLIDWORKS Routing - Electrical): connectors, a from-to wire list, harness route
-segments, the wires routed along the segments (shortest path through the route network), bundle diameters,
-wire lengths and voltage drop, the harness built in 3D (one swept bundle per segment) and a flattened
-harness / formboard drawing (SVG) with the wire and connector tables.
-
-Assembly state `electrical`: {"connectors": {name: {"component", "pins", "point"}}, "wires": [{"id", "from":
-"J1-1", "to": "P2-3", "gauge", "color"}], "routes": [[[x, y, z], ...], ...]}.
-"""
 from __future__ import annotations
 
 import heapq

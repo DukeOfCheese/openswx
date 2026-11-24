@@ -1,4 +1,3 @@
-// Title bar, menu bar, quick access, CommandManager, the Heads-up View toolbar and the pane tabs.
 import { icon } from "../icons.js";
 import { el, escapeHtml, SPECS } from "../propman.js";
 import { menuTree, renderMenu } from "../more.js";
@@ -21,7 +20,7 @@ const MIXIN = {
       ["select", "Select", () => this.cancelAll()], ["rebuild", "Rebuild (Ctrl+B)", () => this.run("rebuild")], ["options", "Options", () => this.optionsDialog()]];
     for (const it of items) {
       if (!it) { qa.append(el("span", "hu-sep")); continue; }
-      const b = el("button", "qa", icon(it[0])); b.title = it[1]; b.onclick = it[2]; b.dataset.k = it[0]; qa.append(b);
+      const b = el("button", "qa", icon(it[0])); b.title = it[1]; b.setAttribute("aria-label", it[1]); b.onclick = it[2]; b.dataset.k = it[0]; qa.append(b);
     }
   },
 
@@ -353,8 +352,9 @@ const MIXIN = {
     const host = $("#cm-buttons"); host.innerHTML = "";
     const mk = (b, big) => {
       const btn = el("button", big ? "cm-big" : "cm-small", `${icon(b.k)}<span>${b.label}</span>`);
-      btn.title = b.label.replace("<br>", " ");
+      btn.title = b.label.replace("<br>", " "); btn.setAttribute("aria-label", btn.title);
       if (b.active || (b.tool && this.sk.active && this.sk.tool === b.tool)) btn.classList.add("active");
+      if (b.tool) btn.setAttribute("aria-pressed", btn.classList.contains("active") ? "true" : "false");
       if (b.tool && !this.sk.active) btn.disabled = false;
       btn.onclick = b.fn; return btn;
     };
@@ -373,7 +373,7 @@ const MIXIN = {
 
   buildHeadsUp() {
     const hu = $("#headsup");
-    const btn = (k, title, fn) => { const b = el("button", "hu", icon(k)); b.title = title; b.onclick = (e) => { e.stopPropagation(); fn(b); }; return b; };
+    const btn = (k, title, fn) => { const b = el("button", "hu", icon(k)); b.title = title; b.setAttribute("aria-label", title); b.onclick = (e) => { e.stopPropagation(); fn(b); }; return b; };
     const drop = (b, opts) => {
       let d = b.querySelector(".hu-drop");
       if (!d) { d = el("div", "hu-drop"); b.append(d); }
@@ -401,11 +401,12 @@ const MIXIN = {
         ["point", `${this.filterHas("vertex") ? "✓ " : ""}Filter Vertices (V)`, () => this.toggleFilter("vertex")],
         ["cancel", "Clear All Filters", () => this.toggleFilter(null)]])));
     this.huFilter = hu.lastChild;
+    this.huFilter.setAttribute("aria-pressed", "false");
   },
 
   renderConfirm() {
     const c = $("#confirm"); c.innerHTML = "";
-    const mk = (k, title, fn) => { const b = el("button", "cc", icon(k)); b.title = title; b.onclick = fn; c.append(b); };
+    const mk = (k, title, fn) => { const b = el("button", "cc", icon(k)); b.title = title; b.setAttribute("aria-label", title); b.onclick = fn; c.append(b); };
     if (this.pm.active) { mk("ok", "OK", () => this.pmOK()); mk("cancel", "Cancel", () => this.pmCancel()); }
     else if (this.sk.active) { mk("exit_sketch", "Exit Sketch", () => this.exitSketch()); mk("cancel", "Discard changes and exit", () => this.exitSketch(false, true)); }
     else if (this.model?.in_context) mk("assembly", `Return to Assembly (${this.model.in_context.assembly})`, () => this.run("return_to_assembly").then(() => this.vp.zoomFit()));
@@ -415,7 +416,10 @@ const MIXIN = {
 
   buildLeftTabs() {
     const keys = { tree: "tab_tree", pm: "tab_pm", config: "tab_config", display: "tab_display" };
-    document.querySelectorAll(".lp-tab").forEach((b) => { b.innerHTML = icon(keys[b.dataset.pane]); b.onclick = () => this.showPane(b.dataset.pane); });
+    document.querySelectorAll(".lp-tab").forEach((b) => {
+      b.innerHTML = icon(keys[b.dataset.pane]); b.setAttribute("aria-pressed", b.classList.contains("active") ? "true" : "false");
+      b.onclick = () => this.showPane(b.dataset.pane);
+    });
     $("#treefilter").oninput = () => this.renderTree();
     const rs = $("#lp-resize"); let start = null;
     rs.onpointerdown = (e) => { start = [e.clientX, $("#leftpane").offsetWidth]; rs.setPointerCapture(e.pointerId); };
@@ -424,7 +428,10 @@ const MIXIN = {
   },
 
   showPane(p) {
-    document.querySelectorAll(".lp-tab").forEach((b) => b.classList.toggle("active", b.dataset.pane === p));
+    document.querySelectorAll(".lp-tab").forEach((b) => {
+      b.classList.toggle("active", b.dataset.pane === p);
+      b.setAttribute("aria-pressed", b.dataset.pane === p ? "true" : "false");
+    });
     for (const id of ["tree", "pm", "config", "display"]) $(`#${id}`).classList.toggle("hidden", id !== p);
     $("#lp-filter").classList.toggle("hidden", p !== "tree");
   },

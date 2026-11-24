@@ -1,17 +1,9 @@
-"""Part feature, multibody, surface, sheet-metal and weldment commands (same registry as session.py, which re-exports them).
-
-Moved out of session.py; helpers come from it by name, and other commands through `_S` at call time."""
 from __future__ import annotations
 
 from typing import Literal
 
 from openswx import session as _S
-from openswx.session import (
-    APP,
-    DocumentError,
-    Path,
-    Vec2,
-    Vec3,
+from openswx.commands.support import (
     _axis_spec,
     _edge,
     _ext_params,
@@ -20,6 +12,13 @@ from openswx.session import (
     _is_edge_sel,
     _plane_spec,
     _point_spec,
+)
+from openswx.session import (
+    APP,
+    DocumentError,
+    Path,
+    Vec2,
+    Vec3,
     command,
 )  # noqa: F401
 

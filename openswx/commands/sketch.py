@@ -1,11 +1,17 @@
-"""Sketch commands (same registry as session.py, which re-exports them).
-
-Moved out of session.py; helpers come from it by name, and other commands through `_S` at call time."""
 from __future__ import annotations
 
+import math
 from typing import Literal
 
 from openswx import session as _S
+from openswx.commands.support import (
+    _add_projected,
+    _dim_id,
+    _edge,
+    _face,
+    _plane_spec,
+    _sk,
+)
 from openswx.session import (
     APP,
     DocumentError,
@@ -13,14 +19,7 @@ from openswx.session import (
     SketchError,
     Vec2,
     Vec3,
-    _add_projected,
-    _dim_id,
-    _edge,
-    _face,
-    _plane_spec,
-    _sk,
     command,
-    math,
 )  # noqa: F401
 
 __all__ = ["create_sketch", "edit_sketch_plane", "sketch_line", "sketch_centerline", "sketch_rectangle",

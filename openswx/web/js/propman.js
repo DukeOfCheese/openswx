@@ -1,4 +1,3 @@
-// PropertyManager: declarative feature forms with selection boxes, group boxes, OK/Cancel and preview.
 import { icon } from "./icons.js";
 
 const UPTO = [["UpToNext", "Up To Next"], ["UpToVertex", "Up To Vertex"], ["UpToSurface", "Up To Surface"], ["OffsetFromSurface", "Offset From Surface"]];

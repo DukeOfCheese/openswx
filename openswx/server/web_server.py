@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import sys
 import tempfile
 from pathlib import Path
@@ -18,10 +19,31 @@ from fastapi.staticfiles import StaticFiles
 
 from openswx import session as S
 from openswx.icons import sprite as icon_sprite
+from openswx.server.mesh_binary import encode_mesh
 
 _log = logging.getLogger("openswx.web")
 
 WEB = Path(__file__).parent.parent / "web"
+
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "X-Frame-Options": "DENY",
+}
+CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'nonce-{nonce}'{eval}; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: blob:; "
+    "font-src 'self'; "
+    "connect-src 'self'; "
+    "worker-src 'self' blob:; "
+    "object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+)
+VENDOR_CACHE = "public, max-age=31536000, immutable"
+UI_CACHE = "no-cache"
+_UI_EVAL = os.environ.get("OPENSWX_UI_EVAL", "").strip().lower() not in ("", "0", "false", "no")
+_INLINE_SCRIPT = re.compile(r'<script(?=[\s>])(?![^>]*\bsrc=)(?![^>]*\bnonce=)', re.I)
 
 
 def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "127.0.0.1",
@@ -53,10 +75,20 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
     app.add_middleware(GZipMiddleware, minimum_size=4096)
 
     @app.middleware("http")
-    async def no_stale_ui(request: Request, call_next):
+    async def ui_headers(request: Request, call_next):
+        """Every response gets the headers above; the UI's modules are revalidated each load, while the vendored
+        libraries are cached for good. The per-response nonce is what the inline import map in the page carries."""
+        nonce = secrets.token_urlsafe(16)
+        request.state.csp_nonce = nonce
         response = await call_next(request)
-        if request.url.path == "/" or request.url.path.startswith("/static/"):
-            response.headers["Cache-Control"] = "no-cache"  # always revalidate UI modules
+        for name, value in SECURITY_HEADERS.items():
+            response.headers[name] = value
+        response.headers["Content-Security-Policy"] = CSP.format(nonce=nonce, eval=" 'unsafe-eval'" if _UI_EVAL else "")
+        path = request.url.path
+        if path.startswith("/static/vendor/"):
+            response.headers["Cache-Control"] = VENDOR_CACHE
+        elif path == "/" or path.startswith("/static/"):
+            response.headers["Cache-Control"] = UI_CACHE
         return response
 
     if mcp is not None:
@@ -64,8 +96,10 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
     app.mount("/static", StaticFiles(directory=WEB), name="static")
 
     @app.get("/")
-    def index():
+    def index(request: Request):
         html = (WEB / "index.html").read_text(encoding="utf-8")
+        nonce = request.state.csp_nonce
+        html = _INLINE_SCRIPT.sub(lambda m: f'{m.group(0)} nonce="{nonce}"', html)  # the inline import map: allowed
         html = html.replace("<!-- icon-sprite -->", icon_sprite(), 1)  # one page request, no icon requests
         if S.home_at_start():  # Home up from the first paint: no frame of the empty graphics area before it
             html = html.replace('<div id="home" class="hidden">', '<div id="home" class="starting">', 1)
@@ -143,6 +177,11 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
     @app.get("/api/mesh")
     def mesh():
         return S.get_mesh()
+
+    @app.get("/api/mesh.bin")
+    def mesh_binary():
+        """The same mesh as /api/mesh, with its big number arrays as little-endian typed-array buffers."""
+        return Response(encode_mesh(S.get_mesh()), media_type="application/octet-stream")
 
     def collab_revision() -> int:
         mod = sys.modules.get("openswx.collab.client")
@@ -237,7 +276,6 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
 
     @app.get("/api/drawing_export")
     def drawing_export(format: str = "pdf", inline: bool = False):
-        import tempfile
         fmt = format.lower() if format.lower() in ("pdf", "dxf", "dwg", "svg") else "pdf"
         tmp = _temp_path(f"{S.APP.active_doc.name}.{fmt}", f"drawing.{fmt}")
         try:

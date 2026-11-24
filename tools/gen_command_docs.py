@@ -1,9 +1,3 @@
-"""Write docs/commands.md (every command = MCP tool, with its arguments) and the counts block in README.md
-from the command registry.
-
-    python tools/gen_command_docs.py          # rewrite both
-    python tools/gen_command_docs.py --check  # exit 1 if either is out of date (CI, tests)
-"""
 from __future__ import annotations
 
 import inspect

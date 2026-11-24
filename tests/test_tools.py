@@ -1,5 +1,3 @@
-"""The survey runner's bookkeeping (tools/survey.py): resumable runs, classification, comparison.
-The rebuild itself is stood in for; no SOLIDWORKS files are needed or read."""
 import sys
 from pathlib import Path
 

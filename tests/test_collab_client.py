@@ -1,8 +1,3 @@
-"""The collaboration client without a server: what it sends for a command, how it takes the server's answers
-(accepted, rejected, someone else's change, undo), the feature id pool, sign-in and local backups.
-
-A stand-in socket answers the way the server would (docs/protocol.md in openswx-collab). The same scenarios
-against the real server, with two openswx processes, are in test_collab_live.py."""
 import json
 import os
 import urllib.parse

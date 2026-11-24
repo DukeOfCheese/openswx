@@ -163,7 +163,7 @@ def import_sw_configurations(path: str, limit: int = 12) -> dict:
     stored in the part)."""
     from pathlib import Path as _P
 
-    from openswx import session as S
+    from openswx.commands.support import _read_foreign
     from openswx.core.features import encode_shape
     from openswx.exchange.sldprt import configurations
     doc = APP.doc
@@ -186,7 +186,7 @@ def import_sw_configurations(path: str, limit: int = 12) -> dict:
             while name in doc.configurations:
                 name += " (SW)"
             try:
-                shape, _notes = S._read_foreign(str(p), c["id"])
+                shape, _notes = _read_foreign(str(p), c["id"])
                 if not shape.solids():
                     raise ValueError("no solid body in this configuration")
             except Exception as exc:  # noqa: BLE001 - one configuration that cannot be read does not lose the others

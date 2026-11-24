@@ -1,4 +1,3 @@
-// Viewport input: mouse gestures, box/area zoom, component dragging, picking and selection.
 import { icon } from "../icons.js";
 import { el, escapeHtml, SPECS } from "../propman.js";
 import { $ } from "../lib/dom.js";
@@ -144,6 +143,7 @@ const MIXIN = {
     if (!k) this.filter = null;
     else { const f = new Set(this.filter || []); f.has(k) ? f.delete(k) : f.add(k); this.filter = f.size ? f : null; }
     this.huFilter?.classList.toggle("on", !!this.filter);
+    this.huFilter?.setAttribute("aria-pressed", this.filter ? "true" : "false");
     this.toast(this.filter ? `Selection filter: ${[...this.filter].map((x) => cap(x) + "s").join(", ")}` : "Selection filters cleared");
   },
 
@@ -208,7 +208,7 @@ const MIXIN = {
         ["mirror", "Mirror", () => this.feature("mirror")], ["plane", "Plane", () => this.feature("plane")], ["measure", "Measure", () => this.measure()]];
     $("#sbar")?.remove();
     const bar = el("div", "sbar"); bar.id = "sbar";
-    for (const [k, t, fn] of items) { const b = el("button", "", icon(k)); b.title = t; b.onclick = (ev) => { ev.stopPropagation(); bar.remove(); fn(); }; bar.append(b); }
+    for (const [k, t, fn] of items) { const b = el("button", "", icon(k)); b.title = t; b.setAttribute("aria-label", t); b.onclick = (ev) => { ev.stopPropagation(); bar.remove(); fn(); }; bar.append(b); }
     bar.style.left = `${Math.min(x, this.vp.w - 6 * 34)}px`; bar.style.top = `${Math.max(4, y - 40)}px`;
     this.graphics.append(bar);
     const off = (ev) => { if (!bar.contains(ev.target)) { bar.remove(); document.removeEventListener("pointerdown", off); } };
@@ -347,7 +347,7 @@ const MIXIN = {
 
   showMiniToolbar(x, y, pick) {
     const tb = $("#minitb"); tb.innerHTML = "";
-    const add = (k, t, fn) => { const b = el("button", "", icon(k)); b.title = t; b.onclick = (e) => { e.stopPropagation(); tb.classList.add("hidden"); fn(); }; tb.append(b); };
+    const add = (k, t, fn) => { const b = el("button", "", icon(k)); b.title = t; b.setAttribute("aria-label", t); b.onclick = (e) => { e.stopPropagation(); tb.classList.add("hidden"); fn(); }; tb.append(b); };
     if (pick.kind === "face") {
       add("sketch", "Sketch", () => this.createSketch(pick.id));
       add("normal_to", "Normal To", () => this.normalToFace(pick));

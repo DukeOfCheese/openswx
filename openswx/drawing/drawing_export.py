@@ -1,8 +1,3 @@
-"""Export drawing sheets (the SVG subset written by drawing.py) to PDF and DXF.
-
-PDF is written directly (vector paths, Helvetica text, circular clip paths for detail views) so no
-PDF library is needed. DXF uses ezdxf with layers VISIBLE / HIDDEN / THIN / TEXT / BORDER.
-"""
 from __future__ import annotations
 
 import math

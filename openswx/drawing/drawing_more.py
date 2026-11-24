@@ -1,6 +1,3 @@
-"""Drawing annotations and sheet tools beyond the basics: surface finish and weld symbols, stacked balloons,
-cosmetic threads in views, alternate-position (phantom) views, layers, and sheet formats (title-block
-templates). drawing.py / drawing_sheets.py call in here when they render a sheet."""
 from __future__ import annotations
 
 import json

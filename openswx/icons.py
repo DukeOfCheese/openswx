@@ -1,9 +1,3 @@
-"""The UI's icon sprite: one <symbol> per SVG file in web/svgs/, inlined into index.html.
-
-The pictograms stay individual, editable SVG files. The page is served with all of them in one hidden
-<svg id="icons"> element, so an icon reference is a fragment (#icon-name): no request per pictogram and no
-name list to keep in step — the sprite's symbols are the names.
-"""
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET

@@ -1,11 +1,10 @@
-"""Sketch blocks (same command registry as session.py, which re-exports them): a named group of sketch
-geometry kept with the part and inserted again anywhere, at any angle and scale."""
 from __future__ import annotations
 
 import math
 
 from openswx.core.document import DocumentError
-from openswx.session import APP, Vec2, _sk, command
+from openswx.commands.support import _sk
+from openswx.session import APP, Vec2, command
 
 __all__ = ["sketch_make_block", "sketch_insert_block", "list_sketch_blocks", "delete_sketch_block", "sketch_from_image"]
 
