@@ -1003,7 +1003,10 @@ class App {
   }
 
   async deskCall(fn, ...args) {
-    const r = await this.desk[fn](...args);
+    let r;
+    try { r = await this.desk[fn](...args); } catch (err) { // (the shell raised: say so, never fail silently)
+      return this.toast(String(err?.message || err), "err");
+    }
     if (r?.cancelled) return;
     if (r && !r.ok) return this.toast(r.error, "err");
     await this.refresh();
@@ -2599,9 +2602,17 @@ class App {
     this.fileMode = mode; $("#fileinput").click();
   }
 
-  save(as = false) {
+  // Save: to the document's file; a document never saved to a file (no path yet) gets Save As instead, as in
+  // any desktop program. Cancelling the dialog leaves it unsaved, without a message.
+  async save(as = false) {
     if (this.collabDoc?.()) return this.collabSave(as); // (a cloud part: kept by the server; Save As writes a local copy)
-    if (this.model.path && !as) return this.run("save_part", {}).then(() => this.toast(`Saved ${this.model.path}`));
+    if (this.model?.path && !as) {
+      const res = await this.commandOrJob("save_part", {});
+      if (res.ok) { await this.refresh(); return this.toast(`Saved ${escapeHtml(res.result.saved)}`); }
+      await this.refresh();
+      if (this.model?.path) return this.toast(res.error, "err"); // (a real failure: a read-only file, say)
+      // (the page's model was behind: the document has no file after all, so this is a Save As)
+    }
     if (this.desk) return this.deskCall("save_as");
     const def = this.model.path || `${this.model.name}.oswprt`;
     this.modal("Save As", `<div class="field"><label>File path on this computer</label><input id="savepath" value="${escapeHtml(def)}"></div><div class="pm-msg">Saved as openswx part (.oswprt). Use File &gt; Export for STEP/STL.</div>`,
@@ -2803,6 +2814,12 @@ class App {
       focus_tree: () => this.focusTree(), open_menu: () => this.menuKeyOpen(0), home: () => this.homeShow(),
     };
     this.bindTreeKeys();
+    // Save works from a text box too, as in any program (the desktop app has no browser Save to fall back on, so
+    // the key used to do nothing there). Capture phase: some boxes keep their keys from the handler below.
+    document.addEventListener("keydown", (e) => {
+      if (this.keyMap.get(comboOf(e)) !== "save" || !$("#modal").classList.contains("hidden")) return;
+      e.preventDefault(); e.stopPropagation(); this.save();
+    }, true);
     document.addEventListener("keydown", (e) => {
       if (this.menuKey(e)) return; // (an open menu takes the arrows, Enter and Escape)
       if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;

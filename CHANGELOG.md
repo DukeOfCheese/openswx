@@ -6,6 +6,16 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Fixed
+
+- Save on a document that has never been saved to a file opens Save As, as in other programs, wherever Save is
+  started: the key, File › Save, the toolbar or the macOS menu bar. Cancelling leaves the document unsaved and
+  shows no error, and later Saves go to the chosen file without asking.
+  - Ctrl+S now works while you are typing in a text box. Before, in the desktop app it did nothing there.
+  - A Save that fails in the desktop app (a folder that cannot be written, say) now shows the error. Before,
+    nothing happened.
+  - `save_part` with no `path` on a never-saved document returns an error that names the `path` argument.
+
 ## 0.4.1 (2026-11-24)
 
 Faster throughout: pictures for agents about 15x quicker, the 3D view refreshes once per change from a cached

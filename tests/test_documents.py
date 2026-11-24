@@ -184,3 +184,43 @@ def test_disk_cache_for_files(tmp_path, monkeypatch):
     src.write_bytes(b"two")  # the file changed: a new key, nothing cached for it
     assert cache.key(str(src), "x") != k and cache.get_json("history", cache.key(str(src), "x")) is None
     assert cache.clear() == 3
+
+
+def test_save_without_a_path_on_a_never_saved_document(tmp_path):
+    """save_part with no path on a document never saved to a file is an error that names the path argument
+    (nothing is written); once saved with a path, later saves without one go to that file."""
+    for kind in ("new_part", "new_assembly"):
+        S.call(kind, {})
+        name, files = S.APP.active, sorted(tmp_path.iterdir())
+        with pytest.raises(S.CommandError, match=r"never been saved.*path argument"):
+            S.call("save_part", {})
+        assert S.APP.active_doc.path is None and sorted(tmp_path.iterdir()) == files
+        saved = S.call("save_part", {"path": str(tmp_path / f"{kind}-doc")})["saved"]
+        ext = ".oswasm" if kind == "new_assembly" else ".oswprt"
+        assert saved == str(tmp_path / f"{kind}-doc{ext}") and Path(saved).is_file()
+        assert S.APP.active == f"{kind}-doc" and S.APP.active_doc.path == saved and name not in S.APP.documents
+        before = Path(saved).stat().st_mtime_ns
+        os.utime(saved, ns=(before - 10**9, before - 10**9))
+        assert S.call("save_part", {})["saved"] == saved  # (the same file, no path needed now)
+        assert Path(saved).stat().st_mtime_ns > before - 10**9
+
+
+def test_desktop_save_as_uses_the_native_dialog(tmp_path, monkeypatch):
+    """The desktop app's Save As (what Save does for a document with no file yet): the native dialog's path is
+    saved to; cancelling it saves nothing and is not an error; a folder that cannot be written is reported."""
+    pytest.importorskip("webview", reason="pywebview (the desktop extra) is not installed")
+    from openswx.desktop import DesktopApi
+    api = DesktopApi()
+    S.call("new_part", {"name": "Unsaved"})
+    asked = []
+    monkeypatch.setattr(api, "_dialog", lambda kind, name="", types=(): asked.append((kind, name)) or None)
+    assert api.save_as() == {"cancelled": True}
+    assert asked == [("save", "Unsaved.oswprt")] and S.APP.active_doc.path is None
+    target = tmp_path / "Chosen.oswprt"
+    monkeypatch.setattr(api, "_dialog", lambda kind, name="", types=(): str(target))
+    r = api.save_as()
+    assert r["ok"] and r["result"]["saved"] == str(target) and target.is_file()
+    assert S.APP.active_doc.path == str(target)
+    monkeypatch.setattr(api, "_dialog", lambda kind, name="", types=(): str(tmp_path / "missing" / "x.oswprt"))
+    r = api.save_as()
+    assert r["ok"] is False and r["error"]
