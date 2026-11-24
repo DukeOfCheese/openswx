@@ -1,6 +1,6 @@
 """Live collaboration in the browser: a real openswx-collab server, two openswx servers (Ada's and Bob's) and a page
 on each. Ada signs in and shares a part through the Collaborate dialogs, Bob opens it; then what each sees of the
-other: avatars and tools, the pointer and selection on the model, sketch lines being drawn, a feature panel's
+other: the People pane (everyone, their tools), the pointer and selection on the model, sketch lines being drawn, a feature panel's
 ghost, follow-their-view, lock badges in the FeatureManager, a refused change's toast, undo that follows the
 collaboration state, and the history dialog.
 
@@ -35,6 +35,7 @@ TOKEN = "ui-collab-token-0123456789abcdefghijklmnopqrstuv"
 PASSWORD = "correct horse"
 SHOTS = os.environ.get("OPENSWX_COLLAB_SHOTS")
 
+ADA = "#tp-people button.pp-person:has-text('Ada')"  # (Ada's row in Bob's People pane)
 pytestmark = pytest.mark.skipif(not SERVER_PY.exists(), reason=f"no openswx-collab server at {SERVER_REPO}")
 
 HELPERS = """
@@ -127,6 +128,13 @@ def shot(page, name: str) -> None:
         page.screenshot(path=str(Path(SHOTS) / f"{name}.png"))
 
 
+def people_pane(page, open_: bool) -> None:
+    """Open or close the People pane in the Task Pane (it narrows the view while open)."""
+    page.evaluate("(o) => { if (document.querySelector('.tp-tab[data-pane=\"people\"]').classList.contains('active') !== o)"
+                  " window.app.showTask('people'); }", open_)
+    page.wait_for_function("(o) => document.querySelector('#taskpane').classList.contains('collapsed') !== o", arg=open_)
+
+
 def canvas_centre(page) -> tuple[float, float]:
     box = page.locator("#view").bounding_box()
     return box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
@@ -163,7 +171,10 @@ def test_share_a_part_into_a_new_project(world):
     a.fill("#cl-pname", "Rover")
     a.evaluate("T.ok()")
     a.wait_for_function("!T.open() && window.app.collabDoc() && window.app.collabDoc().state === 'online'", timeout=30000)
-    a.wait_for_function("document.querySelector('#collabbar:not(.hidden)')?.innerText.includes('Online')")
+    a.wait_for_selector('.tp-tab[data-pane="people"]:not(.hidden)')
+    people_pane(a, True)
+    a.wait_for_function("document.querySelector('#tp-people:not(.hidden) .pp-status')?.innerText.includes('Online')")
+    assert not a.query_selector("#collabbar")
     assert a.evaluate("window.app.collabDoc().role") == "owner"
 
 
@@ -182,15 +193,18 @@ def test_bob_opens_it_from_the_open_dialog(world):
     b.evaluate("T.ok()")
     b.wait_for_function("!T.open() && window.app.collabDoc() && window.app.model.name === 'Bracket'", timeout=30000)
     assert b.evaluate("window.app.model.features.map((f) => f.name)") == ["Sketch1", "Boss-Extrude1"]
+    people_pane(b, True)  # (Bob's People pane stays open from here on; Ada's view keeps its size)
 
 
-def test_each_sees_the_other_as_an_avatar(world):
+def test_each_sees_the_other_in_the_people_pane(world):
     a, b = world["a"], world["b"]
-    b.wait_for_selector("#collabbar .cl-av[title^='Ada']")
-    a.wait_for_selector("#collabbar .cl-av[title^='Bob']")
-    assert b.inner_text("#collabbar .cl-av") == "A"
+    b.wait_for_selector(f"{ADA} .cl-av")
+    a.wait_for_selector("#tp-people button.pp-person:has-text('Bob') .cl-av")
+    people_pane(a, False)
+    assert b.inner_text(f"{ADA} .cl-av") == "A"
+    assert b.inner_text('.tp-tab[data-pane="people"] .tp-count') == "2"
     colour = b.evaluate("T.peer('Ada').colour")
-    assert colour.lower() in b.get_attribute("#collabbar .cl-av", "style").lower()
+    assert colour.lower() in b.get_attribute(f"{ADA} .cl-av", "style").lower()
     world["state"]["ada_colour"] = int(colour[1:], 16)
 
 
@@ -215,6 +229,7 @@ def test_ada_s_pointer_and_selection_show_on_bob_s_model(world):
 
 def test_ada_s_pointer_is_an_arrow_that_glides_and_stays_over_empty_background(world):
     a, b = world["a"], world["b"]
+    people_pane(b, False)  # (Bob's view as wide as Ada's: her pointer at its right edge is in view for him too)
     box = a.locator("#view").bounding_box()
     a.mouse.move(box["x"] + box["width"] - 60, box["y"] + box["height"] / 2 + 20)
     a.mouse.move(box["x"] + box["width"] - 50, box["y"] + box["height"] / 2)  # (right of the part: empty background)
@@ -231,6 +246,7 @@ def test_ada_s_pointer_is_an_arrow_that_glides_and_stays_over_empty_background(w
     assert not b.evaluate(f"{marker}.classList.contains('behind')"), "a pointer in the air is never behind the model"
     a.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
     b.wait_for_function("(T.peer('Ada')?.presence?.pointer?.face || '').length > 0")
+    people_pane(b, True)
 
 
 def test_ada_s_tool_shows_next_to_her_name_and_her_panel_as_a_ghost(world):
@@ -238,7 +254,7 @@ def test_ada_s_tool_shows_next_to_her_name_and_her_panel_as_a_ghost(world):
     a.evaluate("window.app.editFeature('Boss-Extrude1')")
     a.wait_for_function("window.app.pm.active && window.app.cl.held.pm")
     a.evaluate("""() => { const app = window.app; app.pm.values.depth = 45; app.schedulePreview(app.pm.args()); }""")
-    b.wait_for_function("[...document.querySelectorAll('#collabbar .cl-tool')].some((t) => t.innerText === 'Editing Boss-Extrude1')")
+    b.wait_for_function("[...document.querySelectorAll('#tp-people button.pp-person .pp-what')].some((t) => t.innerText === 'Editing Boss-Extrude1')")
     assert "Editing Boss-Extrude1" in b.inner_text(".cl-ptr")
     b.wait_for_function("T.peer('Ada')?.draft?.kind === 'feature'")
     b.wait_for_function("[...window.app.cl.ghosts.values()].some((g) => g.group.children.length > 0)", timeout=20000)
@@ -273,7 +289,7 @@ def test_closing_the_panel_frees_the_lock(world):
     a.evaluate("window.app.closePM()")
     b.wait_for_function("!document.querySelector(\"#tree .t-row[data-feature='Boss-Extrude1'] .cl-lock\")")
     b.wait_for_function("[...window.app.cl.ghosts.values()].every((g) => g.group.children.length === 0)")
-    b.wait_for_function("!document.querySelector('#collabbar .cl-tool')")
+    b.wait_for_function("[...document.querySelectorAll('#tp-people button.pp-person .pp-what')].every((t) => !t.innerText.startsWith('Editing'))")
 
 
 def test_sketch_lines_being_drawn_show_dashed_in_the_drawer_s_colour(world):
@@ -293,7 +309,7 @@ def test_sketch_lines_being_drawn_show_dashed_in_the_drawer_s_colour(world):
     line = b.evaluate("(() => { const l = window.app.cl.groups.drafts.children[0]; return {dashed: !!l.material.isLineDashedMaterial,"
                       " colour: l.material.color.getHex(), sketch: l.userData.sketch}; })()")
     assert line == {"dashed": True, "colour": world["state"]["ada_colour"], "sketch": "Sketch1"}
-    assert "Line in Sketch1" in b.inner_text("#collabbar")
+    assert "Line in Sketch1" in b.inner_text("#tp-people")
     shot(b, "sketch-draft")
     a.keyboard.press("Escape")
     a.evaluate("window.app.exitSketch(true)")
@@ -303,18 +319,18 @@ def test_sketch_lines_being_drawn_show_dashed_in_the_drawer_s_colour(world):
 
 def test_following_ada_s_view(world):
     a, b = world["a"], world["b"]
-    b.click("#collabbar .cl-av[title^='Ada']")
+    b.click(ADA)
     assert b.evaluate("window.app.cl.follow") == b.evaluate("T.peer('Ada').client_id")
     a.evaluate("window.app.vp.setView('top')")
     angle = ("(() => { const q = T.peer('Ada')?.presence?.camera?.q; if (!q) return 9;"
              " const c = window.app.vp.camera.quaternion; return 2 * Math.acos(Math.min(1, Math.abs(c.x*q[0] + c.y*q[1] + c.z*q[2] + c.w*q[3]))); })()")
     b.wait_for_function(f"{angle} < 0.01 && Math.abs(T.peer('Ada').presence.camera.q[0] + 0.7071) < 0.01", timeout=15000)
-    assert "Following Ada" in b.inner_text("#collabbar")
+    assert "Following Ada" in b.inner_text("#tp-people")
     x, y = canvas_centre(b)
     b.mouse.move(x, y)
     b.mouse.wheel(0, -200)  # (any camera input of his own stops following)
     b.wait_for_function("window.app.cl.follow === null")
-    assert "Following" not in b.inner_text("#collabbar")
+    assert "Following" not in b.inner_text("#tp-people")
 
 
 def test_undo_follows_the_collaboration_state(world):
@@ -417,13 +433,13 @@ def test_a_bad_draft_or_camera_does_not_stop_drawing(world):
     b.wait_for_function("window.app.cl.groups.drafts.children.length === 1")  # (the good line, the others skipped)
     _ada_draft(world, None)
     b.wait_for_function("window.app.cl.groups.drafts.children.length === 0")
-    b.click("#collabbar .cl-av[title^='Ada']")
+    b.click(ADA)
     _ada_draft(world, None, {"camera": {"q": ["a", 0, 0], "t": [1, 2], "h": "big"}})
     b.wait_for_function("T.peer('Ada')?.presence?.camera?.h === 'big'")
     time.sleep(0.3)
     cam = b.evaluate("(() => { const v = window.app.vp; return [...v.camera.quaternion.toArray(), ...v.target.toArray(), v.viewHeight]; })()")
     assert all(isinstance(x, (int, float)) and x == x for x in cam), cam  # (nothing NaN)
-    b.click("#collabbar .cl-av[title^='Ada']")
+    b.click(ADA)
     assert b.evaluate("window.app.cl.follow") is None
 
 

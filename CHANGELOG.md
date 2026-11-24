@@ -6,6 +6,14 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Changed
+
+- In a cloud part, who is online is now a **People** pane in the Task Pane on the right, beside Agent activity,
+  instead of a bar over the top-left of the view. Its tab shows only in a cloud part, with how many are in it.
+  The pane lists everyone in their pointer colour, with their role, the tool they are using, the features they
+  have open (locked for others) and whether they are idle. Click someone, or press Enter on them, to follow their
+  view.
+
 ### Fixed
 
 - Save on a document that has never been saved to a file opens Save As, as in other programs, wherever Save is

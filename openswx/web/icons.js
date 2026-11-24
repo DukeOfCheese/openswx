@@ -167,6 +167,7 @@ export const ICONS = {
   tab_config: S(`<rect x="5" y="5" width="9" height="9" fill="${solid}" stroke="${solidDark}"/><rect x="18" y="18" width="9" height="9" fill="${solid}" stroke="${solidDark}"/><path d="M14 10h6v8" stroke="${ink}" stroke-width="1.6"/>`),
   tab_display: S(`<circle cx="11" cy="14" r="6" fill="#e84a3c"/><circle cx="21" cy="14" r="6" fill="#36b24a" opacity=".85"/><circle cx="16" cy="21" r="6" fill="#2a62c9" opacity=".85"/>`),
   agent: S(`<rect x="6" y="9" width="20" height="16" rx="4" fill="#fff" stroke="${ink}" stroke-width="1.8"/><circle cx="12" cy="17" r="2.2" fill="#c8102e"/><circle cx="20" cy="17" r="2.2" fill="#c8102e"/><path d="M16 9V4M13 4h6" stroke="${ink}" stroke-width="1.8"/>`),
+  people: S(`<circle cx="21" cy="10" r="4" fill="#9fb8e0" stroke="${ink}" stroke-width="1.4"/><path d="M14 25a7 7 0 0 1 14 0z" fill="#9fb8e0" stroke="${ink}" stroke-width="1.4"/><circle cx="12" cy="12" r="4.4" fill="#fff" stroke="${ink}" stroke-width="1.6"/><path d="M4 27a8 8 0 0 1 16 0z" fill="#fff" stroke="${ink}" stroke-width="1.6"/>`),
   keyboard: S(`<rect x="3" y="9" width="26" height="15" rx="2" fill="#fff" stroke="${ink}"/><path d="M7 13h2M11 13h2M15 13h2M19 13h2M23 13h2M7 17h2M11 17h2M15 17h2M19 17h2M23 17h2M10 21h12" stroke="${ink}" stroke-width="1.4"/>`),
 
   zoom_fit: S(`<rect x="4" y="4" width="24" height="24" stroke="${ink}" stroke-width="1.4" stroke-dasharray="3 2"/><circle cx="14" cy="14" r="6" stroke="${ink}" stroke-width="2"/><path d="M18.5 18.5L25 25" stroke="${ink}" stroke-width="2.6"/>`),

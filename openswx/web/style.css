@@ -487,7 +487,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .hm-tut svg { width: 16px; height: 16px; }
 
 /* ---------------- live collaboration (collab.js) */
-#collabbar { position: absolute; top: 28px; left: 10px; display: flex; align-items: center; gap: 6px; max-width: calc(100% - 300px); padding: 3px 6px; background: var(--float); border: 1px solid var(--border); border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,.08); z-index: 6; font-size: 11.5px; white-space: nowrap; }
+/* the People pane (Task Pane), its tab and count */
 .cl-state { display: flex; align-items: center; gap: 5px; color: var(--text-2); }
 .cl-state i { width: 8px; height: 8px; border-radius: 50%; background: var(--cancel); flex: none; }
 .cl-state.cl-online i { background: var(--ok); }
@@ -499,7 +499,8 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .cl-av.following { box-shadow: 0 0 0 2px var(--c); }
 .cl-tool { color: var(--view-label); font-size: 11px; margin-right: 5px; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
 .cl-alone { color: var(--muted); }
-.cl-following { display: flex; align-items: center; gap: 5px; padding-left: 6px; border-left: 3px solid var(--c); }
+.cl-following { display: flex; align-items: center; justify-content: space-between; gap: 5px; margin: 0 0 8px; padding: 4px 6px 4px 8px; border-left: 3px solid var(--c); background: var(--panel-2); border-radius: 0 var(--r-btn) var(--r-btn) 0; }
+.cl-following button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .cl-following button { font-size: 11px; padding: 0 6px; height: 18px; border: 1px solid var(--border); background: var(--field); color: var(--text); border-radius: 3px; cursor: pointer; }
 #collab-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 5; }
 .cl-ptr { position: absolute; left: 0; top: 0; will-change: transform; transition: opacity .15s; }
@@ -545,6 +546,32 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .cl-main h3 { margin: 18px 0 8px; font-size: 12.5px; font-weight: 600; }
 .cl-doctable tr.picked { background: var(--accent-soft); }
 .cl-here { display: flex; align-items: center; gap: 2px; min-height: 22px; }
+.tp-tab .tp-count { position: absolute; right: -1px; bottom: -1px; min-width: 14px; height: 14px; padding: 0 3px; box-sizing: border-box; border-radius: 7px; background: var(--ok); color: #fff; font-size: 9.5px; font-weight: 700; line-height: 14px; text-align: center; border: 1.5px solid var(--panel-2); }
+.tp-tab .tp-count.cl-offline, .tp-tab .tp-count.cl-connecting { background: var(--warn); }
+.tp-tab .tp-count:not(.cl-online):not(.cl-offline):not(.cl-connecting) { background: var(--cancel); }
+.tp-tab.following { box-shadow: inset 0 0 0 2px var(--accent); }
+.tp-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+.pp-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -2px 0 10px; font-size: 11.5px; }
+.pp-list { display: flex; flex-direction: column; gap: 2px; }
+.pp-person { display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 6px; border: 1px solid transparent; border-radius: var(--r-btn); background: none; color: var(--text); font: inherit; text-align: left; }
+button.pp-person { cursor: pointer; }
+button.pp-person:hover { background: var(--hover); }
+button.pp-person:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pp-person.following { border-color: var(--c); background: var(--accent-soft); }
+.pp-person.you { margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--chrome-2); border-radius: 0; }
+.pp-person .cl-av { display: grid; place-items: center; width: 26px; height: 26px; font-size: 10px; cursor: inherit; }
+.pp-person.idle .cl-av { opacity: .55; }
+.pp-main { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.pp-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-name b { font-weight: 600; }
+.pp-role { color: var(--muted); font-size: 11px; }
+.pp-what { color: var(--text-2); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-person.idle .pp-what { color: var(--muted); font-style: italic; }
+.pp-open { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-2); }
+.pp-open .cl-lock { width: 14px; height: 14px; flex: none; border-radius: 50%; background: var(--c); display: grid; place-items: center; }
+.pp-open .cl-lock svg { width: 9px; height: 9px; }
+.pp-tag { flex: none; align-self: center; font-size: 10.5px; padding: 1px 6px; border-radius: 999px; background: var(--c); color: #fff; }
+.pp-hint { margin: 10px 2px 0; font-size: 11.5px; }
 .cl-av.cl-dot { display: inline-grid; place-items: center; width: 20px; height: 20px; font-size: 8.5px; line-height: 1; cursor: default; }
 .cl-team { margin-top: 26px; }
 .cl-invite, .cl-accept { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }

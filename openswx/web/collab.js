@@ -4,8 +4,9 @@
 //     parts, and the team (members, roles, invitations, who can open a project); New Part's Local / Cloud choice;
 //   * the Collaborate menu, for the open document: move it to the cloud, stop sharing, history and versions,
 //     follow someone;
-//   * the bar over the view while a cloud document is active: connection state, the others as coloured avatars
-//     with their tool (click one to follow their view);
+//   * the People pane in the Task Pane (its tab shows only for a cloud document, with how many are in it): the
+//     connection state and everyone in the part, with their colour, role, tool, what they have open and whether
+//     they are idle (click someone to follow their view);
 //   * presence out (pointer, selection as persistent names, tool, camera, drafts), at most ~10 a second and only
 //     when something changed; presence in: the others' pointers, selections, sketch drafts and feature ghosts
 //     (drafts can be switched off in the menu);
@@ -18,6 +19,7 @@ import { icon } from "./icons.js";
 
 const $ = (s) => document.querySelector(s);
 const PRESENCE_MS = 50; // presence out: ~20 a second at most
+const IDLE_MS = 120000; // the People pane: someone whose pointer, view, tool and draft have not changed for this long is idle
 const HOME_REFRESH_MS = 10000; // Home's Cloud tab: who is in each part, asked for again this often while it is up
 const GLIDE_MS = 90; // a pointer eases toward where its owner's pointer now is (time constant)
 const ARROW_SVG = '<svg width="18" height="22" viewBox="0 0 18 22"><path d="M2 2 L2 18 L6.5 14 L9.5 20.5 L12.5 19.2 L9.6 12.8 L15.5 12.5 Z" fill="var(--c)" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>';
@@ -63,13 +65,14 @@ const MIXIN = {
     this.cl = { rev: -1, all: [], groups, markers: new Map(), ghosts: new Map(), held: { sketch: null, pm: null },
       page: (crypto.randomUUID?.() || `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`), // (this page: its locks)
       pointer: null, mouse: null, mouseMoved: false, skDraft: null, pmDraft: null, sentP: "", sentD: "null", inFlight: false,
-      follow: null, followCam: null, seen: {}, primed: new Set(), drops: {}, texts: new Map(),
+      follow: null, followCam: null, seen: {}, primed: new Set(), drops: {}, texts: new Map(), active: new Map(),
       previews: storage.get(PREVIEWS_KEY) !== "off" };
-    const bar = el("div", "hidden"); bar.id = "collabbar"; this.graphics.append(bar); this.cl.bar = bar;
-    bar.onclick = (e) => {
-      const av = e.target.closest(".cl-av"); if (av) return this.collabFollow(this.cl.follow === av.dataset.client ? null : av.dataset.client);
+    const pane = $("#tp-people"); this.cl.pane = pane; this.cl.tab = $('.tp-tab[data-pane="people"]');
+    pane.onclick = (e) => {
+      const row = e.target.closest(".pp-person[data-client]"); if (row) return this.collabFollow(this.cl.follow === row.dataset.client ? null : row.dataset.client);
       if (e.target.closest(".cl-stop")) this.collabFollow(null);
     };
+    setInterval(() => this.collabRenderPeople(this.collabDoc()), 15000); // (someone going idle changes nothing else)
     const layer = el("div", ""); layer.id = "collab-layer"; this.graphics.append(layer); this.cl.layer = layer;
     this.vp.frameHooks.push(() => this.collabPlaceMarkers());
     this.vp.on("move", (e) => { this.cl.mouse = { x: e.x, y: e.y }; this.cl.mouseMoved = true; });
@@ -121,7 +124,7 @@ const MIXIN = {
   collabApply() {
     if (!this.cl) return;
     const d = this.collabDoc();
-    this.collabRenderBar(d);
+    this.collabRenderPeople(d);
     if (this.model) this.renderQuickAccessState();
     const sig = d ? JSON.stringify([d.locks, d.broken, (d.peers || []).map((p) => [p.client_id, p.colour])]) : "";
     if (sig !== this.cl.treeSig) { this.cl.treeSig = sig; if (this.model) this.renderTree(); }
@@ -150,27 +153,67 @@ const MIXIN = {
     return p;
   },
 
-  // ---------------------------------------------------------------- the bar: state, avatars, follow
-  collabRenderBar(d) {
-    const cl = this.cl, bar = cl.bar;
-    if (!d) { bar.classList.add("hidden"); cl.barHtml = ""; return; }
+  // ---------------------------------------------------------------- the People pane: state, everyone in the part, follow
+  collabRenderPeople(d) {
+    const cl = this.cl, tab = cl?.tab, pane = cl?.pane;
+    if (!tab || !pane) return;
+    if (!d) {
+      if (!tab.classList.contains("hidden")) {
+        tab.classList.add("hidden"); pane.innerHTML = ""; cl.paneHtml = ""; cl.active.clear();
+        if (tab.classList.contains("active")) this.showTask("people"); // (it was open: the Task Pane folds away)
+      }
+      return;
+    }
+    const now = Date.now(), everyone = d.peers || [];
+    for (const p of everyone) { // (when each person last did anything: a change of pointer, view, tool or draft)
+      const sig = JSON.stringify([p.presence, p.draft]);
+      if (cl.active.get(p.client_id)?.sig !== sig) cl.active.set(p.client_id, { sig, t: now });
+    }
+    for (const id of cl.active.keys()) if (!everyone.some((p) => p.client_id === id)) cl.active.delete(id);
+    const others = everyone.filter((p) => !p.you), me = everyone.find((p) => p.you) || { ...(d.you || {}), you: true };
+    const n = others.length + 1;
+    tab.classList.remove("hidden");
+    const label = `People in this part: ${n === 1 ? "only you" : `${n} online`}`;
+    const badge = `${icon("people")}<span class="tp-count cl-${esc(d.state)}">${n}</span>`;
+    if (tab.dataset.sig !== badge) { tab.innerHTML = badge; tab.dataset.sig = badge; }
+    tab.title = label; tab.setAttribute("aria-label", label);
+    tab.classList.toggle("following", !!cl.follow);
+    if (pane.classList.contains("hidden")) return; // (drawn when it is open: showTask draws it then)
     const st = d.state;
     let state = STATE_LABEL[st] || st;
     if (d.pending) state += st === "online" ? ` · sending ${d.pending}` : ` · ${d.pending} change${d.pending > 1 ? "s" : ""} waiting`;
-    const peers = (d.peers || []).filter((p) => !p.you);
-    const followed = peers.find((p) => p.client_id === cl.follow);
-    const html = `<span class="cl-state cl-${esc(st)}" title="${esc(d.error || `${d.cloud_name}: live collaboration`)}"><i></i>${esc(state)}</span>`
-      + (d.read_only ? `<span class="cl-ro" title="You can watch, not change">Read-only${d.read_only_reason ? `: ${esc(d.read_only_reason)}` : ""}</span>` : "")
-      + `<span class="cl-peers">${peers.map((p) => {
-        const tool = p.presence?.tool || "";
-        return `<button class="cl-av${p.client_id === cl.follow ? " following" : ""}" data-client="${esc(p.client_id)}" style="--c:${colour(p.colour)}"
-          title="${esc(p.name)}${tool ? ` — ${esc(tool)}` : ""}${p.read_only ? " (viewing)" : ""}&#10;Click to ${p.client_id === cl.follow ? "stop following" : "follow their view"}">${esc(initials(p.name))}</button>`
-          + (tool ? `<span class="cl-tool" data-client="${esc(p.client_id)}">${esc(tool)}</span>` : "");
-      }).join("")}</span>`
-      + (peers.length ? "" : `<span class="cl-alone">Nobody else here</span>`)
-      + (followed ? `<span class="cl-following" style="--c:${colour(followed.colour)}">Following ${esc(followed.name)} <button class="cl-stop">Stop</button></span>` : "");
-    if (html !== cl.barHtml) { bar.innerHTML = html; cl.barHtml = html; }
-    bar.classList.remove("hidden");
+    const locks = Object.values(d.locks || {});
+    const person = (p) => {
+      const you = !!p.you, follow = !you && p.client_id === cl.follow;
+      const role = you ? words(d.role || (d.read_only ? "viewer" : "editor")) : p.read_only ? "Viewer" : "Editor";
+      const tool = (you ? this.collabToolLabel() : p.presence?.tool) || "";
+      const open = locks.filter((h) => (you ? h.mine : h.client_id === p.client_id)).map((h) => h.target).filter((t) => t && !tool.endsWith(t));
+      const quiet = now - (cl.active.get(p.client_id)?.t ?? now);
+      const idle = !you && !tool && !open.length && quiet >= IDLE_MS;
+      const what = tool || (idle ? `Idle for ${Math.floor(quiet / 60000)} min` : you ? "" : "Looking around");
+      const body = `<span class="cl-av" style="--c:${colour(p.colour)};color:${inkOn(p.colour)}" aria-hidden="true">${esc(initials(p.name))}</span>`
+        + `<span class="pp-main"><span class="pp-name"><b>${esc(p.name || "?")}</b>${you ? ' <span class="muted">(you)</span>' : ""}</span>`
+        + `<span class="pp-role">${esc(role)}</span>`
+        + (what ? `<span class="pp-what">${esc(what)}</span>` : "")
+        + open.map((t) => `<span class="pp-open" title="Has ${esc(t)} open: nobody else can change it now"><span class="cl-lock" style="--c:${colour(p.colour)}">${LOCK_SVG}</span>${esc(t)}</span>`).join("")
+        + `</span>` + (follow ? `<span class="pp-tag">Following</span>` : "");
+      if (you) return `<div class="pp-person you">${body}</div>`;
+      return `<button class="pp-person${follow ? " following" : ""}${idle ? " idle" : ""}" data-client="${esc(p.client_id)}" style="--c:${colour(p.colour)}"`
+        + ` aria-pressed="${follow}" title="${follow ? "Stop following" : `Follow ${esc(p.name)}&#39;s view`}">${body}</button>`;
+    };
+    const followed = others.find((p) => p.client_id === cl.follow);
+    const html = `<div class="tp-h">${icon("people")} People</div>`
+      + `<div class="pp-status"><span class="cl-state cl-${esc(st)}" title="${esc(d.error || `${d.cloud_name}: live collaboration`)}"><i></i>${esc(state)}</span>`
+      + (d.read_only ? `<span class="cl-ro" title="You can watch, not change">Read-only${d.read_only_reason ? `: ${esc(d.read_only_reason)}` : ""}</span>` : "") + `</div>`
+      + (followed ? `<div class="cl-following" style="--c:${colour(followed.colour)}"><span>Following <b>${esc(followed.name)}</b></span><button class="cl-stop">Stop</button></div>` : "")
+      + `<div class="pp-list" role="list">${others.map((p) => `<div role="listitem">${person(p)}</div>`).join("")}<div role="listitem">${person(me)}</div></div>`
+      + (others.length ? `<p class="muted pp-hint">Click someone to follow their view. Turning the view yourself stops following.</p>`
+        : `<p class="muted pp-hint cl-alone">Nobody else is in this part right now.</p>`);
+    if (html !== cl.paneHtml) {
+      const focused = document.activeElement?.closest?.("#tp-people [data-client]")?.dataset.client;
+      pane.innerHTML = html; cl.paneHtml = html;
+      if (focused) pane.querySelector(`[data-client="${CSS.escape(focused)}"]`)?.focus(); // (keyboard users keep their place)
+    }
   },
 
   collabFollow(clientId) {
@@ -181,7 +224,7 @@ const MIXIN = {
       if (p?.presence?.camera) { cl.followCam = p.presence.camera; this.collabFollowStep(); }
       else if (p) this.toast(`${esc(p.name)} has not moved their view yet: it follows when they do`);
     }
-    this.collabRenderBar(this.collabDoc());
+    this.collabRenderPeople(this.collabDoc());
   },
 
   // ease the camera towards the followed person's (a fifth of the way each frame)

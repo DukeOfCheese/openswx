@@ -338,6 +338,62 @@ def test_agent_setup_dialog_fits_without_sideways_scrolling(page):
     assert wide == []
 
 
+def test_people_pane_lists_who_is_in_a_cloud_part(page):
+    """A cloud part (a faked /api/collab status): the People tab shows with the count, its pane lists everyone with
+    their tool and what they have open, clicking someone follows them; nothing is drawn over the view any more, and
+    the tab goes when the part is no longer a cloud part."""
+    name = page.evaluate("window.app.model.name")
+    status = {"revision": 9001, "documents": [{
+        "document": name, "document_id": "d1", "cloud_name": name, "state": "online", "connected": False, "pending": 0,
+        "role": "owner", "read_only": False, "you": {"client_id": "c-me", "name": "Ada", "colour": "#2f6fd6"},
+        "peers": [
+            {"client_id": "c-me", "name": "Ada", "colour": "#2f6fd6", "you": True},
+            {"client_id": "c-bob", "name": "Bob Lee", "colour": "#d0312d", "read_only": False,
+             "presence": {"tool": "Editing Boss-Extrude1", "camera": {"q": [0, 0, 0, 1], "t": [0, 0, 0], "h": 100}}},
+            {"client_id": "c-cy", "name": "Cy", "colour": "#e0a100", "read_only": True, "presence": None},
+        ],
+        "locks": {"f1": {"client_id": "c-bob", "name": "Bob Lee", "target": "Boss-Extrude1", "mine": False},
+                  "f2": {"client_id": "c-bob", "name": "Bob Lee", "target": "Sketch1", "mine": False}},
+        "broken": {}, "conflicts": [], "recent": [], "versions": []}]}
+    empty = {"revision": 9002, "documents": []}
+    current = {"v": status}
+    page.route("**/api/collab", lambda route: route.fulfill(json=current["v"]))
+    try:
+        page.evaluate("T.close(); window.app.refreshCollab()")
+        tab = '.tp-tab[data-pane="people"]'
+        page.wait_for_selector(f"{tab}:not(.hidden)")
+        assert page.inner_text(f"{tab} .tp-count") == "3"
+        assert page.get_attribute(tab, "aria-label") == "People in this part: 3 online"
+        assert not page.query_selector("#collabbar"), "the bar over the view is gone"
+        assert not page.query_selector("#graphics .cl-av"), "no avatars drawn over the view"
+        page.click(tab)
+        page.wait_for_selector("#tp-people:not(.hidden) .pp-person")
+        rows = page.eval_on_selector_all("#tp-people .pp-person", "(r) => r.map((x) => x.innerText.replace(/\\s+/g, ' ').trim())")
+        assert rows[0].startswith("BL Bob Lee Editor Editing Boss-Extrude1") and "Sketch1" in rows[0], rows
+        assert "Boss-Extrude1 Boss" not in rows[0].replace("Editing Boss-Extrude1", "")  # (open, but already said by the tool)
+        assert rows[1].startswith("C Cy Viewer Looking around"), rows
+        assert rows[2].startswith("A Ada (you) Owner"), rows
+        assert "Online" in page.inner_text("#tp-people .pp-status")
+        colour = page.get_attribute("#tp-people .pp-person[data-client='c-bob'] .cl-av", "style")
+        assert "#d0312d" in colour.lower()
+        page.click("#tp-people .pp-person[data-client='c-bob']")  # (follow Bob's view)
+        assert page.evaluate("window.app.cl.follow") == "c-bob"
+        assert page.get_attribute("#tp-people .pp-person[data-client='c-bob']", "aria-pressed") == "true"
+        assert "Following Bob Lee" in page.inner_text("#tp-people .cl-following")
+        page.focus("#tp-people .pp-person[data-client='c-bob']")
+        page.keyboard.press("Enter")  # (keyboard: the same button stops following)
+        assert page.evaluate("window.app.cl.follow") is None
+        assert page.evaluate("document.activeElement?.dataset.client") == "c-bob"  # (focus stays on the person)
+        current["v"] = empty
+        page.evaluate("window.app.refreshCollab()")
+        page.wait_for_selector(f"{tab}.hidden", state="attached")
+        assert page.evaluate("document.querySelector('#taskpane').classList.contains('collapsed')")
+    finally:
+        page.unroute("**/api/collab")
+        current["v"] = empty
+        page.evaluate("window.app.cl.follow = null; window.app.refreshCollab()")
+
+
 def test_save_on_a_never_saved_part_is_save_as(page, tmp_path):
     """Ctrl+S on a part with no file yet opens Save As (also while typing in a text box); Cancel leaves it unsaved
     without an error; after saving, Ctrl+S writes to that file without asking."""
