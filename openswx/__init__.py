@@ -1,6 +1,6 @@
 """openswx: open-source parametric CAD with a SOLIDWORKS-style workflow and a built-in MCP server."""
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 
 def _defer_sklearn() -> None:

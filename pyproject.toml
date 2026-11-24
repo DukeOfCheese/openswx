@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openswx"
-version = "0.3.1"
+version = "0.4.0"
 description = "Open-source parametric CAD with a familiar layout and a built-in MCP server for AI agents"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -41,7 +41,7 @@ dev = ["pytest", "httpx", "netgen-mesher>=6.2"]
 mesh = ["netgen-mesher>=6.2"]  # curvature-based tetrahedral meshes for simulation (LGPL-2.1; fea_tet.py)
 desktop = ["pywebview>=6", "pyinstaller>=6"]  # the native window and the release build (packaging/build.py)
 difftest = ["pywin32; platform_system == 'Windows'"]  # tools/difftest only (development oracle); openswx itself never uses SOLIDWORKS
-collab = ["openswx-collab-protocol==0.1.0", "websockets>=13", "httpx>=0.27"]  # live collaboration through an openswx-collab server (openswx/collab)
+collab = ["openswx-collab-protocol>=0.1.0,<0.2", "websockets>=13", "httpx>=0.27"]  # live collaboration through an openswx-collab server (openswx/collab)
 
 [project.urls]
 Homepage = "https://github.com/DukeOfCheese/openswx"
