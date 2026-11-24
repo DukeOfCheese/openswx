@@ -372,10 +372,23 @@ def build_extrude(ctx: Ctx, p: dict, name: str, cut: bool = False) -> None:
             amt = _through_length(ctx, plane) if c2 == "ThroughAll" else float(d2.get("depth", depth))
             t2 = -float(d2.get("draft", 0)) if d2.get("draft_outward") else float(d2.get("draft", 0))
             tools.append(extrude(f, amount=amt, dir=-d1, taper=t2))
+    op = "cut" if cut else "add"
+    if cut and len(tools) > 1 and not p.get("flip_side_to_cut") and ctx.body is not None:
+        # many profiles cut at once with one boolean against a compound of the tools (60 holes: 0.04 s instead
+        # of 0.33 s fusing them one by one first); any trouble falls back to the fused tool below
+        before = ctx.body
+        try:
+            tool = Compound(tools)
+            apply_op(ctx, "cut", tool, p.get("merge", True))
+            if ctx.body is not None and ctx.body.solids():
+                ctx.tools[name] = [(op, tool)]
+                return
+        except Exception:  # noqa: BLE001
+            pass
+        ctx.body = before
     tool = tools[0]
     for t in tools[1:]:
         tool = tool.fuse(t)
-    op = "cut" if cut else "add"
     if cut and p.get("flip_side_to_cut"):
         if ctx.body is None:
             raise FeatureError("nothing to cut")
@@ -3030,8 +3043,10 @@ _MP_CACHE: dict = {}
 def mass_properties(shape: Shape | None, density_kg_m3: float = 1000.0) -> dict:
     if shape is None:
         return {"volume": 0.0, "surface_area": 0.0, "mass": 0.0, "center_of_mass": None, "bodies": 0}
-    # shapes are immutable and every rebuild makes new ones, so results are cached per shape
-    key = (shape.wrapped.TShape().__hash__(), str(shape.wrapped.Location().Transformation().TranslationPart().Coord()), density_kg_m3)
+    # shapes are immutable and every rebuild makes new ones, so results are cached per shape. (hash(shape) is
+    # OCCT's hash of the underlying shape; the TShape() wrapper's own __hash__ changed from call to call, so the
+    # cache never hit and every model summary recomputed volume and area)
+    key = (hash(shape), str(shape.wrapped.Location().Transformation().TranslationPart().Coord()), density_kg_m3)
     hit = _MP_CACHE.get(key)
     if hit is not None and hit[0].IsSame(shape.wrapped):
         return dict(hit[1])

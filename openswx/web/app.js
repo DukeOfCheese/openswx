@@ -138,17 +138,30 @@ class App {
     es.onopen = () => { $("#sb-agent").textContent = `MCP: ${location.origin}/mcp`; };
   }
 
-  async refresh() {
-    const [st, mesh] = await Promise.all([this.api("/api/state"), this.api("/api/mesh")]);
+  // One refresh at a time: a command's own refresh and the event stream's for the same change used to fetch and
+  // rebuild everything twice. Calls while one runs are merged into one more pass, and the mesh is fetched and
+  // rebuilt only when the model's version has moved since it was last shown.
+  refresh() {
+    if (this.refreshing) { this.refreshAgain = true; return this.refreshing; }
+    this.refreshing = (async () => {
+      do { this.refreshAgain = false; await this.refreshOnce(); } while (this.refreshAgain);
+    })().finally(() => { this.refreshing = null; });
+    return this.refreshing;
+  }
+
+  async refreshOnce() {
+    const st = await this.api("/api/state");
+    const meshFresh = this.mesh && st.version === this.meshVersion && this.model && this.model.name === st.model.name;
+    const mesh = meshFresh ? this.mesh : await this.api("/api/mesh");
     const first = this.version < 0 || (this.model && this.model.name !== st.model.name);
-    this.version = st.version; this.model = st.model; this.docs = st.documents; this.mesh = mesh;
+    this.version = st.version; this.model = st.model; this.docs = st.documents; this.mesh = mesh; this.meshVersion = st.version;
     if (UNITS.name !== (this.model.units || "mm")) { UNITS.set(this.model.units || "mm"); if (this.pm?.active) this.pm.render(); }
     if (this.sk.active && !this.model.features.some((f) => f.name === this.sk.name)) this.exitSketch(true);
     if (first) { // another document: its own selection and display state
       this.selection = []; this.vp.setSelection([]); this.sk.showDims = null;
       this.hiddenComps.clear(); this.vp.hiddenComponents = new Set();
     }
-    this.vp.setMesh(mesh);
+    if (!meshFresh) this.vp.setMesh(mesh); // (unchanged geometry: the scene, its colours and selection stay as they are)
     if ((this.model.kind || "part") === "assembly" && (this.model.display_state || null) !== (this.shownDisplayState ?? null)) {
       this.shownDisplayState = this.model.display_state || null; // a display state was activated: show what it shows
       this.hiddenComps = new Set(this.model.hidden_components || []); this.vp.setHiddenComponents([...this.hiddenComps]);

@@ -224,13 +224,13 @@ def edge_faces(body, edge) -> list[str] | None:
     lab = labels_of(body)
     if not lab:
         return None
+    from .geom import faces_of_edge
     out = []
-    for f in body.faces():
-        if any(edge.is_same(e) for e in f.edges()):
-            nm = lab.get(hash(f))
-            if nm is None:
-                return None
-            out.append(nm)
+    for f in faces_of_edge(body, edge):
+        nm = lab.get(hash(f))
+        if nm is None:
+            return None
+        out.append(nm)
     return sorted(out) if len(out) == 2 else None
 
 

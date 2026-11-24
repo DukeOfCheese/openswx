@@ -47,6 +47,9 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
 
     app = FastAPI(title="openswx", lifespan=lifespan)
     app.add_middleware(security.Guard, token=token, loopback_only=security.is_loopback(host), view_token=view_token)
+    # large JSON (the mesh, the model) about 6x smaller on the wire; the event stream is left uncompressed
+    from starlette.middleware.gzip import GZipMiddleware
+    app.add_middleware(GZipMiddleware, minimum_size=4096)
 
     @app.middleware("http")
     async def no_stale_ui(request: Request, call_next):

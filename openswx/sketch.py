@@ -982,11 +982,14 @@ class Sketch:
         from build123d import Compound, Shape
         from OCP.BRepAlgoAPI import BRepAlgoAPI_Splitter
         from OCP.collections import List_TopoDS_Shape
-        uniq = []
+        import numpy as np
+        uniq, seen = [], []
         for e in edges:  # coincident duplicates (e.g. two rectangles sharing a side) would break the parity count
-            m = e.position_at(0.5)
-            if not any(abs(e.length - u.length) < 1e-7 and (u.position_at(0.5) - m).length < 1e-7 for u in uniq):
+            m, ln = e.position_at(0.5), e.length
+            key = (ln, m.X, m.Y, m.Z)
+            if not any(abs(ln - k[0]) < 1e-7 and (k[1] - m.X) ** 2 + (k[2] - m.Y) ** 2 + (k[3] - m.Z) ** 2 < 1e-14 for k in seen):
                 uniq.append(e)
+                seen.append(key)
         bb = Compound(uniq).bounding_box()
         size = bb.diagonal * 2 + 10
         c = bb.center()
@@ -1002,33 +1005,45 @@ class Sketch:
         sp.Build()
         if not sp.IsDone():
             return []
-        polys = []  # sketch curves as 2D polylines for the even-odd test
+        # sketch curves as 2D polyline segments (sketch coordinates) for the even-odd test, all in numpy
+        o3 = np.array([plane.origin.X, plane.origin.Y, plane.origin.Z])
+        ax = np.array([[plane.x_dir.X, plane.x_dir.Y, plane.x_dir.Z], [plane.y_dir.X, plane.y_dir.Y, plane.y_dir.Z]])
+        seg_a, seg_b = [], []
         for e in uniq:
             n = 2 if e.geom_type.name.lower() == "line" else 96
-            polys.append([plane.to_local_coords(e.position_at(i / (n - 1))) for i in range(n)])
+            q = np.array([tuple(e.position_at(i / (n - 1))) for i in range(n)])
+            uv = (q - o3) @ ax.T
+            seg_a.append(uv[:-1])
+            seg_b.append(uv[1:])
+        A, B = np.concatenate(seg_a), np.concatenate(seg_b)
+        E = B - A
         ang = 0.3712  # generic ray direction avoids passing exactly through vertices
         dx, dy = math.cos(ang), math.sin(ang)
-        kept = []
+        den = dx * E[:, 1] - dy * E[:, 0]
+        use = np.abs(den) >= 1e-15
+        A, E, den = A[use], E[use], den[use]
+        faces, probes = [], []
         for f in Shape.cast(sp.Shape()).faces():
             verts, tris = f.tessellate(1e-3 * size, 0.2)
             if not tris:
                 continue
             best = max(tris, key=lambda t: ((verts[t[1]] - verts[t[0]]).cross(verts[t[2]] - verts[t[0]])).length)
-            p = plane.to_local_coords((verts[best[0]] + verts[best[1]] + verts[best[2]]) * (1 / 3))
-            hits = 0
-            for poly in polys:
-                for a, b in zip(poly, poly[1:]):
-                    ex, ey = b.X - a.X, b.Y - a.Y
-                    den = dx * ey - dy * ex
-                    if abs(den) < 1e-15:
-                        continue
-                    t = ((a.X - p.X) * ey - (a.Y - p.Y) * ex) / den
-                    u = ((a.X - p.X) * dy - (a.Y - p.Y) * dx) / den
-                    if t > 0 and 0 <= u < 1:
-                        hits += 1
-            if hits % 2 == 1:
-                kept.append(f)
-        return kept
+            c = (verts[best[0]] + verts[best[1]] + verts[best[2]]) * (1 / 3)
+            faces.append(f)
+            probes.append((np.array([c.X, c.Y, c.Z]) - o3) @ ax.T)
+        if not faces:
+            return []
+        P = np.array(probes)  # (regions, 2): a point inside each region
+        hits = np.zeros(len(P), int)
+        step = max(1, 2_000_000 // max(len(A), 1))  # (regions x segments in chunks: bounded memory for big sketches)
+        for i in range(0, len(P), step):
+            p = P[i:i + step]
+            rx = A[None, :, 0] - p[:, None, 0]
+            ry = A[None, :, 1] - p[:, None, 1]
+            t = (rx * E[None, :, 1] - ry * E[None, :, 0]) / den[None, :]
+            u = (rx * dy - ry * dx) / den[None, :]
+            hits[i:i + step] = ((t > 0) & (u >= 0) & (u < 1)).sum(axis=1)
+        return [f for f, h in zip(faces, hits) if h % 2 == 1]
 
     def _profiles_by_wires(self, plane: Plane, edges) -> list[Face]:
         wires = [w for w in Wire.combine(edges, tol=1e-6) if w.is_closed]

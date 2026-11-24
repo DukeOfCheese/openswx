@@ -18,6 +18,15 @@ formats or commands; files are migrated automatically and the change is listed h
   - Your pointer reaches the others even while a rebuild is running.
 - Feature previews (yours, and others' drafts in a cloud part) reuse the part's rebuild cache: they start from the
   feature being changed, not from scratch. On a 26-feature part a preview takes about a quarter of the time.
+- Faster throughout, with the same results (each checked against the old way):
+  - Pictures for agents (`get_view_image`) about 15x faster: 1.5 s to 0.1 s for an 80-feature part.
+  - The 3D mesh is made for the whole part at once (2-3x faster) and kept until the part changes. The window
+    fetches it once per change instead of twice, and it travels gzip-compressed.
+  - Volume and area were recomputed on every model summary (their cache never hit).
+  - Frequency and buckling studies factorise the stiffness matrix once (16 s to 9 s at 47,500 unknowns).
+  - Sketch regions are found in numpy: a sketch with 60 circles in 0.6 s instead of 2.8 s.
+  - Edge selections look up the faces beside each edge in a map instead of scanning every face.
+  - A cut with many profiles is one boolean: 60 holes in 0.9 s instead of 4.0 s.
 
 ### Fixed
 

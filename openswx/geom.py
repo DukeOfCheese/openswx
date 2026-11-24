@@ -75,16 +75,36 @@ def face_ref(face: Face, body: Shape | None = None) -> dict:
     return ref
 
 
+_EDGE_FACES: dict = {}
+
+
+def faces_of_edge(shape: Shape, edge: Edge) -> list:
+    """The faces of `shape` that an edge bounds, in shape.faces() order. A map from each edge to its faces is
+    built once per shape and kept (shapes never change), instead of scanning every face's edges per question."""
+    key = (hash(shape), str(shape.wrapped.Location().Transformation().TranslationPart().Coord()))
+    hit = _EDGE_FACES.get(key)
+    if hit is None or not hit[0].IsSame(shape.wrapped):
+        m: dict = {}
+        for f in shape.faces():
+            for e in f.edges():
+                lst = m.setdefault(hash(e), [])
+                if not any(x is f for x in lst):
+                    lst.append(f)
+        if len(_EDGE_FACES) > 16:
+            _EDGE_FACES.clear()
+        hit = _EDGE_FACES[key] = (shape.wrapped, m)
+    return [f for f in hit[1].get(hash(edge), []) if any(edge.is_same(e) for e in f.edges())]
+
+
 def _adjacent_signature(shape: Shape, edge: Edge) -> list[str]:
     """Describe the faces that meet at an edge (surface type + planar normal); survives most edits."""
     sig = []
-    for f in shape.faces():
-        if any(edge.is_same(e) for e in f.edges()):
-            t = geom_name(f)
-            if t == "plane":
-                n = face_normal(f)
-                t += "(%.3f,%.3f,%.3f)" % (n.X + 0.0, n.Y + 0.0, n.Z + 0.0)
-            sig.append(t)
+    for f in faces_of_edge(shape, edge):
+        t = geom_name(f)
+        if t == "plane":
+            n = face_normal(f)
+            t += "(%.3f,%.3f,%.3f)" % (n.X + 0.0, n.Y + 0.0, n.Z + 0.0)
+        sig.append(t)
     return sorted(sig)
 
 
@@ -182,24 +202,81 @@ def edge_info(i: int, e: Edge) -> dict:
     return info
 
 
+_TESS_CACHE: dict = {}
+
+
 def tessellate(shape: Shape | None, tol: float = 0.05, ang: float = 0.2) -> dict:
+    """Triangles of every face ("Face<i>" in shape.faces() order) and a polyline per edge ("Edge<i>"), as flat
+    coordinate lists rounded to 1e-5 mm. Cached per shape (shapes never change; a rebuild makes new ones), so
+    showing the same body again costs nothing; callers get their own dicts and lists of them."""
     out = {"faces": [], "edges": []}
     if shape is None:
         return out
+    key = (hash(shape), str(shape.wrapped.Location().Transformation().TranslationPart().Coord()), tol, ang)
+    hit = _TESS_CACHE.get(key)
+    if hit is None or not hit[0].IsSame(shape.wrapped):
+        hit = (shape.wrapped, _tessellate(shape, tol, ang))
+        if len(_TESS_CACHE) > 16:
+            _TESS_CACHE.clear()
+        _TESS_CACHE[key] = hit
+    m = hit[1]
+    return {"faces": [dict(f) for f in m["faces"]], "edges": [dict(e) for e in m["edges"]]}
+
+
+def _tessellate(shape: Shape, tol: float, ang: float) -> dict:
+    import numpy as np
+    from OCP.BRep import BRep_Tool
+    from OCP.BRepAdaptor import BRepAdaptor_Curve
+    from OCP.BRepMesh import BRepMesh_IncrementalMesh
+    from OCP.GCPnts import GCPnts_TangentialDeflection
+    from OCP.TopAbs import TopAbs_REVERSED
+    from OCP.TopLoc import TopLoc_Location
+    out = {"faces": [], "edges": []}
     bb = shape.bounding_box()
-    tol = max(tol, bb.diagonal * 1e-3) if bb.diagonal > 0 else tol
+    diag = bb.diagonal
+    tol = max(tol, diag * 1e-3) if diag > 0 else tol
+    # the whole shape in one call (relative deflection, in parallel): meshing face by face re-meshed the
+    # shared edges again and again
+    BRepMesh_IncrementalMesh(shape.wrapped, tol, True, ang, True)
     for i, f in enumerate(shape.faces()):
-        verts, tris = f.tessellate(tol, ang)
-        out["faces"].append({
-            "id": f"Face{i}",
-            "type": geom_name(f),
-            "v": [round(c, 5) for p in verts for c in (p.X, p.Y, p.Z)],
-            "t": [k for tri in tris for k in tri],
-        })
+        loc = TopLoc_Location()
+        poly = BRep_Tool.Triangulation_s(f.wrapped, loc)
+        if poly is None:  # (a face the mesher left out: its own call, as before)
+            verts, tris = f.tessellate(tol, ang)
+            v = np.array([(p.X, p.Y, p.Z) for p in verts], float).reshape(-1, 3)
+            t = np.array(tris, int).reshape(-1, 3)
+        else:
+            trsf = loc.Transformation()
+            n = poly.NbNodes()
+            v = np.empty((n, 3))
+            for k in range(n):
+                p = poly.Node(k + 1).Transformed(trsf)
+                v[k] = (p.X(), p.Y(), p.Z())
+            m = poly.NbTriangles()
+            t = np.empty((m, 3), int)
+            for k in range(m):
+                a, b, c = poly.Triangle(k + 1).Get()
+                t[k] = (a, b, c)
+            t -= 1
+            if f.wrapped.Orientation() == TopAbs_REVERSED:
+                t = t[:, [0, 2, 1]]
+        out["faces"].append({"id": f"Face{i}", "type": geom_name(f), "v": np.round(v, 5).ravel().tolist(),
+                             "t": t.ravel().tolist()})
+    defl = max(diag * 5e-4, 1e-4)
     for i, e in enumerate(shape.edges()):
-        n = 2 if geom_name(e) == "line" else 48
-        pts = [e.position_at(t / (n - 1)) for t in range(n)]
-        out["edges"].append({"id": f"Edge{i}", "p": [round(c, 5) for p in pts for c in (p.X, p.Y, p.Z)]})
+        if geom_name(e) == "line":
+            a, b = e.position_at(0), e.position_at(1)
+            pts = np.array([(a.X, a.Y, a.Z), (b.X, b.Y, b.Z)])
+        else:  # points spaced by turning angle and sag, not a fixed 48
+            try:
+                d = GCPnts_TangentialDeflection(BRepAdaptor_Curve(e.wrapped), 0.12, defl, 2)
+                pts = np.array([(d.Value(k).X(), d.Value(k).Y(), d.Value(k).Z()) for k in range(1, d.NbPoints() + 1)])
+            except Exception:  # noqa: BLE001 - an edge the sampler cannot take: fixed samples, as before
+                pts = None
+            if pts is None or len(pts) < 2:
+                q = [e.position_at(t / 47) for t in range(48)]
+                pts = np.array([(p.X, p.Y, p.Z) for p in q])
+        out["edges"].append({"id": f"Edge{i}", "p": np.round(pts, 5).ravel().tolist()})
     return out
 
 
