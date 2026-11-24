@@ -7,6 +7,7 @@
 .cx-sep { height: 1px; background: var(--chrome-2); margin: 4px 6px; }
 #modal { position: fixed; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: 90; }
 #modal-box { background: var(--panel); border: 1px solid var(--chrome-2); border-radius: var(--r-pane); box-shadow: var(--dlg-shadow); min-width: 340px; max-width: 560px; }
+#modal-box:has(.mat-dlg) { width: min(720px, 94vw); max-width: min(720px, 94vw); }
 .mb-title { padding: 10px 14px; font-weight: 600; border-bottom: 1px solid var(--chrome-2); display: flex; align-items: center; gap: 8px; }
 .mb-title svg { width: 18px; height: 18px; }
 .mb-body { padding: 14px; max-height: 70vh; overflow: auto; }
@@ -115,15 +116,16 @@
 .dt-grid th, .dt-grid td { border: 1px solid var(--chrome-2); padding: 2px 4px; white-space: nowrap; }
 .dt-grid th { background: var(--panel-2); font-weight: 600; }
 .dt-grid input { width: 86px; border: none; font: inherit; }
-.mat-dlg { display: grid; grid-template-columns: 230px 1fr; gap: 12px; min-width: 620px; }
-.mat-tree { border: 1px solid var(--border); border-radius: var(--r-field); height: 330px; overflow: auto; font-size: 12px; padding: 4px; }
+.mat-dlg { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 12px; min-width: 0; }
+.mat-tree { border: 1px solid var(--border); border-radius: var(--r-field); height: clamp(330px, 55vh, 400px); overflow-y: auto; overflow-x: hidden; font-size: 12px; padding: 4px; }
 .mat-tree svg { width: 14px; height: 14px; vertical-align: -2px; }
 .mt-root { font-weight: 600; padding: 2px; }
 .mt-cat { padding: 2px 2px 2px 10px; cursor: pointer; border-radius: 4px; }
 .mt-mat { padding: 2px 2px 2px 24px; cursor: pointer; white-space: nowrap; border-radius: 4px; }
 .mt-mat:hover, .mt-cat:hover { background: var(--hover); }
 .mt-mat.selected { background: var(--accent-soft); color: var(--accent-ink); }
-.mat-props input { width: 100px; }
+.mat-props { width: 100%; table-layout: fixed; }
+.mat-props input { width: 100%; max-width: 120px; }
 #modify .mscope { font-size: 11px; }
 #modify .mcfgs { max-height: 110px; overflow: auto; font-size: 11px; }
 .t-row.related { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
