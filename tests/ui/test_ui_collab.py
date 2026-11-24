@@ -213,6 +213,26 @@ def test_ada_s_pointer_and_selection_show_on_bob_s_model(world):
     b.wait_for_function("window.app.cl.groups.sel.children.length === 0")
 
 
+def test_ada_s_pointer_is_an_arrow_that_glides_and_stays_over_empty_background(world):
+    a, b = world["a"], world["b"]
+    box = a.locator("#view").bounding_box()
+    a.mouse.move(box["x"] + box["width"] - 60, box["y"] + box["height"] / 2 + 20)
+    a.mouse.move(box["x"] + box["width"] - 50, box["y"] + box["height"] / 2)  # (right of the part: empty background)
+    a.wait_for_function("window.app.cl.pointer?.plane === true", timeout=5000)
+    b.wait_for_function("T.peer('Ada')?.presence?.pointer?.plane === true")
+    marker = "[...document.querySelectorAll('.cl-ptr')].find((m) => m.innerText.startsWith('Ada'))"
+    assert b.evaluate(f"!!{marker}.querySelector('svg path')"), "the pointer is drawn as an arrow"
+    # it arrives where Ada's pointer is (eased, not stuck part-way) and shows, not faded out
+    b.wait_for_function(f"""() => {{ const m = {marker}, app = window.app;
+        if (!m || m.classList.contains('gone') || m.style.display === 'none' || !m.target) return false;
+        const [x, y] = app.vp.toScreen(m.target.toArray());
+        const t = /translate\\(([-\\d.]+)px, ([-\\d.]+)px\\)/.exec(m.style.transform);
+        return t && Math.hypot(+t[1] + 2 - x, +t[2] + 2 - y) < 1.5; }}""", timeout=5000)
+    assert not b.evaluate(f"{marker}.classList.contains('behind')"), "a pointer in the air is never behind the model"
+    a.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+    b.wait_for_function("(T.peer('Ada')?.presence?.pointer?.face || '').length > 0")
+
+
 def test_ada_s_tool_shows_next_to_her_name_and_her_panel_as_a_ghost(world):
     a, b = world["a"], world["b"]
     a.evaluate("window.app.editFeature('Boss-Extrude1')")

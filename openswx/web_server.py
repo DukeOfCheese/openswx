@@ -151,7 +151,7 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
                         entry = S.APP.log[-1] if S.APP.log else None
                         event = {"version": last, "last": entry, **({"collab": rev} if rev else {})}
                         yield f"data: {json.dumps(event)}\n\n"
-                    await asyncio.sleep(0.15)
+                    await asyncio.sleep(0.05 if rev else 0.15)  # (others' pointers: ~20 a second)
             finally:
                 if page:
                     pages[page] -= 1

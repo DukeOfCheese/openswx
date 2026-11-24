@@ -368,10 +368,14 @@ button { font: inherit; color: inherit; }
 .cl-following { display: flex; align-items: center; gap: 5px; padding-left: 6px; border-left: 3px solid var(--c); }
 .cl-following button { font-size: 11px; padding: 0 6px; height: 18px; border: 1px solid var(--border); background: #fff; border-radius: 3px; cursor: pointer; }
 #collab-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 5; }
-.cl-ptr { position: absolute; left: 0; top: 0; display: flex; align-items: flex-start; gap: 2px; will-change: transform; }
-.cl-ptr i { width: 12px; height: 12px; flex: none; border-radius: 50%; background: var(--c); border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.3); }
+.cl-ptr { position: absolute; left: 0; top: 0; will-change: transform; transition: opacity .15s; }
+.cl-ptr svg { display: block; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.35)); }
 .cl-ptr.behind { opacity: .35; }
-.cl-ptr span { margin-top: 9px; padding: 1px 6px; border-radius: 3px; background: var(--c); color: #fff; font-size: 10.5px; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.cl-ptr.gone { opacity: 0; }
+.cl-ptr span { position: absolute; left: 14px; top: 17px; padding: 3px 8px; border-radius: 4px 10px 10px 10px; background: var(--c); color: var(--ink, #fff); font-size: 11px; line-height: 1.25; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+.cl-ptr span b { font-weight: 600; }
+.cl-ptr span em { font-style: normal; font-weight: 400; opacity: .85; }
+@media (prefers-reduced-motion: reduce) { .cl-ptr { transition: none; } }
 .t-row .cl-lock { margin-left: 4px; width: 15px; height: 15px; flex: none; border-radius: 50%; background: var(--c); display: grid; place-items: center; }
 .t-row .cl-lock svg { width: 10px; height: 10px; }
 .t-row.cl-locked .lbl { font-style: italic; }

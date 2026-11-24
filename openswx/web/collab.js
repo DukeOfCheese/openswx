@@ -14,7 +14,12 @@ import * as THREE from "three";
 import { SPECS, el, escapeHtml } from "./propman.js";
 
 const $ = (s) => document.querySelector(s);
-const PRESENCE_MS = 100; // presence out: ~10 a second at most
+const PRESENCE_MS = 50; // presence out: ~20 a second at most
+const GLIDE_MS = 90; // a pointer eases toward where its owner's pointer now is (time constant)
+const ARROW_SVG = '<svg width="18" height="22" viewBox="0 0 18 22"><path d="M2 2 L2 18 L6.5 14 L9.5 20.5 L12.5 19.2 L9.6 12.8 L15.5 12.5 Z" fill="var(--c)" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+// readable text on a person's colour: dark on light colours
+const inkOn = (c) => { const n = hex(c), l = 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255); return l > 165 ? "#1b1f24" : "#fff"; };
+const reducedMotion = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } };
 const DRAFT_MS = 300; // someone's feature draft: a preview at most every 300 ms per person
 const PREVIEWS_KEY = "openswx.collab.previews";
 const GHOST_EXTRA = ["variable_fillet"]; // (a panel's other command: Fillet's commandFor)
@@ -224,6 +229,11 @@ const MIXIN = {
           const uv = this.sk.uvAt(m.x, m.y);
           if (uv) ptr = { point: r3(this.sk.w(uv[0], uv[1])), sketch: this.sk.name };
         }
+        if (!ptr) { // over empty background: where the ray meets the plane through the view's centre, facing you
+          const n = this.vp.camera.getWorldDirection(new THREE.Vector3());
+          const hit = this.vp.ray(m.x, m.y).ray.intersectPlane(new THREE.Plane().setFromNormalAndCoplanarPoint(n, this.vp.target), new THREE.Vector3());
+          if (hit && [hit.x, hit.y, hit.z].every(Number.isFinite)) ptr = { point: r3(hit.toArray()), plane: true };
+        }
       }
       cl.pointer = ptr;
     }
@@ -342,18 +352,27 @@ const MIXIN = {
   collabDrawPeers(d, names) {
     const cl = this.cl;
     const peers = d ? (d.peers || []).filter((p) => !p.you) : [];
-    // pointers: a dot and a name tag (with the tool) at their point on the model
+    // pointers: an arrow in their colour with a name bubble (and the tool), gliding to their point on the model
     const live = new Set();
     for (const p of peers) {
       live.add(p.client_id);
       let m = cl.markers.get(p.client_id);
-      if (!m) { m = el("div", "cl-ptr", "<i></i><span></span>"); cl.layer.append(m); cl.markers.set(p.client_id, m); }
+      if (!m) {
+        m = el("div", "cl-ptr gone", `${ARROW_SVG}<span><b></b><em></em></span>`);
+        cl.layer.append(m); cl.markers.set(p.client_id, m);
+      }
       m.style.setProperty("--c", colour(p.colour));
+      m.style.setProperty("--ink", inkOn(p.colour));
       const tool = p.presence?.tool;
-      m.querySelector("span").textContent = tool ? `${p.name} · ${tool}` : p.name;
+      m.querySelector("b").textContent = p.name;
+      m.querySelector("em").textContent = tool ? ` · ${tool}` : "";
       m.dataset.client = p.client_id;
-      const pt = p.presence?.pointer?.point;
-      m.point = Array.isArray(pt) && pt.length === 3 ? pt : null;
+      const ptr = p.presence?.pointer, pt = ptr?.point;
+      if (finite(pt, 3)) {
+        if (!m.target || !m.shown) m.shown = new THREE.Vector3(...pt); // (first sight: appears where it is)
+        m.target = new THREE.Vector3(...pt);
+        m.plane = ptr.plane === true;
+      } else m.target = null;
     }
     for (const [id, m] of cl.markers) if (!live.has(id)) { m.remove(); cl.markers.delete(id); }
     this.collabDrawSelections(peers, names);
@@ -363,21 +382,33 @@ const MIXIN = {
   },
 
   collabPlaceMarkers() {
-    const now = performance.now();
-    for (const m of this.cl.markers.values()) {
-      if (!m.point) { m.style.display = "none"; continue; }
-      const [x, y, z] = this.vp.toScreen(m.point);
+    const now = performance.now(), cl = this.cl;
+    const dt = Math.min(now - (cl.glideAt || now), 100); cl.glideAt = now;
+    const snap = reducedMotion(), k = 1 - Math.exp(-dt / GLIDE_MS);
+    let moving = false;
+    for (const m of cl.markers.values()) {
+      if (!m.target) { m.classList.add("gone"); continue; } // (fades out: their pointer left the view)
+      m.classList.remove("gone");
+      // glide in 3D (so orbiting your own view never makes it lag); a long jump snaps
+      const gap = m.shown.distanceTo(m.target);
+      if (snap || gap > this.vp.viewHeight * 0.5) m.shown.copy(m.target);
+      else if (gap > this.vp.viewHeight * 1e-4) { m.shown.lerp(m.target, k); moving = true; }
+      else m.shown.copy(m.target);
+      const [x, y, z] = this.vp.toScreen(m.shown.toArray());
       const off = z > 1 || x < -20 || y < -20 || x > this.vp.w + 20 || y > this.vp.h + 20;
       m.style.display = off ? "none" : "";
       if (off) continue;
-      m.style.transform = `translate(${Math.round(x) - 6}px, ${Math.round(y) - 6}px)`;
+      m.style.transform = `translate(${(x - 2).toFixed(1)}px, ${(y - 2).toFixed(1)}px)`; // (the arrow's tip on the point)
+      if (m.plane) { m.classList.remove("behind"); continue; } // (in the air in front of the model: never behind it)
       if (now - (m.occAt || 0) > 150) { // behind the model (from here): faint (a ray at most every 150 ms each)
         m.occAt = now;
         const ray = this.vp.ray(x, y), hit = ray.intersectObjects([...this.vp.faces.values()].filter((o) => o.visible), false)[0];
-        const far = ray.ray.origin.distanceTo(new THREE.Vector3(...m.point));
+        const far = ray.ray.origin.distanceTo(m.shown);
         m.classList.toggle("behind", !!hit && hit.distance < far - Math.max(this.vp.viewHeight * 0.01, 1e-3));
       }
     }
+    if (moving) this.vp.dirty = true; // (another frame, until every pointer has arrived)
+    else cl.glideAt = 0;
   },
 
   collabClear(g) {
