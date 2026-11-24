@@ -6,6 +6,37 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Added
+
+- Live collaboration (optional, `pip install openswx[collab]`, with an
+  [openswx-collab](https://github.com/DukeOfCheese/openswx-collab) server): several people edit one part at once.
+  Each change goes to the server as it is made, and the others see it straight away. A sketch or feature you have
+  open is locked for the others. Undo takes back only your own changes. History, named versions and restore are
+  there too.
+- Home's Cloud tab: sign in (email and password, Google or GitHub), then browse your organisations, projects and
+  their parts, with who is in each part right now. New Cloud Part makes a part straight on the server, so anyone
+  in the project can open it at any time, whether or not you are online. The team list (members, roles,
+  invitations, who can open each project) is there too. You can also join with an invitation code. The "who is
+  here" avatars need an openswx-collab server newer than 0.1.0; against 0.1.0 they stay empty.
+- New Part asks Local or Cloud once a collaboration server is set up, and remembers the last choice
+  (`new_part_location`).
+- Others' pointers are arrows in their colour with a name bubble that glide to where the person points, also over
+  empty background.
+- Commands `collab_new_part`, `collab_create_org`, `collab_members`, `collab_invite`, `collab_cancel_invite`,
+  `collab_set_role`, `collab_remove_member`, `collab_accept_invite`, `collab_project_members`,
+  `collab_set_project_role`, `collab_remove_project_member`, alongside the other `collab_*` commands.
+
+### Changed
+
+- A cloud part is never "unsaved": the server keeps it. Save on one says so, and Save As writes a local copy
+  (the part stays the cloud part). A cloud part opens only while the server can be reached.
+- The Collaborate menu has only what belongs to the open document: Move to Cloud, Stop Sharing, History,
+  Name Version and Follow. Signing in, opening and the team are on Home's Cloud tab.
+
+### Security
+
+- Passwords, invitation codes and tokens given to a command are never written to the log.
+
 ## 0.3.1 (2026-11-24)
 
 The macOS app uses the system menu bar and no longer hangs on quit; the Home page shows first at start-up; agent

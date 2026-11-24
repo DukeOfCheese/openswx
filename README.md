@@ -64,7 +64,7 @@ here without retraining. Underneath, it is a different program, built on differe
 - **Rendering**: real-time PBR, or path traced for soft shadows and reflections.
 - **Review**: design review, requirements checked like tests, tolerance stack-up, design studies, document
   compare.
-- **Agents**: <!-- counts -->433 commands, 413 of them MCP tools ([full list](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md))<!-- /counts -->,
+- **Agents**: <!-- counts -->463 commands, 443 of them MCP tools ([full list](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md))<!-- /counts -->,
   over stdio or streamable HTTP, shown live in the UI's Agent activity pane.
 - **Files**: native `.oswprt` / `.oswasm` / `.oswdrw` (versioned JSON). Reads SOLIDWORKS `.sldprt` / `.sldasm` /
   `.slddrw` (2015 and later) natively; clean-room Parasolid reader (`.x_t`, `.x_b`) and writer (`.x_t`); STEP and
@@ -168,7 +168,7 @@ What an agent sees and can do:
 
 - **Toolsets.** A connection starts with the `core` tools (under 50: part-modelling essentials) plus `batch`,
   `list_toolsets` and `enable_toolset`. `enable_toolset("assembly")` adds an area (sketch, features, surfaces,
-  sheet_metal, weldments, document, assembly, drawing, simulation, manufacturing, ecosystem, plugins);
+  sheet_metal, weldments, document, assembly, drawing, simulation, manufacturing, ecosystem, collab, plugins);
   `--toolsets core,drawing`, `--toolsets all` or `OPENSWX_TOOLSETS` sets the starting list.
 - **Atomic batches.** `batch` runs several commands in one call: if one fails, every open document goes back
   to how it was; if all succeed, the batch is a single Undo step.

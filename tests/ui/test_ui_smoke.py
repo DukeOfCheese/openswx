@@ -78,7 +78,7 @@ def test_page_needs_the_token_link(server, page):
     page.wait_for_function("window.app && window.app.version >= 0")
     assert page.url.rstrip("/") == server  # the token left the address bar
     assert page.evaluate("[...document.querySelectorAll('#menubar .menu-root')].map(e => e.firstChild.textContent)") == \
-        ["File", "Edit", "View", "Insert", "Tools", "Window", "Help"]
+        ["File", "Edit", "View", "Insert", "Tools", "Collaborate", "Window", "Help"]
     # the menus are always shown (not behind a click on the logo)
     assert page.evaluate("[...document.querySelectorAll('#menubar .menu-root')].every(e => e.getBoundingClientRect().width > 0)")
     page.evaluate(HELPERS)
@@ -259,7 +259,7 @@ def test_macos_desktop_menus_go_to_the_menu_bar(page):
         delete window.pywebview; delete navigator.platform;
         return {titles: sent.map((m) => m.title), hidden, shown, back, hasSub: JSON.stringify(sent).includes('"items"')};
     }""")
-    assert got["titles"] == ["File", "Edit", "View", "Insert", "Tools", "Window", "Help"]
+    assert got["titles"] == ["File", "Edit", "View", "Insert", "Tools", "Collaborate", "Window", "Help"]
     assert got["hidden"] and got["shown"] and got["back"] and got["hasSub"]
 
 def test_connect_an_agent_dialog_copies_every_code_section(page, server):

@@ -182,8 +182,19 @@ def _open(p: Path, history: bool) -> dict:
 
 @command(category="document")
 def save_part(path: str | None = None) -> dict:
-    """Save the active document (part .oswprt or assembly .oswasm), optionally to a new path (Save As)."""
+    """Save the active document (part .oswprt or assembly .oswasm), optionally to a new path (Save As). A cloud
+    part (live collaboration) is kept by its server and needs no saving: with a path, this writes a local copy of
+    it, and it stays the cloud part."""
     d = APP.active_doc
+    c = getattr(d, "_collab", None)
+    if c is not None and not getattr(c, "closed", True):
+        if not path:
+            raise DocumentError("cloud parts save automatically (every change goes to the server); give a path to "
+                                "save a local copy")
+        saved = d.save_copy(path)
+        from . import recent
+        recent.add(saved)
+        return {"saved": saved, "copy": True}
     saved = d.save(path)
     if APP.active != d.name:
         APP.documents[d.name] = APP.documents.pop(APP.active)
@@ -464,13 +475,20 @@ def measure_items(items: list[str | Vec3]) -> dict:
 # ====================================================================== tree editing
 @command(category="edit")
 def undo() -> dict:
-    """Undo the last change to the active document."""
+    """Undo the last change to the active document. In a cloud document (live collaboration) this takes back
+    your own last change only, and is refused when someone has changed the same thing since."""
+    alt = _S.redirected("undo", APP.active_doc) if _S.COMMAND_HOOKS else None
+    if alt is not None:
+        return alt
     APP.active_doc.undo(); return APP.active_doc.summary()
 
 
 @command(category="edit")
 def redo() -> dict:
     """Redo the last undone change."""
+    alt = _S.redirected("redo", APP.active_doc) if _S.COMMAND_HOOKS else None
+    if alt is not None:
+        return alt
     APP.active_doc.redo(); return APP.active_doc.summary()
 
 
@@ -492,6 +510,14 @@ def edit_feature(name: str, params: dict) -> dict:
 def redefine_feature(name: str, command_name: str, args: dict) -> dict:
     """Re-define a feature using the creation command's arguments (used by the UI's Edit Feature).
     The command runs on a scratch copy to translate selections into parameters."""
+    meta = COMMANDS.get(command_name)
+    linked = (meta is not None and meta["mutates"] and meta["category"] in _S.FEATURE_CATEGORIES
+              and command_name in _S.FILE_ARGS)  # (Insert Part, Mirror Part: a feature that names a file)
+    if not (_S.feature_command(command_name) or (linked and not getattr(_TL, "preview", False))):
+        raise DocumentError(f"{command_name!r} cannot redefine a feature (only commands that make one can"
+                            f"{'; and a preview never reads files' if linked else ''})")
+    if linked and getattr(_TL, "origin", "agent") == "agent":
+        _S._check_workspace(command_name, args)  # (as if called itself: an agent stays in its workspace)
     doc = APP.doc
     target = doc.find(name)
     scratch = PartDocument(doc.name)
@@ -503,12 +529,13 @@ def redefine_feature(name: str, command_name: str, args: dict) -> dict:
         scratch.rebuild()
     key = APP.active
     APP.documents[key] = scratch
+    was_preview = getattr(_TL, "preview", False)  # (itself previewed, by the Edit Feature panel: it stays one)
     _TL.preview = True
     try:
         COMMANDS[command_name]["fn"](**args)
         new_params = scratch.features[-1 if scratch.rollback is None else scratch.rollback - 1]["params"]
     finally:
-        _TL.preview = False
+        _TL.preview = was_preview
         APP.documents[key] = doc
     if target["type"] == "sketch":
         raise DocumentError("use the sketch tools to edit a sketch")

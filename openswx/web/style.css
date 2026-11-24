@@ -485,3 +485,74 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .hm-tuts { display: flex; flex-wrap: wrap; gap: 8px; }
 .hm-tut { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--panel); cursor: pointer; }
 .hm-tut svg { width: 16px; height: 16px; }
+
+/* ---------------- live collaboration (collab.js) */
+#collabbar { position: absolute; top: 28px; left: 10px; display: flex; align-items: center; gap: 6px; max-width: calc(100% - 300px); padding: 3px 6px; background: var(--float); border: 1px solid var(--border); border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,.08); z-index: 6; font-size: 11.5px; white-space: nowrap; }
+.cl-state { display: flex; align-items: center; gap: 5px; color: var(--text-2); }
+.cl-state i { width: 8px; height: 8px; border-radius: 50%; background: var(--cancel); flex: none; }
+.cl-state.cl-online i { background: var(--ok); }
+.cl-state.cl-offline i, .cl-state.cl-connecting i { background: var(--warn); }
+.cl-ro { color: var(--note-fg); background: var(--note-bg); border-radius: 3px; padding: 1px 6px; }
+.cl-peers { display: flex; align-items: center; gap: 3px; overflow: hidden; }
+.cl-av { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 2px solid var(--panel); background: var(--c); color: #fff; font-size: 9.5px; font-weight: 700; cursor: pointer; padding: 0; box-shadow: 0 0 0 1px rgba(0,0,0,.18); }
+.cl-av:hover { box-shadow: 0 0 0 2px rgba(0,0,0,.25); }
+.cl-av.following { box-shadow: 0 0 0 2px var(--c); }
+.cl-tool { color: var(--view-label); font-size: 11px; margin-right: 5px; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+.cl-alone { color: var(--muted); }
+.cl-following { display: flex; align-items: center; gap: 5px; padding-left: 6px; border-left: 3px solid var(--c); }
+.cl-following button { font-size: 11px; padding: 0 6px; height: 18px; border: 1px solid var(--border); background: var(--field); color: var(--text); border-radius: 3px; cursor: pointer; }
+#collab-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 5; }
+.cl-ptr { position: absolute; left: 0; top: 0; will-change: transform; transition: opacity .15s; }
+.cl-ptr svg { display: block; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.35)); }
+.cl-ptr.behind { opacity: .35; }
+.cl-ptr.gone { opacity: 0; }
+.cl-ptr span { position: absolute; left: 14px; top: 17px; padding: 3px 8px; border-radius: 4px 10px 10px 10px; background: var(--c); color: var(--ink, #fff); font-size: 11px; line-height: 1.25; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+.cl-ptr span b { font-weight: 600; }
+.cl-ptr span em { font-style: normal; font-weight: 400; opacity: .85; }
+@media (prefers-reduced-motion: reduce) { .cl-ptr { transition: none; } }
+.t-row .cl-lock { margin-left: 4px; width: 15px; height: 15px; flex: none; border-radius: 50%; background: var(--c); display: grid; place-items: center; }
+.t-row .cl-lock svg { width: 10px; height: 10px; }
+.t-row.cl-locked .lbl { font-style: italic; }
+.t-row .cl-broken { margin-left: 4px; padding: 0 4px; border-radius: 3px; background: var(--err-bg); color: var(--err-fg); font-size: 10px; flex: none; }
+.toast.cl-conflict { border-left-color: var(--warn); }
+.toast.cl-conflict div { margin-top: 3px; color: var(--text-2); }
+.toast.cl-locked { border-left-color: var(--warn); }
+.cl-oauth { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.cl-oauth p { width: 100%; margin: 2px 0 0; }
+.cl-list { max-height: 260px; overflow: auto; margin-top: 6px; }
+.cl-list tr.cl-doc { cursor: pointer; }
+.cl-list tr.cl-doc:hover { background: var(--hover); }
+.cl-list tr.cl-doc.picked { background: var(--accent-soft); }
+.cl-hist { max-height: 300px; overflow: auto; }
+.cl-name-version { display: flex; gap: 6px; margin-top: 8px; }
+.cl-name-version input { flex: 1; min-width: 0; }
+.cl-warn { color: var(--note-fg); }
+/* Home's Cloud tab (collab.js) */
+.cl-acct { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); }
+.cl-home { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; margin-top: 18px; }
+.cl-orgs { display: flex; flex-direction: column; gap: 10px; }
+.cl-org { display: flex; flex-direction: column; gap: 1px; }
+.cl-org-b { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; padding: 4px 8px; border: 0; background: none; text-align: left; cursor: pointer; border-radius: 4px; }
+.cl-org-b:hover, .cl-proj-b:hover { background: var(--hover); }
+.cl-proj-b { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px 0 18px; border: 1px solid transparent; border-radius: 4px; background: none; text-align: left; cursor: pointer; }
+.cl-proj-b svg { width: 16px; height: 16px; flex: none; }
+.cl-proj-b span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-proj-b.active { background: var(--accent-soft); border-color: var(--accent); }
+.cl-newproj { color: var(--muted); }
+.cl-main { min-width: 0; }
+.cl-main .hm-head:first-child { margin-top: 0; }
+.cl-main h3 { margin: 18px 0 8px; font-size: 12.5px; font-weight: 600; }
+.cl-doctable tr.picked { background: var(--accent-soft); }
+.cl-here { display: flex; align-items: center; gap: 2px; min-height: 22px; }
+.cl-av.cl-dot { display: inline-grid; place-items: center; width: 20px; height: 20px; font-size: 8.5px; line-height: 1; cursor: default; }
+.cl-team { margin-top: 26px; }
+.cl-invite, .cl-accept { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.cl-invite input:not([type=checkbox]), .cl-invite select, .cl-accept input { height: 28px; border: 1px solid var(--border); border-radius: var(--r-field); padding: 0 8px; font: inherit; background: var(--field); color: var(--text); }
+.cl-invite input:focus, .cl-invite select:focus, .cl-accept input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.cl-members select, .cl-team select { height: 24px; border: 1px solid var(--border); border-radius: var(--r-field); background: var(--field); color: var(--text); font: inherit; }
+.cl-invite input[type=email], .cl-accept input { flex: 1; min-width: 180px; max-width: 360px; }
+.cl-ip { display: inline-flex; align-items: center; gap: 4px; }
+.cl-signin { max-width: 420px; }
+.cl-where { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.cl-where label { display: flex; align-items: baseline; gap: 6px; cursor: pointer; }
+@media (max-width: 760px) { .cl-home { grid-template-columns: minmax(0, 1fr); } }

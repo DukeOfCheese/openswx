@@ -132,6 +132,47 @@ class CommandError(RuntimeError):
     pass
 
 
+# Command hooks: optional add-ons (live collaboration) that watch the outermost mutating commands. A hook is an
+# object with
+#     before(name, arguments) -> token    (called with the command lock held, before the command runs; may
+#                                          raise to refuse the command)
+#     after(token, ok)                    (after it: ok=False when it failed, and then it must not raise)
+# and optionally redirect(name, document) -> result or None, which commands such as undo ask first (a hook
+# may do them differently for some documents). With no hooks registered nothing here runs.
+COMMAND_HOOKS: list = []
+
+
+def add_command_hook(hook) -> None:
+    if hook not in COMMAND_HOOKS:
+        COMMAND_HOOKS.append(hook)
+
+
+def remove_command_hook(hook) -> None:
+    if hook in COMMAND_HOOKS:
+        COMMAND_HOOKS.remove(hook)
+
+
+def redirected(name: str, doc) -> Any:
+    """What a hook does instead of command `name` on `doc`, or None: run the command as usual."""
+    for h in list(COMMAND_HOOKS):
+        fn = getattr(h, "redirect", None)
+        out = fn(name, doc) if fn is not None else None
+        if out is not None:
+            return out
+    return None
+
+
+def _hooks_after(tokens: list, ok: bool) -> None:
+    for h, tok in reversed(tokens):
+        if ok:
+            h.after(tok, True)
+        else:
+            try:
+                h.after(tok, False)
+            except Exception:  # noqa: BLE001 - the command's own error is the one to report
+                _LOG.exception("command hook failed after a failed command")
+
+
 def command(mutates: bool = True, category: str = "general", mcp: bool = True):
     def deco(fn):
         @functools.wraps(fn)
@@ -154,10 +195,18 @@ def command(mutates: bool = True, category: str = "general", mcp: bool = True):
                     watch._clean = _fingerprint(watch)
             t0 = time.perf_counter()
             _TL.depth = depth + 1
+            hooked = None  # [(hook, token)] while the hooks wait for this command's outcome
             try:
+                if COMMAND_HOOKS and mutates and outer is None and not getattr(_TL, "preview", False):
+                    hooked = []
+                    for h in list(COMMAND_HOOKS):
+                        hooked.append((h, h.before(fn.__name__, bound.arguments)))
                 result = fn(*bound.args, **bound.kwargs)  # (as bound: the workspace check may have resolved paths)
-                if watch is not None:
+                if watch is not None:  # (before the hooks: a hook may say the change is kept elsewhere)
                     _mark_dirty(watch)
+                if hooked is not None:
+                    done, hooked = hooked, None
+                    _hooks_after(done, True)
                 if outer is None and not getattr(_TL, "preview", False) and (mutates or time.perf_counter() - t0 > 1.0):
                     _LOG.info("%s (%s) %.3f s", fn.__name__, origin, time.perf_counter() - t0)
                     _LOG.debug("%s args %s", fn.__name__, _short(dict(bound.arguments)))
@@ -176,6 +225,8 @@ def command(mutates: bool = True, category: str = "general", mcp: bool = True):
                 _LOG.exception("%s (%s) crashed after %.3f s", fn.__name__, origin, time.perf_counter() - t0)
                 raise
             finally:
+                if hooked:  # (the command failed: hooks hear so, and nothing of it goes anywhere)
+                    _hooks_after(hooked, False)
                 _TL.depth = depth
                 if outer is None:
                     APP.running.pop(threading.get_ident(), None)
@@ -255,7 +306,7 @@ def _journal(name: str, arguments) -> None:
         if doc is not None and getattr(doc, "journal", None) == [] and getattr(doc, "features", None):
             doc.journal = [{"command": "import_file", "args": {"path": str(arguments.get("path"))}}]
         return
-    if name in NO_JOURNAL or name.startswith(("pdm_", "macro_")) or name == "run_macro":
+    if name in NO_JOURNAL or name.startswith(("pdm_", "macro_", "collab_")) or name == "run_macro":
         return
     doc = APP.documents.get(APP.active)
     if doc is None or getattr(doc, "journal", None) is None:
@@ -339,8 +390,52 @@ def call(name: str, args: dict | None = None, origin: str | None = None) -> Any:
             _TL.origin = prev if prev is not None else "agent"
 
 
-def preview(name: str, args: dict | None = None) -> dict:
-    """Run a mutating command on a throw-away copy of the active document and return its mesh."""
+# What a preview may run: commands that make or change a model feature, nothing else. A preview runs whatever it
+# is given on a copy of the document, and what it is given can come from someone else (a collaborator's draft):
+# no command that reads or writes files, runs code, or opens, saves or closes documents.
+FEATURE_CATEGORIES = ("features", "surfaces", "sheet_metal", "weldments", "mold", "bodies")
+PREVIEW_EXTRA = ("edit_feature", "redefine_feature", "add_mate", "redefine_mate", "insert_component", "edit_sketch_plane",
+                 "sketch_offset", "sketch_mirror", "sketch_linear_pattern", "sketch_circular_pattern",
+                 "sketch_convert_entities", "sketch_transform")  # (the other panels the UI previews)
+
+
+def feature_command(name: str) -> bool:
+    """Does `name` make or change a model feature (and nothing else: no files)? What redefine_feature may run."""
+    meta = COMMANDS.get(name)
+    return (meta is not None and meta["mutates"] and meta["category"] in FEATURE_CATEGORIES and name not in FILE_ARGS
+            and not name.startswith("collab_"))
+
+
+def preview_refusal(name: str, args) -> str | None:
+    """Why `name` with `args` may not run as a preview (None: it may)."""
+    if not isinstance(name, str) or not isinstance(args, dict):
+        return "a preview needs a command name and its arguments"
+    if not (feature_command(name) or (name in PREVIEW_EXTRA and name in COMMANDS)):
+        return f"{name!r} cannot be previewed (only commands that make or change a feature can)"
+    if name == "insert_component" and args.get("source") not in APP.documents:
+        return "a component preview takes an open document, not a file"
+    if name == "redefine_feature" and not feature_command(str(args.get("command_name"))):
+        return f"{args.get('command_name')!r} cannot be previewed (only commands that make or change a feature can)"
+    return None
+
+
+def preview(name: str, args: dict | None = None, wait: bool = True) -> dict:
+    """Run a command that makes or changes a feature (see preview_refusal) on a throw-away copy of the active
+    document and return its mesh. wait=False: give up at once ({"ok": False, "busy": True}) when another command
+    is running, instead of waiting for it."""
+    args = {} if args is None else args
+    why = preview_refusal(name, args)
+    if why:
+        return {"ok": False, "error": why, "refused": True}
+    if not APP.lock.acquire(blocking=wait, timeout=30 if wait else -1):
+        return {"ok": False, "busy": True, "error": "openswx is busy with another command"}
+    try:
+        return _preview_locked(name, args)
+    finally:
+        APP.lock.release()
+
+
+def _preview_locked(name: str, args: dict) -> dict:
     with APP.lock:
         key = APP.active
         real = APP.active_doc
@@ -362,9 +457,15 @@ def preview(name: str, args: dict | None = None) -> dict:
             APP.documents[key] = real
 
 
+_SECRET_ARGS = {"password", "token", "invite", "code"}  # (never written to a log: passwords, invites, login codes)
+
+
 def _short(args: dict) -> dict:
     out = {}
     for k, v in args.items():
+        if k in _SECRET_ARGS and v is not None:
+            out[k] = "***"
+            continue
         s = repr(v)
         out[k] = v if len(s) < 200 else s[:200] + "..."
     return out
@@ -1324,6 +1425,7 @@ from .commands_asm import *  # noqa: E402,F401,F403
 from .commands_blocks import *  # noqa: E402,F401,F403
 from .commands_simreport import *  # noqa: E402,F401,F403
 from .commands_std import *  # noqa: E402,F401,F403
+from .collab.commands_collab import *  # noqa: E402,F401,F403  (live collaboration: needs the collab extra to run)
 
 from . import plugins as _plugins  # noqa: E402
 

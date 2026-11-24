@@ -145,6 +145,7 @@ export const ICONS = {
   face: S(`<path d="M4 22l8-12h16l-8 12z" fill="#f6cf6a" stroke="${solidDark}"/>`),
   edge: S(`<path d="M5 26L27 6" stroke="#e07b00" stroke-width="3"/>`),
 
+  cloud: S(`<path d="M9 25a6 6 0 01-.6-12A8 8 0 0124 11.5 6.8 6.8 0 0124 25z" fill="#dceafc" stroke="#2a62c9" stroke-width="1.8" stroke-linejoin="round"/>`),
   folder: S(`<path d="M4 9h9l2 3h13v13H4z" fill="#f6d77d" stroke="${solidDark}"/><path d="M4 13h24" stroke="${solidDark}"/>`),
   history: S(`<circle cx="16" cy="16" r="11" fill="#fff" stroke="${ink}" stroke-width="1.8"/><path d="M16 9v7l5 3" stroke="${ink}" stroke-width="2"/>`),
   sensors: S(`<path d="M16 26a2 2 0 100-4 2 2 0 000 4zM10 18a8.5 8.5 0 0112 0M6 14a14 14 0 0120 0" stroke="#8a4fd1" stroke-width="2.2"/>`),

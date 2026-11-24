@@ -35,7 +35,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install
-        run: python -m pip install -e ".[desktop,dev]"
+        run: python -m pip install -e ".[desktop,dev,collab]"  # (collab: live collaboration ships in the app)
       - name: Test
         run: python -m pytest -q
       - name: Inno Setup
@@ -44,6 +44,14 @@ jobs:
           if [ ! -f "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" ]; then choco install innosetup -y --no-progress; fi
       - name: Build
         run: python packaging/build.py --zip
+      - name: The app includes live collaboration
+        run: |
+          cli=dist/openswx/openswx-cli; [ -f "$cli.exe" ] && cli="$cli.exe"
+          [ -f "$cli" ] || cli=dist/openswx.app/Contents/MacOS/openswx-cli
+          python -m PyInstaller.utils.cliutils.archive_viewer --list --recursive "$cli" > bundled.txt
+          for m in openswx_collab_protocol.ops openswx.collab.client openswx.collab.commands_collab websockets; do
+            grep -q "$m" bundled.txt || { echo "missing from the app: $m"; exit 1; }
+          done
       - name: Check the macOS app and installer
         if: runner.os == 'macOS'
         run: |

@@ -8,6 +8,7 @@ import { MORE_FEATURE_TO_SPEC, MORE_SPECS, MORE_TYPE_ICON, installMore, menuTree
 import { installMfg } from "./mfg.js";
 import { installHome } from "./home.js";
 import { DEFAULT_KEYS, SHORTCUTS, comboOf, conflicts, effectiveKeys, keyTable } from "./keys.js";
+import { installCollab } from "./collab.js";
 
 const $ = (s) => document.querySelector(s);
 const TYPE_ICON = { sketch: "sketch_item", extrude: "extrude", cut_extrude: "cut_extrude", revolve: "revolve", cut_revolve: "cut_revolve",
@@ -58,6 +59,7 @@ class App {
     this.buildMenus(); this.buildQuickAccess(); this.buildHeadsUp(); this.buildLeftTabs(); this.buildTaskPane();
     this.bindViewport(); this.bindKeys(); this.bindSearch(); this.bindFileInput();
     this.renderCommandManager(); this.renderConfirm();
+    this.initCollab();
     this.connect();
     this.loadUserSettings();
     this.homeStart();
@@ -123,13 +125,14 @@ class App {
 
   connect() {
     $("#sb-agent").textContent = `MCP: ${location.origin}/mcp`;
-    const es = new EventSource("/api/events");
+    const es = new EventSource(`/api/events?page=${encodeURIComponent(this.cl.page)}`); // (the page: its collaboration locks)
     es.onmessage = (m) => {
       const d = JSON.parse(m.data);
       if (d.version !== this.version) {
         if (d.last && d.last.origin === "agent" && this.version >= 0) this.onAgent(d.last);
         this.refresh();
       }
+      if (d.collab !== undefined && d.collab !== this.cl.rev) this.refreshCollab(); // (peers, locks: no document change)
     };
     es.onerror = () => { $("#sb-agent").textContent = "Disconnected - retrying..."; };
     es.onopen = () => { $("#sb-agent").textContent = `MCP: ${location.origin}/mcp`; };
@@ -162,6 +165,7 @@ class App {
       this.openedDrawingDoc = this.model.drawing_document; this.dwg.open();
     } else if (this.model.show_drawing) this.dwg.open(); // a SOLIDWORKS drawing was opened
     if (first) requestAnimationFrame(() => { this.vp.resize(); this.vp.zoomFit(false); });
+    this.collabApply();
   }
 
   async loadSketch() {
@@ -195,7 +199,7 @@ class App {
     const qa = $("#quickaccess");
     const items = [["new", "New (Ctrl+N)", () => this.newPart()], ["open", "Open (Ctrl+O)", () => this.openFile()], ["save", "Save (Ctrl+S)", () => this.save()],
       ["print", "Print / export image", () => window.open("/api/image?view=isometric&width=1600&height=1200")], null,
-      ["undo", "Undo (Ctrl+Z)", () => this.run("undo")], ["redo", "Redo (Ctrl+Y)", () => this.run("redo")], null,
+      ["undo", "Undo (Ctrl+Z)", () => this.undoRedo("undo")], ["redo", "Redo (Ctrl+Y)", () => this.undoRedo("redo")], null,
       ["select", "Select", () => this.cancelAll()], ["rebuild", "Rebuild (Ctrl+B)", () => this.run("rebuild")], ["options", "Options", () => this.optionsDialog()]];
     for (const it of items) {
       if (!it) { qa.append(el("span", "hu-sep")); continue; }
@@ -205,7 +209,14 @@ class App {
 
   renderQuickAccessState() {
     const q = (k) => document.querySelector(`.qa[data-k="${k}"]`);
-    q("undo").disabled = !this.model.can_undo; q("redo").disabled = !this.model.can_redo;
+    const cd = this.collabDoc(); // (a cloud document: undo takes back only your own changes, which the server keeps)
+    q("undo").disabled = !(cd ? cd.can_undo : this.model.can_undo); q("redo").disabled = !(cd ? cd.can_redo : this.model.can_redo);
+  }
+
+  undoRedo(which) {
+    const cd = this.collabDoc();
+    if (cd && !cd[`can_${which}`]) return Promise.resolve();
+    return this.run(which).catch(() => {});
   }
 
   buildMenus() {
@@ -275,7 +286,7 @@ class App {
         ["Import DXF into Sketch...", "", () => this.importDxf()], ["Publish eDrawings File...", "", () => this.publishEDrawing()], "-",
         ["PDM > Vault...", "", () => this.pdmDialog()], ["PDM > Check In...", "", () => this.pdmDialog()], "-",
         ["Close", "", () => this.run("close_document")], ...(window.pywebview ? [["Exit", "Alt+F4", () => window.close()]] : [])],
-      Edit: [["Undo", "Ctrl+Z", () => this.run("undo")], ["Redo", "Ctrl+Y", () => this.run("redo")], "-", ["Rebuild", "Ctrl+B", () => this.run("rebuild")],
+      Edit: [["Undo", "Ctrl+Z", () => this.undoRedo("undo")], ["Redo", "Ctrl+Y", () => this.undoRedo("redo")], "-", ["Rebuild", "Ctrl+B", () => this.run("rebuild")],
         ["Delete", "Del", () => this.deleteSelection()], ["Suppress", "", () => this.suppressSelected(true)], ["Unsuppress", "", () => this.suppressSelected(false)]],
       View: [["Zoom to Fit", "F", () => this.vp.zoomFit()], ["Zoom to Area", "", () => this.startZoomArea()], ["Zoom to Selection", "", () => this.zoomToSelection()],
         ["Previous View", "Ctrl+Shift+Z", () => this.vp.previousView()], "-",
@@ -323,6 +334,7 @@ class App {
         ["Macro > Record / Stop", "", () => this.macroRecord()], ["Macro > Stop and Save...", "", () => this.macroStop()], ["Macro > Run...", "", () => this.macroRun()], "-",
         ["Equations...", "", () => this.equationsDialog()], ["Dimension Tolerances...", "", () => this.toleranceDialog()], ["Requirements...", "", () => this.requirementsDialog()], ["Design Review", "", () => this.reviewDialog()], ["Export Script (.py)...", "", () => this.exportScript()], ["Hand-off Pack...", "", () => this.handoffPack()], "-", ["Assembly > Display States...", "", () => this.displayStatesDialog()], ["Assembly > Configurations...", "", () => this.asmConfigDialog()], ["User Settings...", "", () => this.userSettingsDialog()], ["Customize Keyboard...", "", () => this.customizeKeyboardDialog()], ["Design Table...", "", () => this.designTableDialog()], ["Material...", "", () => this.materialDialog()],
         ["Appearance...", "", () => this.appearanceDialog()], ["Properties...", "", () => this.propertiesDialog()], ["Options...", "", () => this.optionsDialog()]],
+      Collaborate: () => this.collabMenu(),
       Window: () => [...(this.docs?.documents || []).map((d) => [`${d.name === this.model.name ? "✓ " : ""}${d.name}`.replace(/ > /g, " › "), "", () => this.switchDocument(d.name)]),
         "-", ["Next Document", "Ctrl+Tab", () => this.nextDocument()], ["Close", "Ctrl+W", () => this.run("close_document").then(() => this.vp.zoomFit())]],
       Help: [["Keyboard Shortcuts", "", () => this.showTask("help")], ["Tutorials...", "", () => this.tutorialDialog()], ["Agent (MCP) Setup", "", () => this.mcpDialog()], ["Save Diagnostic Report...", "", () => this.diagnosticReport()], ["Check for Updates", "", () => this.checkUpdates()], ["About openswx", "", () => this.about()]],
@@ -644,12 +656,13 @@ class App {
       const label = prefix + f.name;
       if (filter && !label.toLowerCase().includes(filter)) return;
       const cls = [f.suppressed ? "suppressed" : "", f.rolled_back ? "rolled" : "", f.status === "error" ? "error" : ""].join(" ");
-      row({ icon: f.suppressed ? "suppress" : TYPE_ICON[f.type] || "part", label, depth, error: f.error, title: f.error || f.type,
+      const r = row({ icon: f.suppressed ? "suppress" : TYPE_ICON[f.type] || "part", label, depth, error: f.error, title: f.error || f.type,
         children: kids.length > 0, open, toggle: () => { open ? this.expanded.delete(f.name) : this.expanded.add(f.name); this.renderTree(); },
         selected: this.selection.some((s) => s.kind === "feature" && s.id === f.name), feature: depth < 1 ? f.name : null,
         cls: [cls, this.relatedFeatures?.has(f.name) ? "related" : ""].join(" "),
         hover: (on) => this.hoverFeature(on ? f.name : null),
         click: (e) => this.treeClick(f, e), dbl: () => this.showFeatureDims(f.name), ctx: (e) => this.featureMenu(e, f) });
+      this.collabTreeBadge(r, f); // (cloud documents: who is editing it, who broke it)
       if (open) kids.forEach((k) => renderFeature(k, depth + 1));
     };
     for (const f of visible) {
@@ -1876,6 +1889,7 @@ class App {
   }
 
   schedulePreview(args) {
+    this.collabPanelDraft(args); // (a cloud document: the others see it as a ghost)
     clearTimeout(this.previewTimer);
     this.previewTimer = setTimeout(async () => {
       if (!this.pm.active) return;
@@ -1906,7 +1920,7 @@ class App {
 
   pmCancel() { this.closePM(); }
   closePM() {
-    clearTimeout(this.previewTimer);
+    clearTimeout(this.previewTimer); this.collabPanelClosed();
     this.pm.close(); this.editing = null; this.vp.setPreview(null); this.showPane("tree"); this.renderConfirm(); this.setSelection([]);
   }
 
@@ -1916,8 +1930,9 @@ class App {
     if (f.type === "sketch") return this.enterSketch(name);
     const key = FEATURE_TO_SPEC[f.type];
     if (!key) return this.toast(`${f.type} features cannot be edited in the UI yet`, "err");
+    if (!(await this.collabLock(name, "pm"))) return; // (a cloud document: the panel is yours alone while open)
     const res = await this.api("/api/command", { name: "get_feature", args: { name } });
-    if (!res.ok) return;
+    if (!res.ok) { this.collabRelease("pm"); return; }
     const spec = SPECS[key];
     this.openPM(spec, { initial: spec.fromParams(res.result.params), edit: name });
   }
@@ -1963,6 +1978,7 @@ class App {
   }
 
   async enterSketch(name) {
+    if (!(this.sk.active && this.sk.name === name) && !(await this.collabLock(name, "sketch"))) return; // (a cloud document: yours alone while open)
     if (this.pm.active) this.closePM();
     this.hideFeatureDims();
     if (this.sk.active && this.sk.name !== name) await this.exitSketch(true);
@@ -1980,7 +1996,7 @@ class App {
     if (!this.sk.active) return;
     const name = this.sk.name;
     const isNew = this.newSketch === name;
-    this.sk.exit(); this.newSketch = null; this.prompt(""); this.status.coords(null);
+    this.sk.exit(); this.newSketch = null; this.prompt(""); this.status.coords(null); this.collabRelease("sketch", name); // (only this sketch's lock: another may be taken already)
     $("#sb-editing").textContent = "Editing Part"; this.tab = "Features";
     if (discard && isNew) await this.run("delete_feature", { name }).catch(() => {});
     this.vp.setMesh(this.mesh); this.showPane("tree");
@@ -2571,6 +2587,7 @@ class App {
   }
 
   save(as = false) {
+    if (this.collabDoc?.()) return this.collabSave(as); // (a cloud part: kept by the server; Save As writes a local copy)
     if (this.model.path && !as) return this.run("save_part", {}).then(() => this.toast(`Saved ${this.model.path}`));
     if (this.desk) return this.deskCall("save_as");
     const def = this.model.path || `${this.model.name}.oswprt`;
@@ -2761,7 +2778,7 @@ class App {
     this.keyActions = {
       ...Object.fromEntries(Object.entries(views).map(([id, v]) => [id, () => this.vp.setView(v)])),
       ...Object.fromEntries(Object.entries(filters).map(([id, f]) => [id, () => { if (this.sk.active) return false; this.toggleFilter(f); }])),
-      normal_to: () => this.normalTo(), undo: () => this.run("undo").catch(() => {}), redo: () => this.run("redo").catch(() => {}),
+      normal_to: () => this.normalTo(), undo: () => this.undoRedo("undo"), redo: () => this.undoRedo("redo"),
       rebuild: () => this.run("rebuild"), force_rebuild: () => this.run("rebuild"), save: () => this.save(), new_part: () => this.newPart(),
       open: () => this.openFile(), previous_view: () => this.vp.previousView(), next_document: () => this.nextDocument(),
       close: () => this.run("close_document").then(() => this.vp.zoomFit()).catch(() => {}),
@@ -3053,4 +3070,5 @@ App.prototype.newPartChoosers = [];
 installMore(App);
 installMfg(App);
 installHome(App);
+installCollab(App);
 window.app = new App();
