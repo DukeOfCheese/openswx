@@ -10,7 +10,7 @@ parts in it while you watch.**
 ![platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![status: alpha](https://img.shields.io/badge/status-alpha-orange)
 
-https://github.com/user-attachments/assets/2c19c47d-aeae-4146-8f85-38fad6df28fa
+https://github.com/user-attachments/assets/442086e2-4e71-4d49-8bb5-408b3b027d70
 
 <sub>30 s ([4K original](https://github.com/DukeOfCheese/openswx/blob/main/docs/media/demo.mp4)). Recorded in
 openswx: every feature is built by a real MCP tool call, the same calls Claude makes through Claude Code or any

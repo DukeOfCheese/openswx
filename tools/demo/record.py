@@ -43,7 +43,7 @@ async def main():
         port = s.getsockname()[1]
     home = tempfile.mkdtemp(prefix="oswx-demo-")
     env = dict(os.environ, OPENSWX_HOME=home, OPENSWX_TOKEN=TOKEN, OPENSWX_AUTOSAVE="off", OPENSWX_LOG="off",
-               OPENSWX_PLUGINS="off", OPENSWX_TOOLSETS="all")
+               OPENSWX_PLUGINS="off", OPENSWX_TOOLSETS="all", OPENSWX_SHOW_HOME="0")
     proc = subprocess.Popen([sys.executable, "-m", "openswx", "serve", "--port", str(port)], env=env, cwd=ROOT,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     base = f"http://127.0.0.1:{port}"
