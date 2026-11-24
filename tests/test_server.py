@@ -84,3 +84,47 @@ def test_bad_arguments_and_file_names_are_handled_safely(tmp_path):
     assert _temp_path("...", "upload").name == "upload"
     assert _temp_path("a*b?.step", "x").name == "a_b_.step"
     assert _temp_path("Träger.step", "x").name == "Träger.step"  # letters of any script stay
+
+
+def test_presence_checks_arguments_and_keeps_error_details_in_the_log(monkeypatch, caplog):
+    """/api/collab/presence (code-scanning alert 12): arguments are checked against collab_presence's before the
+    call, and an error raised while sending is logged, not sent back to the client."""
+    from openswx.collab import commands_collab as CC
+    sent = []
+
+    class Fake:
+        def presence(self, data):
+            sent.append(("presence", data))
+            return True
+
+        def draft(self, data):
+            sent.append(("draft", data))
+            return True
+
+    S.call("new_part", {})  # (a part that is not a cloud document)
+    with TestClient(create_app(mount_mcp=False, token=None), base_url="http://127.0.0.1:8765") as c:
+        for args in ({"evil<script>": 1}, {"pointer": "x"}, {"clear_draft": "yes"}, {"selection": {"a": 1}}):
+            r = c.post("/api/collab/presence", json={"args": args})
+            assert r.status_code == 400 and not r.json()["ok"]
+            assert "evil" not in r.json()["error"] and "Traceback" not in r.json()["error"]
+        r = c.post("/api/collab/presence", json={"args": {"run": "evil"}})
+        assert r.json()["error"] == "collab_presence takes only " + ", ".join(CC.PRESENCE_ARGS)
+        r = c.post("/api/collab/presence", json={"args": {"pointer": "x"}})
+        assert r.json()["error"] == "collab_presence: pointer must be a dict"
+        assert c.post("/api/collab/presence", json={"args": "x"}).status_code == 400
+
+        # a DocumentError while sending: a fixed answer, the reason only in the log
+        caplog.set_level("INFO", logger="openswx.web")
+        r = c.post("/api/collab/presence", json={"args": {"tool": "fillet"}})
+        assert r.status_code == 400
+        assert r.json() == {"ok": False, "error": "presence not sent: the active document is not a live cloud "
+                                                  "document (details in the log)"}
+        assert "collab_enable" not in r.text  # (the exception's own text)
+        assert any("collab_enable" in (rec.exc_text or "") or "collab_enable" in str(rec.exc_info[1])
+                   for rec in caplog.records if rec.exc_info)
+
+        monkeypatch.setattr(CC, "_client", lambda document=None: Fake())
+        r = c.post("/api/collab/presence", json={"args": {"pointer": {"point": [1, 2, 3]}, "tool": "fillet",
+                                                          "draft": {"kind": "sketch"}}})
+        assert r.json() == {"ok": True, "result": {"sent": True}}
+        assert sent == [("presence", {"pointer": {"point": [1, 2, 3]}, "tool": "fillet"}), ("draft", {"kind": "sketch"})]
