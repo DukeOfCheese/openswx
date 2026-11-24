@@ -133,10 +133,15 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
         mod = sys.modules.get("openswx.collab.commands_collab")
         if mod is None:
             return JSONResponse({"ok": False, "error": "live collaboration is not running"}, status_code=400)
+        problem = _presence_problem(args, mod.PRESENCE_ARGS)
+        if problem:
+            return JSONResponse({"ok": False, "error": problem}, status_code=400)
         try:
             return {"ok": True, "result": await asyncio.to_thread(mod.send_presence, **args)}
-        except S.DocumentError as exc:
-            return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+        except S.DocumentError:  # (not a cloud document, or collaboration not installed): the reason goes to the log
+            _log.info("presence not sent", exc_info=True)
+            return JSONResponse({"ok": False, "error": "presence not sent: the active document is not a live cloud "
+                                                       "document (details in the log)"}, status_code=400)
 
     @app.get("/api/mesh")
     def mesh():
@@ -250,6 +255,18 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
         return Response(base64.b64decode(res["png_base64"]), media_type="image/png")
 
     return app
+
+
+def _presence_problem(args: dict, allowed: dict[str, type]) -> str | None:
+    """What is wrong with presence `args` (None: nothing). Checked before the call; the message is built from
+    the allowed names and types only, never from what the client sent."""
+    if any(k not in allowed for k in args):
+        return f"collab_presence takes only {', '.join(allowed)}"
+    for name, kind in allowed.items():
+        v = args.get(name)
+        if v is not None and not isinstance(v, kind):
+            return f"collab_presence: {name} must be a {kind.__name__}"
+    return None
 
 
 _SAFE_CHARS = re.compile(r"[^\w .()+-]")  # letters and digits of any script survive
