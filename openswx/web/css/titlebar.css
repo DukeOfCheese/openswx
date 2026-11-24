@@ -1,0 +1,46 @@
+/* title bar, menu bar, cascading menus */
+/* ---------------- title bar */
+#titlebar { display: flex; align-items: center; gap: 6px; padding: 0 8px; background: var(--chrome); position: relative; z-index: 20; }
+#brand { display: flex; align-items: center; gap: 6px; padding: 0 8px 0 2px; height: 100%; }
+.brand-cube { width: 18px; height: 18px; background: linear-gradient(135deg, #e3324b, #8d0b1f); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+.brand-name { font-size: 14px; letter-spacing: .3px; color: var(--text-2); }
+.brand-name b { color: var(--brand); }
+#menubar { display: flex; gap: 0; } /* always shown (File, Edit, View ...) */
+body.native-menu #menubar { display: none; } /* macOS desktop app: the menus are in the system menu bar */
+.menu-root { position: relative; padding: 4px 9px; margin: 3px 0; border-radius: 6px; cursor: default; }
+.menu-root:hover, .menu-root.open { background: var(--hover); }
+.menu-drop { position: absolute; top: calc(100% + 3px); left: 0; min-width: 220px; background: var(--panel); border: 1px solid var(--chrome-2); border-radius: var(--r-tray); box-shadow: var(--pop-shadow); padding: 4px; display: none; z-index: 50; }
+.menu-root.open > .menu-drop { display: block; }
+.menu-item { display: flex; justify-content: space-between; gap: 24px; padding: 5px 12px 5px 26px; white-space: nowrap; border-radius: 5px; }
+.menu-item:hover { background: var(--hover); }
+.menu-item .key { color: var(--muted); }
+.menu-item.disabled { color: var(--faint); }
+.menu-sep { height: 1px; background: var(--chrome-2); margin: 4px 6px; }
+/* cascading submenus: open on hover beside their row (flipped left near the window edge) */
+.menu-item.has-sub { position: relative; }
+.menu-item.has-sub > .key { font-size: 10px; }
+.menu-sub { top: -5px; left: calc(100% + 2px); }
+.menu-sub.left { left: auto; right: calc(100% + 2px); }
+.menu-item.has-sub:hover > .menu-sub { display: block; }
+.menu-item.has-sub:hover { background: var(--hover); }
+/* DimXpert / PMI labels over the model */
+.pmi-label { position: absolute; transform: translate(-50%, -50%); background: rgba(255,255,255,.92); border: 1px solid #1d6fd6; color: #1d4ea0;
+  font: 11px/1.25 sans-serif; padding: 1px 5px; border-radius: 3px; pointer-events: none; white-space: nowrap; z-index: 4; }
+.pmi-label small { display: block; color: #555; font-size: 10px; }
+.pmi-label.datum { background: #1d6fd6; color: #fff; font-weight: 600; padding: 1px 6px; }
+.muted { color: var(--muted); }
+#quickaccess { display: flex; gap: 1px; margin-left: 4px; }
+.qa { width: 26px; height: 24px; border: 0; background: none; border-radius: var(--r-btn); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.qa:hover { background: var(--lift); box-shadow: var(--lift-shadow); }
+.qa:disabled { opacity: .35; cursor: default; background: none; box-shadow: none; }
+.qa svg { width: 18px; height: 18px; }
+#doctitle { flex: 1; text-align: center; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#search { position: relative; }
+#cmdsearch { width: 210px; height: 22px; border: 1px solid transparent; border-radius: 11px; padding: 0 10px; font: inherit; background: var(--panel); box-shadow: var(--tray-shadow); }
+#cmdsearch:focus { outline: none; border-color: var(--accent-line); }
+#searchresults { position: absolute; right: 0; top: 28px; width: 300px; background: var(--panel); border: 1px solid var(--chrome-2); border-radius: var(--r-tray); box-shadow: var(--pop-shadow); display: none; z-index: 60; max-height: 360px; overflow: auto; padding: 4px; }
+#searchresults.open { display: block; }
+.sr-item { padding: 6px 8px; display: flex; gap: 8px; align-items: center; cursor: pointer; border-radius: 5px; }
+.sr-item:hover { background: var(--hover); }
+.sr-item svg { width: 18px; height: 18px; }
+

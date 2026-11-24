@@ -4,7 +4,7 @@ import zipfile
 
 import pytest
 
-from openswx import fcstd
+from openswx.exchange import fcstd
 from openswx import session as S
 
 DOCUMENT = """<?xml version='1.0' encoding='utf-8'?>

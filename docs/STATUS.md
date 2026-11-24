@@ -26,14 +26,14 @@ state), and how the program got here, pass by pass, in [`PLAN.md`](PLAN.md) (a l
 | | |
 |---|---|
 | `session.py` | the application object, the `@command` registry and dispatcher, shared helpers |
-| `commands_*.py` | the commands, by area (document, sketch, features, assembly, drawing, simulation, review, ...) |
-| `document.py`, `assembly.py` | the part and assembly models: rebuild, undo, save / load |
-| `sketch.py`, `features.py`, `geom.py`, `naming.py` | constraint solver, feature builders, references, persistent names |
-| `drawing*.py`, `inspection.py`, `tolerance.py` | drawings, inspection reports, tolerances and ISO 286 fits |
-| `fea*.py`, `cfd.py`, `plastics.py`, `cam.py` | the solvers |
-| `sldprt.py`, `sw_*.py`, `parasolid*.py` | SOLIDWORKS and Parasolid readers / writer (clean-room; see `re/README.md`) |
-| `web_server.py`, `mcp_server.py`, `security.py`, `desktop.py`, `web/` | REST + SSE server, MCP server, access rules, desktop shell, the UI |
-| `recovery.py`, `migrate.py`, `snapshots.py`, `jobs.py`, `isolated.py`, `applog.py`, `settings.py`, `plugins.py` | autosave, file versions, undo storage, background jobs, isolated file reading, log, settings, plugins |
+| `commands/` | the commands, by area (document, sketch, features, assembly, drawing, simulation, review, ...) |
+| `core/document.py`, `core/assembly.py` | the part and assembly models: rebuild, undo, save / load |
+| `core/sketch.py`, `core/features.py`, `core/geom.py`, `core/naming.py` | constraint solver, feature builders, references, persistent names |
+| `drawing/`, `analysis/inspection.py`, `analysis/tolerance.py` | drawings, inspection reports, tolerances and ISO 286 fits |
+| `analysis/fea*.py`, `analysis/cfd.py`, `manufacturing/plastics.py`, `manufacturing/cam.py` | the solvers and manufacturing tools |
+| `exchange/sldprt.py`, `exchange/sw_*.py`, `exchange/parasolid*.py` | SOLIDWORKS and Parasolid readers / writer (clean-room; see `re/README.md`) |
+| `server/web_server.py`, `server/mcp_server.py`, `server/security.py`, `shell/desktop.py`, `web/` | REST + SSE server, MCP server, access rules, desktop shell, the UI |
+| `system/recovery.py`, `exchange/migrate.py`, `system/snapshots.py`, `system/jobs.py`, `system/isolated.py`, `system/applog.py`, `system/settings.py`, `system/plugins.py` | autosave, file versions, undo storage, background jobs, isolated file reading, log, settings, plugins |
 | `tools/` | command reference generator, conformance cases, benchmarks, SOLIDWORKS survey, differential tests |
 
 ## Known limits

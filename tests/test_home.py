@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from openswx import recent, settings
+from openswx.system import recent, settings
 from openswx import session as S
 
 
@@ -157,7 +157,7 @@ def test_home_at_start_decides_before_the_window_loads(tmp_path, monkeypatch):
 
 def test_index_page_starts_with_home_up_only_when_it_will_show(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
-    from openswx.web_server import create_app
+    from openswx.server.web_server import create_app
     p = _part(tmp_path)
     S.APP.documents.clear(); S.APP.active = None
     client = TestClient(create_app(token=None, mount_mcp=False), base_url="http://127.0.0.1:8765")

@@ -1,8 +1,9 @@
-"""Plugins: installed packages that add commands (openswx/plugins.py)."""
+"""Plugins: installed packages that add commands (openswx/system/plugins.py)."""
 import asyncio
 import importlib.metadata
 
-from openswx import mcp_server, plugins
+from openswx.server import mcp_server
+from openswx.system import plugins
 from openswx import session as S
 
 

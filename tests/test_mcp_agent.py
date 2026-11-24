@@ -5,7 +5,7 @@ import math
 
 import pytest
 
-from openswx import mcp_server as M
+from openswx.server import mcp_server as M
 from openswx import session as S
 
 

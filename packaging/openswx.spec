@@ -50,12 +50,12 @@ if _ng is not None and sys.platform in ("win32", "darwin"):
         binaries += [(str(f), "netgen_occt") for f in (Path(sys.prefix) / "lib").glob("libTK*.dylib")]
 else:
     NOT_BUNDLED = ["netgen", "pyngcore"]
-hidden += ["openswx.fea_tet", "openswx.mcp_bridge", "openswx.desktop", "openswx.web_server", "openswx.mcp_server", "openswx.assembly", "openswx.drawing",
-           "openswx.sldprt", "openswx.render", "openswx.equations", "openswx.sw_tree", "openswx.sw_sketch",
-           "openswx.sw_rebuild", "openswx.drawing_sheets", "openswx.fileassoc", "openswx.sw_drawing",
-           "openswx.advanced", "openswx.sheet_more", "openswx.commands_more", "openswx.drawing_more", "openswx.fea_more",
-           "openswx.analysis_more", "openswx.ecosystem", "openswx.piping", "openswx.cfd", "openswx.cam", "openswx.plastics", "openswx.inspection", "openswx.electrical", "openswx.commands_mfg",
-           "openswx.naming", "openswx.cache", "openswx.security", "openswx.recovery", "openswx.commands_app", "openswx.migrate", "openswx.applog", "openswx.tolerance", "openswx.commands_tol", "openswx.commands_review", "openswx.cli", "openswx.snapshots", "openswx.jobs", "openswx.settings", "openswx.recent", "openswx.commands_settings", "openswx.plugins", "openswx.isolated", "openswx.commands_asm", "openswx.commands_blocks", "openswx.commands_simreport", "openswx.commands_std", "openswx.fcstd", "openswx.updates", "openswx.api", "openswx.commands_document", "openswx.commands_sketch", "openswx.commands_features", "openswx.commands_assembly", "openswx.commands_drawing", "openswx.commands_simulation",
+hidden += ["openswx.icons", "openswx.analysis.fea_tet", "openswx.server.mcp_bridge", "openswx.shell.desktop", "openswx.server.web_server", "openswx.server.mcp_server", "openswx.core.assembly", "openswx.drawing.drawing",
+           "openswx.exchange.sldprt", "openswx.analysis.render", "openswx.core.equations", "openswx.exchange.sw_tree", "openswx.exchange.sw_sketch",
+           "openswx.exchange.sw_rebuild", "openswx.drawing.drawing_sheets", "openswx.system.fileassoc", "openswx.exchange.sw_drawing",
+           "openswx.core.advanced", "openswx.core.sheet_more", "openswx.commands.more", "openswx.drawing.drawing_more", "openswx.analysis.fea_more",
+           "openswx.analysis.analysis_more", "openswx.manufacturing.ecosystem", "openswx.manufacturing.piping", "openswx.analysis.cfd", "openswx.manufacturing.cam", "openswx.manufacturing.plastics", "openswx.analysis.inspection", "openswx.manufacturing.electrical", "openswx.commands.mfg",
+           "openswx.core.naming", "openswx.system.cache", "openswx.server.security", "openswx.system.recovery", "openswx.commands.app", "openswx.exchange.migrate", "openswx.system.applog", "openswx.analysis.tolerance", "openswx.commands.tol", "openswx.commands.review", "openswx.shell.cli", "openswx.system.snapshots", "openswx.system.jobs", "openswx.system.settings", "openswx.system.recent", "openswx.commands.settings", "openswx.system.plugins", "openswx.system.isolated", "openswx.commands.asm", "openswx.commands.blocks", "openswx.commands.simreport", "openswx.commands.std", "openswx.exchange.fcstd", "openswx.system.updates", "openswx.api", "openswx.commands.document", "openswx.commands.sketch", "openswx.commands.features", "openswx.commands.assembly", "openswx.commands.drawing", "openswx.commands.simulation",
            "openswx.collab", "openswx.collab.commands_collab", "openswx.collab.client", "openswx.collab.auth", "openswx.collab.backup"]
 
 a = Analysis([str(ROOT / "packaging" / "entry.py")], pathex=[str(ROOT)], datas=datas, binaries=binaries,
@@ -70,7 +70,7 @@ coll = COLLECT(gui, cli, a.binaries, a.datas, name="openswx")
 
 if IS_MAC:
     # the same file types as the Windows installer (loaded by path: the package __init__ installs import stubs)
-    spec = importlib.util.spec_from_file_location("_fileassoc", ROOT / "openswx" / "fileassoc.py")
+    spec = importlib.util.spec_from_file_location("_fileassoc", ROOT / "openswx" / "system" / "fileassoc.py")
     fa = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(fa)
     version = re.search(r'^version\s*=\s*"([^"]+)"', (ROOT / "pyproject.toml").read_text(encoding="utf-8"), re.M).group(1)

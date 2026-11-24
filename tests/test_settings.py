@@ -1,9 +1,10 @@
-"""User settings (openswx/settings.py) and what reads them."""
+"""User settings (openswx/system/settings.py) and what reads them."""
 import json
 
 import pytest
 
-from openswx import mcp_server, recovery, settings
+from openswx.server import mcp_server
+from openswx.system import recovery, settings
 from openswx import session as S
 
 
@@ -68,13 +69,13 @@ def test_web_ui_tables_match_the_settings():
     """keys.js's default keys are in the format settings.py accepts, and viewport.js has every mouse preset."""
     import re
     from pathlib import Path
-    web = Path(settings.__file__).parent / "web"
-    keys_js = (web / "keys.js").read_text(encoding="utf-8")
+    web = Path(settings.__file__).parent.parent / "web"
+    keys_js = (web / "js" / "keys.js").read_text(encoding="utf-8")
     rows = re.findall(r'\["([a-z0-9_]+)", "[^"]+", "([^"]*)", "[^"]+"\]', keys_js)
     assert len(rows) >= 30 and len({a for a, _ in rows}) == len(rows)
     for action, combo in rows:
         assert settings._check("shortcuts", {action: combo}) == {action: combo}
     assert len({c for _, c in rows}) == len(rows), "two actions share default keys"
-    vp = (web / "viewport.js").read_text(encoding="utf-8")
+    vp = (web / "js" / "viewport.js").read_text(encoding="utf-8")
     block = vp[vp.index("export const MOUSE = {"):vp.index("};", vp.index("export const MOUSE = {"))]
     assert set(re.findall(r"^\s+(\w+): \(b, e\)", block, re.M)) == set(settings.MOUSE_PRESETS)

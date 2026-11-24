@@ -4,7 +4,7 @@ import math
 import numpy as np
 import pytest
 
-from openswx import cam
+from openswx.manufacturing import cam
 from openswx import session as S
 
 

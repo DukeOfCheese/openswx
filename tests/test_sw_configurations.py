@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from openswx import session as S
-from openswx.sldprt import configurations
+from openswx.exchange.sldprt import configurations
 
 SAMPLES = Path(os.environ.get("OPENSWX_SW_SAMPLES") or "C:/Users/Public/Documents/SOLIDWORKS")
 

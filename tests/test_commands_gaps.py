@@ -283,7 +283,7 @@ def test_drawing_sheet_and_table_commands():
     assert isinstance(S.drawing_pick(view, [100, 150]), dict)
 
     # a hole table: move it, then delete it
-    from openswx import drawing_sheets as DS
+    from openswx.drawing import drawing_sheets as DS
     st = S.APP.doc.drawing
     v = next(x for s in st["sheets"] for x in s["views"] if x["id"] == view)
     g = DS.view_geometry(S.APP.doc, st, v)

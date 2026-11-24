@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from openswx import jobs
+from openswx.system import jobs
 from openswx import session as S
 
 

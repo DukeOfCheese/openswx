@@ -34,7 +34,7 @@ def test_open_solidworks_drawing(tmp_path, monkeypatch):
     """A SOLIDWORKS drawing (.slddrw): the referenced model is found beside the drawing and opened, and the
     sheets and views are recreated - model views in their orientations, projected views from them. (A
     synthetic Definition stream in the record layout observed in SOLIDWORKS files: no sample is committed.)"""
-    from openswx import sw_drawing
+    from openswx.exchange import sw_drawing
     u = lambda s: b"\x00\x07" + s.encode("utf-16-le") + b"\x00\x00\x03"  # noqa: E731
     model = "C:\\Somewhere\\Else\\bracket.SLDPRT"
     definition = (u("Sheet1") + u("Drawing View1") + u("Drawing View2") + u("Drawing View3") + u(model)  # contents
@@ -69,7 +69,7 @@ def test_solidworks_drawing_placement(tmp_path, monkeypatch):
     and scale, the sheet's (height, width) and the view's dimension texts: the recreated views sit where they
     did in SOLIDWORKS, at its scale, on its sheet size, dimensioned by value."""
     import struct
-    from openswx import sw_drawing
+    from openswx.exchange import sw_drawing
     u = lambda s: b"\x00\x07" + s.encode("utf-16-le") + b"\x00\x00\x03"  # noqa: E731
     rec = lambda m, x, y, s: b"\x00" * 40 + struct.pack("<13d", *m, x, y, -0.025, s) + b"\x00" * 40  # noqa: E731
     front, top = (1, 0, 0, 0, 1, 0, 0, 0, 1), (1, 0, 0, 0, 0, 1, 0, -1, 0)
@@ -107,7 +107,7 @@ def test_solidworks_drawing_placement(tmp_path, monkeypatch):
 def test_drawing_dwg_export(tmp_path, monkeypatch):
     """DWG drawings go through the ODA File Converter: one DWG per sheet converted from the sheet's DXF; without
     the converter the error says what to install."""
-    from openswx import dxf_io
+    from openswx.exchange import dxf_io
     S.new_part()
     sk = S.create_sketch("Top")["sketch"]
     S.sketch_rectangle(sk, [0, 0], [100, 60])
@@ -177,7 +177,7 @@ def test_drawing_sheets_and_views(tmp_path):
     """Drawing documents: New Drawing lays out Front / Top / Right / Isometric (projected views aligned with
     Front); section, detail and auxiliary views; first-angle projection; several sheets exported as a
     multi-page PDF; deleting a view deletes the views derived from it; revision table."""
-    from openswx import drawing_sheets as DS
+    from openswx.drawing import drawing_sheets as DS
     S.new_part()
     sk = S.create_sketch("Front")["sketch"]
     S.sketch_line(sk, [0, 0], [100, 0])
@@ -253,7 +253,7 @@ def test_drawing_sheets_and_views(tmp_path):
 def test_drawing_hole_table_bom_title_block(tmp_path):
     """Hole Table tags holes by size (blind holes give their depth, bosses are left out) and locates them from
     a picked origin; the BOM's part number, description and order can be edited; the title block's fields."""
-    from openswx import drawing_sheets as DS
+    from openswx.drawing import drawing_sheets as DS
     S.new_part("Plate")
     sk = S.create_sketch("Top")["sketch"]
     S.sketch_rectangle(sk, [0, 0], [100, 60])
@@ -301,7 +301,7 @@ def test_drawing_hole_table_bom_title_block(tmp_path):
 def test_drawing_annotations():
     """Angle between edges (the quadrant the picks are in), distance between parallel edges, Hole Callout,
     center marks / centerlines, and balloons numbered from the BOM (auto and manual, moving with the view)."""
-    from openswx import drawing_sheets as DS
+    from openswx.drawing import drawing_sheets as DS
     S.new_part()
     sk = S.create_sketch("Front")["sketch"]
     for a, b in (([0, 0], [100, 0]), ([100, 0], [100, 20]), ([100, 20], [60, 40]), ([60, 40], [0, 40]), ([0, 40], [0, 0])):
@@ -369,7 +369,7 @@ def test_drawing_annotations():
 def test_drawing_break_crop_broken_out():
     """Break View shortens a long part but dimensions across the break keep the true length; Crop View keeps
     a rectangle; a broken-out section cuts to a depth and hatches the floor; each can be removed."""
-    from openswx import drawing_sheets as DS
+    from openswx.drawing import drawing_sheets as DS
     S.new_part()
     sk = S.create_sketch("Front")["sketch"]
     S.sketch_rectangle(sk, [0, 0], [300, 20])
@@ -429,7 +429,7 @@ def test_solidworks_drawing_notes(tmp_path, monkeypatch):
     """A .slddrw sheet's notes (DetailItem records after the views: lines, font, then x, y, 0 in metres from
     the lower left) come in as openswx notes, symbol tags as characters; sheet-format labels stay out."""
     import struct
-    from openswx import sw_drawing
+    from openswx.exchange import sw_drawing
     u = lambda s: b"\x00\x07" + s.encode("utf-16-le") + b"\x00\x00\x03"  # noqa: E731
     at = lambda x, y: b"\x00" * 24 + struct.pack("<3d", x / 1000, y / 1000, -0.0)  # noqa: E731
     model = "C:\\Somewhere\\Else\\plate.SLDPRT"
@@ -460,7 +460,7 @@ def test_solidworks_drawing_notes(tmp_path, monkeypatch):
 
 def test_delete_view_of_automatic_drawing():
     block()
-    from openswx.drawing import make_drawing
+    from openswx.drawing.drawing import make_drawing
     S.drawing_delete_view("top")
     assert S.drawing_info()["settings"]["hidden_views"] == ["top"]
     views = make_drawing(S.APP.doc)["views"]
@@ -509,7 +509,7 @@ def test_drawing_symbols_threads_layers_formats(tmp_path, monkeypatch):
     front = st["sheets"][0]["views"][0]
     S.drawing_view_alternate_position(front["id"], "Out")
     assert 'stroke-dasharray="6 1.2 1.2 1.2 1.2 1.2"' in S.create_drawing()["svg"]
-    from openswx import drawing_sheets as DS
+    from openswx.drawing import drawing_sheets as DS
     t = DS.placement(st, front, DS.view_geometry(S.APP.asm, st, front))
     b = S.drawing_add_stacked_balloon(front["id"], list(t(0, 10)), ["PinM-1", "SPARE"])["balloon"]
     assert b["stack"] == ["PinM-1", "SPARE"]
@@ -602,7 +602,7 @@ def test_solidworks_drawing_gdt(tmp_path, monkeypatch):
     """A .slddrw feature control frame: the characteristic tag, its texts up to <Gtol>, then the frame's
     position (the first sheet point after the texts that the view record before it does not also hold)."""
     import struct
-    from openswx import sw_drawing
+    from openswx.exchange import sw_drawing
     u = lambda s: b"\x00\x07" + s.encode("utf-16-le") + b"\x00\x00\x03"  # noqa: E731
     at = lambda x, y: b"\x00" * 24 + struct.pack("<3d", x / 1000, y / 1000, -0.0)  # noqa: E731
     definition = (u("Sheet1") + u("Drawing View1") + u("C:/x/plate.SLDPRT") + u("*Front") + at(120.0, 40.0)

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from build123d import Box, Cylinder
 
-from openswx import fea_tet
+from openswx.analysis import fea_tet
 from openswx import session as S
 
 pytestmark = pytest.mark.skipif(not fea_tet.available(), reason="the Netgen mesher is not installed")

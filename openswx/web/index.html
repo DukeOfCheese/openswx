@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>openswx</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/css/style.css">
 <script type="importmap">{"imports": {"three": "/static/vendor/three.module.min.js", "three-mesh-bvh": "/static/vendor/three-mesh-bvh.module.js"}}</script>
 </head>
 <body>
+<!-- icon-sprite -->
 <div id="app">
-  <!-- title bar: brand, menus, quick access, document title, search -->
   <header id="titlebar">
     <div id="brand">
       <span class="brand-cube"></span><span class="brand-name">open<b>swx</b></span>
@@ -20,14 +20,12 @@
     <div id="search"><input type="search" placeholder="Search commands" id="cmdsearch"><div id="searchresults"></div></div>
   </header>
 
-  <!-- CommandManager -->
   <section id="commandmanager">
     <div id="cm-buttons"></div>
     <div id="cm-tabs"></div>
   </section>
 
   <main id="workspace">
-    <!-- left pane: FeatureManager / PropertyManager -->
     <aside id="leftpane">
       <div id="lp-tabs">
         <button class="lp-tab active" data-pane="tree" title="FeatureManager Design Tree"></button>
@@ -43,7 +41,6 @@
       <div id="lp-resize"></div>
     </aside>
 
-    <!-- graphics area -->
     <section id="graphics">
       <canvas id="view"></canvas>
       <div id="overlay"></div>
@@ -56,7 +53,6 @@
       <canvas id="triad" width="110" height="110"></canvas>
     </section>
 
-    <!-- task pane -->
     <aside id="taskpane" class="collapsed">
       <div id="tp-tabs">
         <button class="tp-tab" data-pane="agent" title="Agent activity (MCP)"></button>
@@ -88,6 +84,6 @@
 <div id="modal" class="hidden"><div id="modal-box"></div></div>
 <div id="toasts"></div>
 <input type="file" id="fileinput" class="hidden" accept=".oswprt,.oswasm,.oswdrw,.step,.stp,.igs,.iges,.brep,.x_t,.x_b,.stl,.3mf,.FCStd,.sldprt,.sldasm,.slddrw">
-<script type="module" src="/static/app.js"></script>
+<script type="module" src="/static/js/app.js"></script>
 </body>
 </html>

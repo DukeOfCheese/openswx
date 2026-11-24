@@ -110,9 +110,9 @@ The full list with colours is in [`.github/labels.yml`](.github/labels.yml).
 - A new or changed **command** needs: typed arguments, a docstring (it becomes the MCP tool description, so
   write it for an agent that has never seen the code), a test, a UI entry where one makes sense, and
   `python tools/gen_command_docs.py` re-run so `docs/commands.md` and the counts in the README stay current.
-- Changes to the **SOLIDWORKS history rebuild** (`sw_rebuild.py`, `sw_sketch.py`, `sw_tree.py`) must include
-  a survey comparison (`tools/survey.py compare before.jsonl after.jsonl`): parts gained and, especially,
-  parts lost.
+- Changes to the **SOLIDWORKS history rebuild** (`openswx/exchange/sw_rebuild.py`, `sw_sketch.py`,
+  `sw_tree.py`) must include a survey comparison (`tools/survey.py compare before.jsonl after.jsonl`): parts
+  gained and, especially, parts lost.
 - CI must pass: the test suite on Linux, Windows and macOS, and the UI smoke tests.
 - Fill in the pull request template; the checklist is the review checklist.
 

@@ -18,11 +18,11 @@ import time
 from pathlib import Path
 from typing import Any, Literal
 
-from . import applog, jobs
-from .document import DocumentError, PartDocument
-from .features import END_CONDITIONS, FeatureError, encode_shape, mass_properties
-from .geom import edge_ref, face_ref
-from .sketch import SketchError
+from openswx.system import applog, jobs
+from openswx.core.document import DocumentError, PartDocument
+from openswx.core.features import END_CONDITIONS, FeatureError, encode_shape, mass_properties
+from openswx.core.geom import edge_ref, face_ref
+from openswx.core.sketch import SketchError
 
 SheetSize = Literal["A4", "A3", "A2", "A1", "A0", "A4 portrait", "ANSI A", "ANSI B", "ANSI C", "ANSI D", "ANSI E"]
 
@@ -117,7 +117,7 @@ def home_at_start() -> bool:
     """Whether a window that opens now starts on the Home page: show_home is on and nothing but the untouched
     part made on demand is open (or nothing at all yet: the window's first request makes that part). Decided
     when the page is served, so Home is the first thing it paints; a file opened at launch makes this False."""
-    from . import settings
+    from openswx.system import settings
     if not settings.get("show_home"):
         return False
     if not APP.documents:
@@ -242,7 +242,7 @@ def command(mutates: bool = True, category: str = "general", mcp: bool = True):
                 if depth == 0:
                     _journal(fn.__name__, bound.arguments)
                 if outer is None:
-                    from . import recovery
+                    from openswx.system import recovery
                     recovery.start(APP)  # (autosave thread: started by the first change, see recovery.py)
             return result
         COMMANDS[fn.__name__] = {"fn": wrapper, "mutates": mutates, "category": category, "mcp": mcp,
@@ -484,7 +484,7 @@ def _face(doc: PartDocument, sel) -> dict:
         raise DocumentError("the part has no body yet")
     faces = doc.body.faces()
     if not re.fullmatch(r"(Face)?\d+", str(sel)):  # a persistent name from get_topology ('Boss-Extrude1:cap+')
-        from .naming import find_face
+        from openswx.core.naming import find_face
         hit = find_face(doc.body, str(sel))
         if hit is None:
             raise DocumentError(f"unknown face {sel!r}; call get_topology for current face ids and names")
@@ -502,7 +502,7 @@ def _edge(doc: PartDocument, sel) -> dict:
         raise DocumentError("the part has no body yet")
     edges = doc.body.edges()
     if "|" in str(sel):  # a persistent name from get_topology: the two faces the edge lies between
-        from .naming import find_edge
+        from openswx.core.naming import find_edge
         hit = find_edge(doc.body, str(sel).split("|"))
         if hit is None:
             raise DocumentError(f"unknown edge {sel!r}; call get_topology for current edge ids and names")
@@ -560,8 +560,8 @@ def _open_sldasm_native(p: Path):
     at its saved position. Mates are not decoded, so every component comes in fixed."""
     import numpy as np
     from scipy.spatial.transform import Rotation
-    from .assembly import AssemblyDocument
-    from .sldprt import assembly_tree
+    from openswx.core.assembly import AssemblyDocument
+    from openswx.exchange.sldprt import assembly_tree
     tree = assembly_tree(str(p))
     asm = AssemblyDocument(p.stem)
     asm.live_docs = APP.documents
@@ -609,9 +609,9 @@ def _import_sldasm_mates(asm, p: Path, placed: dict) -> list[str]:
     import itertools
     import math
     import numpy as np
-    from .assembly import ASSEMBLY, _mate_residual, plane_ref
-    from .geom import edge_ref, face_ref
-    from .sldprt import assembly_mates, face_geometry, match_face_ref, part_face_ids
+    from openswx.core.assembly import ASSEMBLY, _mate_residual, plane_ref
+    from openswx.core.geom import edge_ref, face_ref
+    from openswx.exchange.sldprt import assembly_mates, face_geometry, match_face_ref, part_face_ids
     try:
         mates = assembly_mates(str(p))
     except Exception as exc:
@@ -818,7 +818,7 @@ def _recreate_drawing(drw: dict) -> dict:
     standard three-view), at a standard scale that fits the model on an A3 sheet. Views whose sheet position
     and scale the file gives are placed there (on the smallest sheet that holds them), projected views on the
     side of their parent they sit on."""
-    from .drawing import SHEETS
+    from openswx.drawing.drawing import SHEETS
     doc = APP.active_doc
     body = doc.body
     size = max(tuple(body.bounding_box().max - body.bounding_box().min)) if body is not None else 100.0
@@ -992,11 +992,11 @@ def _read_foreign(path: str, config: int | None = None):
     already in the disk cache is used directly."""
     import multiprocessing
 
-    from . import isolated
+    from openswx.system import isolated
     if not isolated.enabled() or multiprocessing.current_process().name != "MainProcess":
         return isolated.read_geometry_here(path, config)
     if path.lower().endswith(".sldprt"):
-        from . import cache
+        from openswx.system import cache
         hit = cache.get_shape("body", cache.key(path, "sldprt-body", config))
         if hit is not None:
             return hit[0], hit[1].get("notes", [])
@@ -1015,7 +1015,7 @@ def _import_file(doc: PartDocument, path: str, config: int | None = None) -> dic
     elif ext in (".stl", ".3mf"):
         shape, notes = _read_mesh(str(p))
     elif ext == ".fcstd":
-        from .fcstd import FcstdError, read_fcstd
+        from openswx.exchange.fcstd import FcstdError, read_fcstd
         try:
             shape, notes = read_fcstd(str(p))
         except FcstdError as exc:
@@ -1041,7 +1041,7 @@ def _direction(direction) -> tuple:
     if isinstance(direction, str):
         d = {"X": (1, 0, 0), "Y": (0, 1, 0), "Z": (0, 0, 1)}.get(direction.upper())
         if d is None:
-            from .features import resolve_plane
+            from openswx.core.features import resolve_plane
             d = tuple(resolve_plane(APP.doc.ctx, direction).z_dir)
         return d
     return tuple(direction)
@@ -1072,7 +1072,7 @@ def _study_edit(fn):
 
 
 def _resolve_study(doc):
-    from .geom import face_normal, resolve_face
+    from openswx.core.geom import face_normal, resolve_face
     body = doc.body
     if getattr(doc, "kind", "part") == "assembly":
         def rf(r):
@@ -1124,7 +1124,7 @@ def _thermal(doc) -> dict:
 
 def _context_meshes(asm, component: str) -> list[dict]:
     """The assembly's other components, placed in the edited component's frame (shown ghosted)."""
-    from .geom import tessellate
+    from openswx.core.geom import tessellate
     comp = asm.component(component)
     inv = comp.location().inverse()
     out = []
@@ -1140,7 +1140,7 @@ def _measure_item(item):
     """A selection to measure: [x, y, z] (a vertex), Face#/Edge# of the part, or Component/Face# in an
     assembly. Returns (shape or None, info dict)."""
     from build123d import Vertex as _Vx
-    from .geom import geom_name
+    from openswx.core.geom import geom_name
     if isinstance(item, (list, tuple)):
         p = [float(v) for v in item]
         return _Vx(*p), {"kind": "vertex", "id": "Vertex", "point": p}
@@ -1200,7 +1200,7 @@ def _drawing_edit(fn, annotations: bool = False):
     d._checkpoint()
     st = _drawing_state(d)
     if annotations and st.get("sheets"):
-        from .drawing_sheets import active_sheet
+        from openswx.drawing.drawing_sheets import active_sheet
         st = active_sheet(st)
     try:
         out = fn(st)
@@ -1223,7 +1223,7 @@ def _next_ann(st: dict, prefix: str) -> str:
 # ---- drawing documents: sheets and placed views (SOLIDWORKS drawing workflow) -------------------------
 def _views_edit(fn):
     """fn(st, module) on a drawing that has sheets; returns its result."""
-    from . import drawing_sheets as DS
+    from openswx.drawing import drawing_sheets as DS
 
     def g(st):
         if not st.get("sheets"):
@@ -1413,24 +1413,9 @@ def _point_spec(doc: PartDocument, pt):
 
 
 # more commands (flex, mold tools, library features, ...) register with the same registry
-from .commands_document import *  # noqa: E402,F401,F403
-from .commands_sketch import *  # noqa: E402,F401,F403
-from .commands_features import *  # noqa: E402,F401,F403
-from .commands_assembly import *  # noqa: E402,F401,F403
-from .commands_drawing import *  # noqa: E402,F401,F403
-from .commands_simulation import *  # noqa: E402,F401,F403
-from .commands_more import *  # noqa: E402,F401,F403
-from .commands_mfg import *  # noqa: E402,F401,F403
-from .commands_app import *  # noqa: E402,F401,F403
-from .commands_tol import *  # noqa: E402,F401,F403
-from .commands_review import *  # noqa: E402,F401,F403
-from .commands_settings import *  # noqa: E402,F401,F403
-from .commands_asm import *  # noqa: E402,F401,F403
-from .commands_blocks import *  # noqa: E402,F401,F403
-from .commands_simreport import *  # noqa: E402,F401,F403
-from .commands_std import *  # noqa: E402,F401,F403
-from .collab.commands_collab import *  # noqa: E402,F401,F403  (live collaboration: needs the collab extra to run)
+from openswx.commands import *  # noqa: E402,F401,F403
+from openswx.collab.commands_collab import *  # noqa: E402,F401,F403  (live collaboration: needs the collab extra to run)
 
-from . import plugins as _plugins  # noqa: E402
+from openswx.system import plugins as _plugins  # noqa: E402
 
 _plugins.load_all()  # (installed packages that add commands: see plugins.py)

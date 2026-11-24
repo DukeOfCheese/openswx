@@ -1,4 +1,4 @@
-"""macOS desktop app: the page's menus as native menu-bar menus (openswx/desktop.py)."""
+"""macOS desktop app: the page's menus as native menu-bar menus (openswx/shell/desktop.py)."""
 import sys
 
 import pytest
@@ -8,7 +8,7 @@ webview = pytest.importorskip("webview", reason="pywebview (the desktop extra) i
 
 def test_menu_tree_becomes_pywebview_menus():
     from webview.menu import Menu, MenuAction, MenuSeparator
-    from openswx.desktop import install_native_menu, menu_objects
+    from openswx.shell.desktop import install_native_menu, menu_objects
     called = []
     tree = [{"title": "File", "items": [{"title": "New Part...", "id": 0}, "-",
                                         {"title": "Export", "items": [{"title": "STEP...", "id": 1}]}]},
@@ -50,7 +50,7 @@ def test_closing_asks_without_deadlocking_on_macos(monkeypatch):
     directly; elsewhere (other platforms, or another thread) pywebview's dialog is used as before."""
     import threading
     import types
-    from openswx import desktop
+    from openswx.shell import desktop
     asked = []
 
     class Win:

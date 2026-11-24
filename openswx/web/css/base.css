@@ -1,0 +1,72 @@
+/* design tokens, light/dark theme, reset */
+/* openswx UI: "soft elevated" style. A tinted canvas, with the ribbon groups, the left pane, the graphics area and
+   the task pane set on it as rounded trays. Every colour is a token here; the dark set follows the OS setting, or
+   data-theme="dark" / "light" on <html> forces one. The graphics area stays light in both themes (sketch geometry
+   is drawn in near-black). */
+:root {
+  --chrome: #eceff3;          /* canvas behind the trays, title bar, ribbon, status bar */
+  --chrome-2: #e1e5ea;        /* hairlines inside trays */
+  --border: #d3d9e1;          /* control borders */
+  --panel: #ffffff;           /* trays, menus, dialogs */
+  --panel-2: #f6f8fa;         /* quiet fill inside a tray */
+  --text: #1b2029;
+  --text-2: #3d4554;
+  --muted: #677186;
+  --faint: #9aa1ad;
+  --accent: #1f6fd1;
+  --accent-soft: #dceafc;
+  --accent-line: #9cc0ef;
+  --accent-ink: #134a94;      /* text on accent-soft */
+  --hover: #e4e8ee;           /* row / item hover */
+  --lift: #ffffff;            /* hovered tool button */
+  --brand: #c8102e;
+  --ok: #2e9e44;
+  --cancel: #d0312d;
+  --warn: #e0a100;
+  --pm-bg: #eef1f5;
+  --field: #ffffff;
+  --note-bg: #fff8dc; --note-line: #ecd98b; --note-fg: #5b4a10;
+  --err-bg: #fde8e7; --err-line: #f0aaa6; --err-fg: #8c1d18;
+  --code-bg: #f1f3f6;
+  --roll: linear-gradient(90deg, #f6c94a, #eab422);
+  --roll-line: #c79a12;
+  --view-bg: radial-gradient(120% 90% at 50% 10%, #f8f9fb, #dde3eb);
+  --view-label: #3b4b63;
+  --float: rgba(255,255,255,.94);   /* toolbars floating over the model */
+  --scrim: rgba(23,32,48,.22);
+  --icon-ink: #3b4554;
+  --tray-shadow: 0 1px 2px rgba(23,32,48,.08), 0 1px 6px rgba(23,32,48,.04);
+  --lift-shadow: 0 1px 2px rgba(23,32,48,.10), 0 2px 6px rgba(23,32,48,.06);
+  --pop-shadow: 0 12px 32px rgba(23,32,48,.16), 0 2px 4px rgba(23,32,48,.06);
+  --dlg-shadow: 0 24px 60px rgba(23,32,48,.24);
+  --r-btn: 7px; --r-field: 6px; --r-tray: 10px; --r-pane: 12px;
+  --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --chrome: #15171b; --chrome-2: #2a2e34; --border: #353a42; --panel: #1f2227; --panel-2: #1a1d21; --text: #e5e8ec; --text-2: #c2c8d0; --muted: #949cab; --faint: #6c7480;
+  --accent: #5598ec; --accent-soft: #1d3352; --accent-line: #34598c; --accent-ink: #b2d0f8; --hover: #2a2e34; --lift: #2b2f36; --pm-bg: #17191d; --field: #16181c;
+  --note-bg: #332b12; --note-line: #5c4c19; --note-fg: #f0dc9a; --err-bg: #3a1a1a; --err-line: #6e2b2b; --err-fg: #f4b4ae; --code-bg: #16181c;
+  --roll: linear-gradient(90deg, #d9a91f, #c99512); --roll-line: #a57d0e;
+  --view-bg: radial-gradient(120% 90% at 50% 10%, #e3e7ec, #b9c1cc); --view-label: #2c3a50; --float: rgba(31,34,39,.94); --scrim: rgba(0,0,0,.5);
+  --icon-ink: #c3cad4; --tray-shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 1px 4px rgba(0,0,0,.35); --lift-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 2px 6px rgba(0,0,0,.4);
+  --pop-shadow: 0 14px 36px rgba(0,0,0,.55); --dlg-shadow: 0 24px 60px rgba(0,0,0,.6); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --chrome: #15171b; --chrome-2: #2a2e34; --border: #353a42; --panel: #1f2227; --panel-2: #1a1d21; --text: #e5e8ec; --text-2: #c2c8d0; --muted: #949cab; --faint: #6c7480;
+  --accent: #5598ec; --accent-soft: #1d3352; --accent-line: #34598c; --accent-ink: #b2d0f8; --hover: #2a2e34; --lift: #2b2f36; --pm-bg: #17191d; --field: #16181c;
+  --note-bg: #332b12; --note-line: #5c4c19; --note-fg: #f0dc9a; --err-bg: #3a1a1a; --err-line: #6e2b2b; --err-fg: #f4b4ae; --code-bg: #16181c;
+  --roll: linear-gradient(90deg, #d9a91f, #c99512); --roll-line: #a57d0e;
+  --view-bg: radial-gradient(120% 90% at 50% 10%, #e3e7ec, #b9c1cc); --view-label: #2c3a50; --float: rgba(31,34,39,.94); --scrim: rgba(0,0,0,.5);
+  --icon-ink: #c3cad4; --tray-shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 1px 4px rgba(0,0,0,.35); --lift-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 2px 6px rgba(0,0,0,.4);
+  --pop-shadow: 0 14px 36px rgba(0,0,0,.55); --dlg-shadow: 0 24px 60px rgba(0,0,0,.6); color-scheme: dark; }
+/* web/svgs/ pictograms draw their dark ink in currentColor, so the ink follows the theme */
+svg { color: var(--icon-ink); }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; font: 12px var(--font); color: var(--text); background: var(--chrome); overflow: hidden; user-select: none; }
+.hidden { display: none !important; }
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+input, select, textarea { color: var(--text); background: var(--field); }
+#app { display: grid; grid-template-rows: 30px auto 1fr 22px; grid-template-columns: minmax(0, 1fr); height: 100vh; } /* (the column never grows to fit the ribbon: it scrolls) */
+

@@ -59,7 +59,7 @@ def run(corpus: str, out: str, timeout: float, limit: int | None, smallest_first
     if rebuild is None:
         sys.path.insert(0, str(ROOT))
         os.environ.setdefault("OPENSWX_CACHE", "off")  # (measure the rebuild, not the cache)
-        from openswx.sw_rebuild import RebuildError, rebuild_isolated
+        from openswx.exchange.sw_rebuild import RebuildError, rebuild_isolated
 
         def rebuild(path):
             try:

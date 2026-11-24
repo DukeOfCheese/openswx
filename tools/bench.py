@@ -45,7 +45,7 @@ def main() -> int:
     a = ap.parse_args()
     results = {"import_session_cold": cold_import()}
     from openswx import session as S
-    from openswx.geom import tessellate
+    from openswx.core.geom import tessellate
 
     def first_part():
         S.new_part("bench")

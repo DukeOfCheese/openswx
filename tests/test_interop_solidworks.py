@@ -13,7 +13,7 @@ def test_sw_end_condition_integers_and_midplane():
 
 @pytest.mark.skipif(not os.path.exists(SAMPLE), reason="SOLIDWORKS sample files not installed")
 def test_sldprt_reader(tmp_path):
-    from openswx.sldprt import extract, read_info
+    from openswx.exchange.sldprt import extract, read_info
     info = read_info(SAMPLE)
     assert info["document_type"] == "PART"
     assert "Contents/Config-0-Partition" in info["streams"]
@@ -28,7 +28,7 @@ def test_sldprt_native_geometry(tmp_path):
     import json
     import struct
     import zlib
-    from openswx.sldprt import read_sldprt
+    from openswx.exchange.sldprt import read_sldprt
     xt = (XT_DATA / "drafted_cylinder_partition.xtp").read_bytes()
     stream = struct.pack("<I", 0) + bytes(16) + zlib.compress(xt)
     name = bytes(((c & 0x0F) << 4) | (c >> 4) for c in b"Contents/Config-0-Partition")
@@ -67,7 +67,7 @@ def test_sldasm_native(tmp_path):
            '<swReference id="7" swName="cyl" swReferenceNumber="2" swComponentName="cyl" swSuppressed="NO" swHidden="NO" '
            f'swModelRef="5" swConfigurationId="0" swTransform="{rz} 0.1 0 0 1"/></swModel></swModelList></swSolidWorks>')
     (tmp_path / "asm.SLDASM").write_bytes(_sw_package({"swXmlContents/COMPINSTANCETREE": xml.encode()}))
-    from openswx.sldprt import assembly_tree
+    from openswx.exchange.sldprt import assembly_tree
     tree = assembly_tree(str(tmp_path / "asm.SLDASM"))
     assert [c["name"] for c in tree["components"]] == ["cyl-1", "cyl-2"]
     assert tree["components"][1]["rotation"][1][0] == pytest.approx(1.0)  # component x maps to parent +y
@@ -96,7 +96,7 @@ def test_sldasm_native(tmp_path):
 
 def test_sw_feature_tree(tmp_path):
     """Feature history from ResolvedFeatures: tree order, classes, dimensions, end conditions, feature ids."""
-    from openswx.sw_tree import read_tree
+    from openswx.exchange.sw_tree import read_tree
     tree = {f["name"]: f for f in read_tree(_sw_part(tmp_path, "cut_thru"))}
     assert list(tree)[3:] == ["Sketch1", "Boss-Extrude1", "Sketch2", "Cut-Extrude1"]
     assert tree["Boss-Extrude1"]["cls"] == "moExtrusion_c" and tree["Cut-Extrude1"]["cls"] == "moICE_c"
@@ -116,7 +116,7 @@ def test_sw_feature_tree(tmp_path):
 
 def test_sw_sketch_decode(tmp_path):
     """Sketch entities and frames: points (mm), arc centre/start/end, circles, a sketch on a face."""
-    from openswx.sw_sketch import read_sketches
+    from openswx.exchange.sw_sketch import read_sketches
     sk = read_sketches(_sw_part(tmp_path, "sk_arc"))["Sketch1"]
     (c, s, e), = sk["arcs"]
     assert [sk["points"][i] for i in (c, s, e)] == [pytest.approx((13, 17)), pytest.approx((22, 17)), pytest.approx((13, 26))]
@@ -153,8 +153,8 @@ def test_sw_sketch_decode(tmp_path):
 ])
 def test_sw_rebuild(tmp_path, name, features):
     """The decoded history rebuilt with openswx features reproduces the Parasolid body stored in the file."""
-    from openswx.document import PartDocument
-    from openswx.sw_rebuild import rebuild_part
+    from openswx.core.document import PartDocument
+    from openswx.exchange.sw_rebuild import rebuild_part
     doc = PartDocument("t")
     r = rebuild_part(_sw_part(tmp_path, name), doc)
     assert r["features"] == features and [f["name"] for f in doc.features] == features
@@ -165,9 +165,9 @@ def test_sw_rebuild(tmp_path, name, features):
 def test_sw_rebuild_imports_undecoded_feature(tmp_path, monkeypatch):
     """A feature type that is not decoded comes in as its exact contribution, read off the stored body next to
     the faces SOLIDWORKS tagged with its id; the features around it stay parametric."""
-    import openswx.sw_tree as sw_tree
-    from openswx.document import PartDocument
-    from openswx.sw_rebuild import rebuild_part
+    import openswx.exchange.sw_tree as sw_tree
+    from openswx.core.document import PartDocument
+    from openswx.exchange.sw_rebuild import rebuild_part
     real = sw_tree.read_tree
 
     def tree(path, config=None):
@@ -178,7 +178,7 @@ def test_sw_rebuild_imports_undecoded_feature(tmp_path, monkeypatch):
     assert r["imported"] == ["Fillet1"] and [f["type"] for f in doc.features] == ["sketch", "extrude", "import"]
     assert abs(r["volume"] - r["stored_volume"]) <= 1e-3 * r["stored_volume"]
     # but the feature that makes the first solid must be editable, else the part opens as its stored body
-    from openswx.sw_rebuild import RebuildError
+    from openswx.exchange.sw_rebuild import RebuildError
     monkeypatch.setattr(sw_tree, "read_tree", lambda path, config=None: [
         {**f, "cls": "moSomethingNew_c"} if f["name"] == "Boss-Extrude1" else f for f in real(path, config)])
     with pytest.raises(RebuildError, match="base feature"):
@@ -189,8 +189,8 @@ def test_tagged_faces_extended_by_mirror():
     """A feature's tagged face that a later mirror merged with its copy (a pipe run, mirrored to full length)
     still matches the half the feature made; a candidate that falls short of a tagged end cap does not."""
     from build123d import Box, Pos
-    from openswx.features import _valid
-    from openswx.sw_rebuild import _faces_on_body
+    from openswx.core.features import _valid
+    from openswx.exchange.sw_rebuild import _faces_on_body
     full = Box(40, 10, 10)  # the stored body: x -20 .. 20
     side = max(full.faces(), key=lambda f: f.center().Y)  # one face across both halves
     cap = max(full.faces(), key=lambda f: f.center().X)  # the end at x = 20
@@ -231,14 +231,14 @@ def test_open_sldprt_history_editable(tmp_path):
 def test_sw_rebuild_draft():
     """A draft (not decoded: neutral plane and faces) rebuilt by trying the body's planes, scored against
     the stored body: a 10 degree draft on the sides of a block."""
-    from openswx import sw_rebuild as rb
+    from openswx.exchange import sw_rebuild as rb
     S.new_part()
     sk = S.create_sketch("Top")["sketch"]
     S.sketch_rectangle(sk, [0, 0], [40, 30])
     S.extrude(sk, depth=10)
     doc = S.APP.doc
     sides = [f for f in doc.body.faces() if abs(f.normal_at().Y) < 1e-6]
-    from openswx.geom import face_ref
+    from openswx.core.geom import face_ref
     top = max(doc.body.faces(), key=lambda f: f.center().Y)
     c, n = top.center(), top.normal_at()
     neutral = {"origin": [c.X, c.Y, c.Z], "normal": [n.X, n.Y, n.Z], "x_dir": [1, 0, 0]}
@@ -253,7 +253,7 @@ def test_sw_rebuild_draft():
 def test_sw_rebuild_sketch_helpers():
     """Rebuild helpers on decoded sketches: a rectangle's unflagged diagonal is a chord (construction); a
     section's loops around the origin are a member's profile, the member beside it is left out."""
-    from openswx import sw_rebuild as rb
+    from openswx.exchange import sw_rebuild as rb
     sk = {"points": {1: (0, 0), 2: (10, 0), 3: (10, 5), 4: (0, 5)},
           "lines": [(1, 2), (2, 3), (3, 4), (4, 1), (1, 3)], "arcs": []}
     assert rb._chords(sk) == {frozenset((1, 3))}
@@ -273,8 +273,8 @@ def test_sw_rebuild_sketch_helpers():
 def test_sw_sketch_relations_decoded(tmp_path):
     """Sketch relations read from the stream (swConstraintType_e code + line references): perpendicular
     (8) and parallel (7) between two lines, carried into the rebuilt openswx sketch."""
-    from openswx.sw_rebuild import _sketch_dict
-    from openswx.sw_sketch import read_sketches
+    from openswx.exchange.sw_rebuild import _sketch_dict
+    from openswx.exchange.sw_sketch import read_sketches
     for case, code, kind in (("rel_perp", 8, "perpendicular"), ("rel_par", 7, "parallel")):
         sk = read_sketches(_sw_part(tmp_path, case))["Sketch1"]
         assert [r["type"] for r in sk["relations"]] == [code]
@@ -286,8 +286,8 @@ def test_sw_sketch_relations_decoded(tmp_path):
 def test_sw_rebuild_inferred_relations():
     """Relations read off decoded geometry: perpendicular slanted lines, arcs tangent at a shared end,
     concentric circles with separate centre points; the sketch still solves without moving."""
-    from openswx import sw_rebuild as rb
-    from openswx.sketch import Sketch
+    from openswx.exchange import sw_rebuild as rb
+    from openswx.core.sketch import Sketch
     sk = {"points": {1: (0, 0), 2: (3, 4), 3: (-4, 3),       # two perpendicular slanted lines from 1
                      10: (20, 0), 11: (25, 0), 12: (30, 0),   # arc A: centre 10 from 11 ... ; arc B: centre 13
                      13: (35, 0), 14: (40, 0),

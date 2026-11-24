@@ -1,10 +1,10 @@
-"""The local server's guard: token, Host, Origin and content type (openswx/security.py)."""
+"""The local server's guard: token, Host, Origin and content type (openswx/server/security.py)."""
 import json
 
 from fastapi.testclient import TestClient
 
-from openswx import security
-from openswx.web_server import create_app
+from openswx.server import security
+from openswx.server.web_server import create_app
 
 BASE = "http://127.0.0.1:8765"
 TOKEN = "t" * 40
@@ -22,7 +22,7 @@ def test_api_needs_the_token():
         assert c.get("/api/events").status_code == 401
         assert c.post("/api/command", json=CMD, headers={"Authorization": "Bearer wrong"}).status_code == 401
         assert c.get("/api/health").status_code == 200  # liveness stays open
-        assert c.get("/static/app.js").status_code == 200  # the UI's files are not secret
+        assert c.get("/static/js/app.js").status_code == 200  # the UI's files are not secret
         for headers in ({"Authorization": f"Bearer {TOKEN}"}, {"X-OpenSWX-Token": TOKEN}, {"Cookie": f"{security.COOKIE}={TOKEN}"}):
             r = c.post("/api/command", json=CMD, headers=headers)
             assert r.status_code == 200 and r.json()["ok"]
@@ -39,6 +39,14 @@ def test_token_link_sets_the_cookie_and_the_page_then_works():
         c.cookies.set(security.COOKIE, TOKEN)
         assert c.get("/").status_code == 200
         assert c.post("/api/command", json=CMD).json()["ok"]
+
+
+def test_the_page_carries_the_icon_sprite():
+    with client() as c:
+        c.cookies.set(security.COOKIE, TOKEN)
+        page = c.get("/").text
+    assert 'id="icons"' in page and 'id="icon-part"' in page  # one inline sprite, no request per pictogram
+    assert "<!-- icon-sprite -->" not in page
 
 
 def test_cross_site_requests_are_refused_even_with_the_token():

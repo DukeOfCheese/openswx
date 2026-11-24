@@ -631,7 +631,7 @@ def test_toolbox_standards():
     pin = S.insert_fastener("dowel_pin", "6", length=20)["component"]
     bolt = S.insert_fastener("ansi_hex_bolt", "1/4-20", length=1.0)["component"]
     asm = S.APP.asm
-    from openswx.features import mass_properties
+    from openswx.core.features import mass_properties
     assert mass_properties(asm._local_body(asm.component(pin)))["volume"] == pytest.approx(PI * 9 * 20, rel=1e-6)
     bb = asm._local_body(asm.component(bolt)).bounding_box()
     assert bb.min.Z == pytest.approx(-25.4) and bb.size.X == pytest.approx(0.4375 * 25.4 / math.cos(PI / 6), rel=1e-3)
@@ -640,7 +640,7 @@ def test_toolbox_standards():
 
 
 def test_piping_library_route_and_fittings():
-    from openswx import piping
+    from openswx.manufacturing import piping
     p = piping.pipe("2", "40")
     assert (p["od"], p["wall"]) == (60.3, 3.91)
     el, R, t = piping.elbow_shape("2", "40", 90)
@@ -669,7 +669,7 @@ def test_piping_library_route_and_fittings():
 
 def test_cfd_pipe_flow_and_sphere_drag():
     from build123d import Cylinder, Rot, Sphere
-    from openswx.cfd import external_flow, internal_flow
+    from openswx.analysis.cfd import external_flow, internal_flow
     # laminar pipe flow (Re 10): Hagen-Poiseuille plus the entrance loss (K ~ 1.25), parabolic profile
     pipe = Rot(0, 90, 0) * (Cylinder(8, 60) - Cylinder(5, 62))
     r = internal_flow(pipe, "X", 0.001, "water", cells_across=10)
@@ -741,8 +741,8 @@ def test_electrical_harness_and_composer(tmp_path):
 
 def test_mates_on_edges_vertices_and_assembly_planes():
     import numpy as np
-    from openswx.assembly import ASSEMBLY, plane_ref
-    from openswx.geom import edge_ref
+    from openswx.core.assembly import ASSEMBLY, plane_ref
+    from openswx.core.geom import edge_ref
     def block(name):
         S.new_part(name)
         sk = S.create_sketch("Front")["sketch"]

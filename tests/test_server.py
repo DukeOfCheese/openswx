@@ -4,8 +4,8 @@ import json
 from fastapi.testclient import TestClient
 
 from openswx import session as S
-from openswx.mcp_server import build_mcp
-from openswx.web_server import create_app
+from openswx.server.mcp_server import build_mcp
+from openswx.server.web_server import create_app
 
 
 def test_mcp_tools_and_calls():
@@ -71,7 +71,7 @@ def test_rest_api_and_origin_tagging():
 def test_bad_arguments_and_file_names_are_handled_safely(tmp_path):
     """Arguments are checked against the command's signature before the call (the message names the
     problem, not the interpreter's error), and file names sent by a client cannot leave the temporary folder."""
-    from openswx.web_server import _temp_path
+    from openswx.server.web_server import _temp_path
     with TestClient(create_app(mount_mcp=False, token=None), base_url="http://127.0.0.1:8765") as c:
         r = c.post("/api/command", json={"name": "new_part", "args": {"nmae": "X"}})
         assert r.status_code == 400

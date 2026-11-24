@@ -1,10 +1,10 @@
-"""Autosave and Document Recovery (openswx/recovery.py)."""
+"""Autosave and Document Recovery (openswx/system/recovery.py)."""
 import json
 import math
 import os
 import shutil
 
-from openswx import recovery
+from openswx.system import recovery
 from openswx import session as S
 
 

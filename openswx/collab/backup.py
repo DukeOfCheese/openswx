@@ -20,7 +20,7 @@ import time
 import urllib.parse
 from pathlib import Path
 
-from .. import recovery
+from openswx.system import recovery
 
 _state = {"thread": None, "stop": threading.Event()}
 
@@ -67,7 +67,7 @@ def save(client) -> str | None:
 
 
 def save_all() -> list[str]:
-    from .client import CLIENTS
+    from openswx.collab.client import CLIENTS
     out = []
     for c in list(CLIENTS.values()):
         try:

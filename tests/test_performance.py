@@ -6,8 +6,9 @@ import numpy as np
 import pytest
 from build123d import Box, Cylinder, Pos, Sphere
 
-from openswx import geom, render
-from openswx.features import _MP_CACHE, mass_properties
+from openswx.core import geom
+from openswx.analysis import render
+from openswx.core.features import _MP_CACHE, mass_properties
 
 
 def test_mass_properties_cache_hits():
@@ -72,7 +73,7 @@ def test_faces_of_edge_matches_brute_force():
 def test_sketch_regions_even_odd_nested():
     """Nested contours keep alternate regions (a plate, a hole in it, an island in the hole)."""
     from openswx import session as S
-    from openswx import sketch as SK
+    from openswx.core import sketch as SK
     S.new_part("Nest")
     sk = S.create_sketch("Top")["sketch"]
     S.sketch_rectangle(sk, [-50, -50], [50, 50])
@@ -102,7 +103,7 @@ def test_many_profile_cut_in_one_boolean():
 def test_mesh_is_compressed_on_the_wire():
     from fastapi.testclient import TestClient
     from openswx import session as S
-    from openswx.web_server import create_app
+    from openswx.server.web_server import create_app
     S.new_part("Wire")
     sk = S.create_sketch("Top")["sketch"]
     S.sketch_circle(sk, [0, 0], 20)

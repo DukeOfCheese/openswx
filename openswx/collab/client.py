@@ -31,9 +31,9 @@ import uuid
 from openswx_collab_protocol import ops as O
 from openswx_collab_protocol.messages import PROTOCOL_VERSION
 
-from .. import session as S
-from ..document import VERSION, DocumentError
-from . import auth
+from openswx import session as S
+from openswx.core.document import VERSION, DocumentError
+from openswx.collab import auth
 
 log = logging.getLogger("openswx.collab")
 
@@ -1084,7 +1084,7 @@ def attach(doc, document_id: str, server: str, token: str, info: dict, timeout: 
         c.close()
         raise
     c.reload_view_locked(force=True)
-    from . import backup
+    from openswx.collab import backup
     backup.start()
     changed()
     return c

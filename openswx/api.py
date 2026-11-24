@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import base64
 
-from . import session as _S
+from openswx import session as _S
 
 Error = _S.CommandError
 

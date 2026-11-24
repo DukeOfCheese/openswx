@@ -3,7 +3,7 @@ plugs into, checked on their own, with no server and no collab extra."""
 import pytest
 
 from openswx import session as S
-from openswx.document import DocumentError
+from openswx.core.document import DocumentError
 
 
 class Recorder:

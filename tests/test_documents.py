@@ -65,7 +65,7 @@ def test_equations_and_configurations(tmp_path):
 def test_file_associations():
     """register-file-types: .oswprt / .oswasm open in openswx with its icon, openswx is offered in Open with
     for SOLIDWORKS / STEP / Parasolid files without taking them over; unregister removes exactly that."""
-    from openswx import fileassoc
+    from openswx.system import fileassoc
     reg = _FakeReg()
     reg.CreateKey(reg.HKEY_CURRENT_USER, r"Software\Classes\.sldprt")  # SOLIDWORKS owns .sldprt
     with reg.OpenKey(reg.HKEY_CURRENT_USER, r"Software\Classes\.sldprt") as k:
@@ -141,8 +141,8 @@ def test_named_views(tmp_path):
 
 def test_persistent_names_follow_moved_edges():
     from build123d import Vector
-    from openswx.geom import edge_ref
-    from openswx.naming import labels_of
+    from openswx.core.geom import edge_ref
+    from openswx.core.naming import labels_of
     S.new_part("Step")
     sk = S.create_sketch("Front")["sketch"]
     S.sketch_rectangle(sk, [0, 0], [40, 10])
@@ -168,7 +168,7 @@ def test_persistent_names_follow_moved_edges():
 
 def test_disk_cache_for_files(tmp_path, monkeypatch):
     from build123d import Box
-    from openswx import cache
+    from openswx.system import cache
     src = tmp_path / "part.bin"
     src.write_bytes(b"one")
     monkeypatch.setenv("OPENSWX_CACHE", "off")
