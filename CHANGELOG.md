@@ -6,6 +6,11 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+## 0.3.0 (2026-11-24)
+
+A new look with a dark theme, a Home page with recent files, customisable keyboard shortcuts, mouse presets and
+view colours, and sheet metal Unfold / Fold, Rip and Vent with bend notes in the flat-pattern DXF.
+
 ### Added
 
 - A Home page when openswx starts without a file: New Part, New Assembly, Open, the recent files (a missing file
@@ -39,6 +44,15 @@ formats or commands; files are migrated automatically and the change is listed h
 
 - Ctrl+Shift+Z (Previous View) ran Undo.
 - Leaving the browser page with unsaved changes did not ask first.
+- Agents called the program SOLIDWORKS: the MCP instructions now say it is openswx (and not SOLIDWORKS), and tool
+  descriptions no longer compare themselves with SOLIDWORKS tools.
+
+### Security
+
+- Files sent to or from the browser go into a private temporary folder under a cleaned name (no path parts).
+- Command arguments are checked before a command runs; problems are reported in words, and an error inside a
+  command no longer sends the interpreter's message to the client.
+- Workflows run with read-only repository access unless a job needs more.
 
 ## 0.2.0 (2026-11-23)
 
