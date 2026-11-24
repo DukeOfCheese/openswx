@@ -2754,7 +2754,9 @@ class App {
 
   applyUserSettings(s) {
     if (!s) return;
-    this.graphics.style.background = `linear-gradient(${s.view_background_top}, ${s.view_background_bottom})`;
+    // the graphics area keeps the theme's own background (light or dark) until the user picks colours
+    const themed = s.view_background_top === "#cfdae8" && s.view_background_bottom === "#ffffff"; // (the settings' defaults)
+    this.graphics.style.background = themed ? "" : `linear-gradient(${s.view_background_top}, ${s.view_background_bottom})`;
     this.vp.setColors({ body: s.view_body_color, edge: s.view_edge_color, hover: s.view_highlight_color, sel: s.view_selection_color });
     this.vp.mouse = { preset: s.mouse_preset || "solidworks", zoomReverse: !!s.mouse_zoom_reverse };
     this.keys = effectiveKeys(s.shortcuts); this.keyMap = keyTable(this.keys);

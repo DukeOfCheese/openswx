@@ -29,8 +29,8 @@ SETTINGS = {
     "image_width": {"default": 1600, "min": 100, "max": 8000, "doc": "Width in pixels of exported pictures"},
     "image_height": {"default": 1200, "min": 100, "max": 8000, "doc": "Height in pixels of exported pictures"},
     # view colours (the graphics area's gradient and the model's default, highlight and selection colours)
-    "view_background_top": {"default": "#cfdae8", "kind": "color", "doc": "Graphics area background: top colour"},
-    "view_background_bottom": {"default": "#ffffff", "kind": "color", "doc": "Graphics area background: bottom colour"},
+    "view_background_top": {"default": "#cfdae8", "kind": "color", "doc": "Graphics area background: top colour (left at the default, the theme's own background is used)"},
+    "view_background_bottom": {"default": "#ffffff", "kind": "color", "doc": "Graphics area background: bottom colour (left at the default, the theme's own background is used)"},
     "view_body_color": {"default": "#c4cad3", "kind": "color", "doc": "Colour of bodies with no appearance of their own"},
     "view_edge_color": {"default": "#101010", "kind": "color", "doc": "Colour of model edges"},
     "view_highlight_color": {"default": "#f08a00", "kind": "color", "doc": "Colour of what is under the pointer"},

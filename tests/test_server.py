@@ -83,3 +83,4 @@ def test_bad_arguments_and_file_names_are_handled_safely(tmp_path):
         assert ".." not in p.parts and p.parent.name.startswith("openswx_") and p.name in ("passwd", "win.ini", "path.step", "y.step")
     assert _temp_path("...", "upload").name == "upload"
     assert _temp_path("a*b?.step", "x").name == "a_b_.step"
+    assert _temp_path("Träger.step", "x").name == "Träger.step"  # letters of any script stay

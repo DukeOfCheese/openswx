@@ -212,6 +212,7 @@ def test_view_colours_and_mouse_settings_apply(page):
     assert turned == {"moved": True, "clicks": 1}
     page.evaluate("async () => { await T.run('set_settings', {reset: true}); await window.app.loadUserSettings(); }")
     assert page.evaluate("window.app.vp.mouse") == {"preset": "solidworks", "zoomReverse": False}
+    assert page.evaluate("document.querySelector('#graphics').style.background") == ""  # back to the theme's own
 
 
 def test_keyboard_navigation(page):
