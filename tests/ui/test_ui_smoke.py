@@ -262,6 +262,35 @@ def test_macos_desktop_menus_go_to_the_menu_bar(page):
     assert got["titles"] == ["File", "Edit", "View", "Insert", "Tools", "Window", "Help"]
     assert got["hidden"] and got["shown"] and got["back"] and got["hasSub"]
 
+def test_connect_an_agent_dialog_copies_every_code_section(page, server):
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=server)
+    page.evaluate("async () => { T.close(); await window.app.mcpDialog(); }")
+    page.wait_for_function("T.open()")
+    assert "Settings > Desktop App > Extensions > Manage > Edit Config" in page.evaluate("T.text()")
+    codes = page.evaluate("[...document.querySelectorAll('#modal-box pre.code, #modal-box code')].map(c => c.textContent)")
+    assert len(codes) >= 5 and page.evaluate("document.querySelectorAll('#modal-box .copy-btn').length") == len(codes)
+    for i, text in enumerate(codes):
+        page.evaluate("i => document.querySelectorAll('#modal-box .copy-btn')[i].click()", i)
+        page.wait_for_function("i => document.querySelectorAll('#modal-box .copy-btn')[i].textContent === 'Copied'", arg=i)
+        assert page.evaluate("navigator.clipboard.readText()").replace("\r\n", "\n") == text  # (Windows: CRLF)
+    assert '"mcpServers"' in codes[1] and codes[2].startswith("claude mcp add")
+    page.evaluate("T.close()")
+
+
+def test_command_manager_keeps_its_height_on_every_tab(page):
+    tops = page.evaluate("""async () => {
+        const out = {};
+        for (const t of [...document.querySelectorAll('#cm-tabs .cm-tab')].map(b => b.textContent)) {
+            [...document.querySelectorAll('#cm-tabs .cm-tab')].find(b => b.textContent === t).click();
+            await new Promise(requestAnimationFrame);
+            out[t] = [document.querySelector('#cm-tabs').getBoundingClientRect().top, document.querySelector('#workspace').getBoundingClientRect().top];
+        }
+        document.querySelector('#cm-tabs .cm-tab').click();
+        return out;
+    }""")
+    assert len(tops) > 5 and len({tuple(v) for v in tops.values()}) == 1, tops  # (the tabs and the workspace never move)
+
+
 def test_no_script_errors(page):
     assert page.errors == []
 

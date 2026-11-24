@@ -6,6 +6,16 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Changed
+
+- Help > Connect an agent: every command and config snippet has a Copy button, and the Claude Desktop path is
+  Settings > Desktop App > Extensions > Manage > Edit Config.
+
+### Fixed
+
+- The CommandManager keeps one height on every tab: the tabs and the workspace no longer move up and down when you
+  switch tabs (a tab with four buttons in a stack, a three-line label, or a horizontal scrollbar made it taller).
+
 ## 0.3.0 (2026-11-24)
 
 A new look with a dark theme, a Home page with recent files, customisable keyboard shortcuts, mouse presets and

@@ -2670,7 +2670,7 @@ class App {
     const info = r.ok ? r.result : { stdio: { command: "openswx-cli", args: ["mcp"] }, http: `${location.origin}/mcp`, claude_desktop_config: "claude_desktop_config.json" };
     const desktop = { mcpServers: { openswx: info.stdio } };
     this.modal("Connect an agent (MCP)", `<p><b>Claude Desktop</b> (and other chat apps that start local MCP servers): add this to
-      <code>${escapeHtml(info.claude_desktop_config)}</code> (Claude Desktop: Settings &gt; Developer &gt; Edit Config), then restart it.
+      <code>${escapeHtml(info.claude_desktop_config)}</code> (Claude Desktop: Settings &gt; Desktop App &gt; Extensions &gt; Manage &gt; Edit Config), then restart it.
       While openswx is open, the agent works in this window and you watch its edits live.</p>
       <pre class="code">${escapeHtml(JSON.stringify(desktop, null, 1))}</pre>
       <p><b>Claude Code</b> (and clients that reach this computer over HTTP):</p>
@@ -2678,6 +2678,26 @@ class App {
       <p>The token is your openswx secret: print it with <code>openswx token</code> (desktop app: <code>openswx-cli token</code>). Requests without it are refused.</p>
       <p><b>Claude on the web (claude.ai)</b> connects to MCP servers from Anthropic's servers, which cannot reach an app on
       this computer: use Claude Desktop or Claude Code.</p>`, null, "agent");
+    this.addCopyButtons($("#modal-box .mb-body"));
+  }
+
+  // a Copy button on every code block and inline code in `root` (dialogs that show commands or config to paste)
+  addCopyButtons(root) {
+    for (const c of root.querySelectorAll("pre.code, code")) {
+      const b = el("button", "copy-btn", "Copy"); b.type = "button"; b.title = "Copy to the clipboard";
+      b.onclick = async () => {
+        const ok = await this.copyText(c.textContent);
+        b.textContent = ok ? "Copied" : "Select and copy"; b.classList.toggle("done", ok);
+        setTimeout(() => { b.textContent = "Copy"; b.classList.remove("done"); }, 1500);
+      };
+      if (c.tagName === "PRE") { const w = el("div", "copy-wrap"); c.replaceWith(w); w.append(c, b); } else c.after(b);
+    }
+  }
+
+  async copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* (no clipboard API here: the old way) */ }
+    const t = el("textarea", ""); t.value = text; t.style.cssText = "position:fixed;opacity:0"; document.body.append(t); t.select();
+    try { return document.execCommand("copy"); } catch { return false; } finally { t.remove(); }
   }
 
   async checkUpdates() {

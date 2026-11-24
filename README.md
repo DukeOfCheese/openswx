@@ -137,7 +137,7 @@ claude mcp add --transport http openswx http://127.0.0.1:8765/mcp \
 With the desktop app, use `openswx-cli token` in place of `python -m openswx token`.
 
 **Claude Desktop** (and other chat apps that start local MCP servers): add openswx to its config (Claude
-Desktop: *Settings → Developer → Edit Config*) and restart it. While openswx is open, `openswx mcp` relays to
+Desktop: *Settings → Desktop App → Extensions → Manage → Edit Config*) and restart it. While openswx is open, `openswx mcp` relays to
 the open window, so you watch the agent's edits live; without it, it starts its own copy and UI.
 
 ```json
