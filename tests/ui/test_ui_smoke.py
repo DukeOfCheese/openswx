@@ -236,6 +236,32 @@ def test_keyboard_navigation(page):
     assert page.evaluate("document.querySelector('#menubar .menu-root.open')") is None
 
 
+def test_macos_desktop_menus_go_to_the_menu_bar(page):
+    """In the macOS desktop app the page hands its menus to the shell (window.pywebview.api.set_native_menu) and
+    hides its own menu bar once they are in the system menu bar; each item runs by id."""
+    got = page.evaluate("""async () => {
+        const real = Object.getOwnPropertyDescriptor(Navigator.prototype, 'platform');
+        Object.defineProperty(navigator, 'platform', {get: () => 'MacIntel', configurable: true});
+        let sent = null;
+        window.pywebview = {api: {set_native_menu: async (m) => { sent = m; return true; }}};
+        window.app.nativeMenuJson = null;
+        await window.app.syncNativeMenu();
+        const hidden = getComputedStyle(document.querySelector('#menubar')).display === 'none';
+        const help = sent.find((m) => m.title === 'Help').items.find((i) => i.title === 'Keyboard Shortcuts');
+        window.app.menuInvoke(help.id);
+        const shown = !document.querySelector('#tp-help').classList.contains('hidden');
+        window.app.showTask('help');  // (close it again)
+        // the shell could not: the window keeps its own menu bar
+        window.pywebview.api.set_native_menu = async () => false;
+        window.app.nativeMenuJson = null;
+        await window.app.syncNativeMenu();
+        const back = getComputedStyle(document.querySelector('#menubar')).display !== 'none';
+        delete window.pywebview; delete navigator.platform;
+        return {titles: sent.map((m) => m.title), hidden, shown, back, hasSub: JSON.stringify(sent).includes('"items"')};
+    }""")
+    assert got["titles"] == ["File", "Edit", "View", "Insert", "Tools", "Window", "Help"]
+    assert got["hidden"] and got["shown"] and got["back"] and got["hasSub"]
+
 def test_no_script_errors(page):
     assert page.errors == []
 

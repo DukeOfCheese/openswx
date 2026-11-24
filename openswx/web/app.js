@@ -157,6 +157,7 @@ class App {
     if (this.lastKind !== (this.model.kind || "part")) { this.lastKind = this.model.kind || "part"; this.renderCommandManager(); }
     this.renderTree(); this.renderTitle(); this.renderStatus(); this.renderQuickAccessState(); this.renderTaskPane(); this.renderConfirm();
     this.homeCheck();
+    this.syncNativeMenu(); // (the Window menu lists the open documents)
     if (this.model.drawing_document && this.openedDrawingDoc !== this.model.drawing_document) { // a .oswdrw was opened: show it
       this.openedDrawingDoc = this.model.drawing_document; this.dwg.open();
     } else if (this.model.show_drawing) this.dwg.open(); // a SOLIDWORKS drawing was opened
@@ -333,7 +334,35 @@ class App {
       bar.append(root);
     }
     document.addEventListener("click", () => { this.closeMenus(); $("#ctxmenu").classList.add("hidden"); document.querySelectorAll(".hu-drop.open").forEach((d) => d.classList.remove("open")); });
+    this.menuDefs = M;
+    this.syncNativeMenu();
   }
+
+  // macOS desktop app: the menus go in the system menu bar at the top of the screen instead of the window (the
+  // desktop shell builds them from this tree; each item carries an id that menuInvoke runs). Items show no key
+  // equivalents there: the keys stay with the page, so typing in a text box is never taken as a command.
+  nativeMenuTree() {
+    const fns = [];
+    const walk = (nodes) => nodes.map((n) => (n === "-" ? "-" : n.children ? { title: n.label, items: walk(n.children) }
+      : { title: n.label, id: fns.push(n.fn) - 1 }));
+    const menus = Object.entries(this.menuDefs || {}).map(([title, items]) => ({ title, items: walk(menuTree(typeof items === "function" ? items() : items)) }));
+    return { menus, fns };
+  }
+
+  async syncNativeMenu() {
+    const api = this.desk;
+    if (!api?.set_native_menu || !/Mac/i.test(navigator.platform || navigator.userAgent)) return;
+    const { menus, fns } = this.nativeMenuTree();
+    this.nativeMenuFns = fns; // (always: the Window menu's items change with the documents)
+    const json = JSON.stringify(menus);
+    if (json === this.nativeMenuJson) return;
+    this.nativeMenuJson = json;
+    const ok = await api.set_native_menu(menus).catch(() => false);
+    document.body.classList.toggle("native-menu", !!ok); // (if the shell could not, the window keeps its own menu bar)
+  }
+
+  menuInvoke(id) { const fn = this.nativeMenuFns?.[id]; if (fn) { this.closeMenus(); fn(); } }
+
   closeMenus() { document.querySelectorAll(".menu-root.open").forEach((r) => r.classList.remove("open")); if (!document.querySelector(".menu-root.open")) $("#menubar").classList.remove("open"); }
 
   // ================================================================== CommandManager

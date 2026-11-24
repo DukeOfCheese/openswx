@@ -2,6 +2,7 @@
 engine and the MCP endpoint running in-process. This is what `openswx.exe` starts."""
 from __future__ import annotations
 
+import functools
 import socket
 import sys
 import threading
@@ -79,6 +80,10 @@ class DesktopApi:
 
     _window = None  # (private: pywebview walks every public attribute of the js_api object)
 
+    def set_native_menu(self, menus):
+        """macOS: show the page's menus in the system menu bar; True if they are there (the page then hides its own)."""
+        return install_native_menu(self._window, menus or [])
+
     def _dialog(self, kind, name="", types=()):
         import webview
         mode = {"open": webview.FileDialog.OPEN, "save": webview.FileDialog.SAVE}[kind]
@@ -155,6 +160,73 @@ class DesktopApi:
         with open(path, "wb") as fh:
             fh.write(base64.b64decode(png))
         return {"ok": True, "result": {"saved": path}}
+
+
+def menu_objects(menus: list, invoke) -> list:
+    """pywebview Menu objects for the page's menu tree ([{"title", "items": [...]}], an item being "-", a
+    submenu {"title", "items"} or a command {"title", "id"}); a command calls invoke(id)."""
+    from webview.menu import Menu, MenuAction, MenuSeparator
+
+    def build(items):
+        out = []
+        for it in items:
+            if it == "-":
+                out.append(MenuSeparator())
+            elif isinstance(it, dict) and "items" in it:
+                out.append(Menu(str(it["title"]), build(it["items"])))
+            elif isinstance(it, dict) and "id" in it:
+                out.append(MenuAction(str(it["title"]), functools.partial(invoke, int(it["id"]))))
+        return out
+    return [Menu(str(m["title"]), build(m.get("items") or [])) for m in menus]
+
+
+def install_native_menu(window, menus: list) -> bool:
+    """macOS: put the page's menus in the system menu bar (the app menu stays first; Edit gets the standard Cut,
+    Copy, Paste and Select All for text fields). Returns False (the window keeps its own menu bar) elsewhere or
+    if pywebview's Cocoa backend has changed under us."""
+    if sys.platform != "darwin":
+        return False
+    try:
+        import AppKit
+        from PyObjCTools import AppHelper
+        from webview import settings as webview_settings
+        from webview.platforms import cocoa
+    except Exception:  # noqa: BLE001 - not the Cocoa backend
+        return False
+
+    def invoke(item_id: int) -> None:
+        try:
+            window.evaluate_js(f"window.app && window.app.menuInvoke({int(item_id)})")
+        except Exception:  # noqa: BLE001 - the page is reloading
+            pass
+
+    native = menu_objects(menus, invoke)
+    done, ok = threading.Event(), [False]
+
+    def apply():  # (on the main thread: AppKit)
+        try:
+            inst = next(i for i in cocoa.BrowserView.instances.values() if i.pywebview_window is window)
+            webview_settings["SHOW_DEFAULT_MENUS"] = False  # (our Edit menu takes the text-editing items)
+            inst.menu = native
+            main = inst._recreate_menus(native)
+            edit = main.itemWithTitle_("Edit")
+            if edit is not None and edit.submenu() is not None:
+                sub = edit.submenu()
+                for k, (title, action, key) in enumerate([("Cut", "cut:", "x"), ("Copy", "copy:", "c"),
+                                                          ("Paste", "paste:", "v"), ("Select All", "selectAll:", "a")]):
+                    sub.insertItem_atIndex_(AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(title, action, key), k)
+                sub.insertItem_atIndex_(AppKit.NSMenuItem.separatorItem(), 4)
+            cocoa.BrowserView.current_menu = native
+            cocoa.BrowserView.app.setMainMenu_(main)
+            ok[0] = True
+        except Exception as exc:  # noqa: BLE001 - keep the in-window menus
+            print(f"openswx: could not use the macOS menu bar ({exc}); the menus stay in the window", file=sys.stderr)
+        finally:
+            done.set()
+
+    AppHelper.callAfter(apply)
+    done.wait(5)
+    return ok[0]
 
 
 def run(port: int = 8765, file: str | None = None) -> int:
