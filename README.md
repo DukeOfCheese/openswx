@@ -12,11 +12,13 @@ it while you watch, and live collaboration so your team can edit the same part a
 
 https://github.com/user-attachments/assets/442086e2-4e71-4d49-8bb5-408b3b027d70
 
-<sub>30 s ([4K original](https://github.com/DukeOfCheese/openswx/blob/main/docs/media/demo.mp4)). Recorded in
+<sub>39 s ([4K original](https://github.com/DukeOfCheese/openswx/blob/main/docs/media/demo.mp4)). Recorded in
 openswx: every feature is built by a real MCP tool call, the same calls Claude makes through Claude Code or any
-other MCP client. The chat panel illustrates the conversation and is replayed by a script
-([`tools/demo/`](https://github.com/DukeOfCheese/openswx/blob/main/tools/demo)). Claude is made by
-[Anthropic](https://www.anthropic.com/).</sub>
+other MCP client. Then the part moves to the cloud and a second person joins it from their own openswx, through
+a local [openswx-collab](https://github.com/DukeOfCheese/openswx-collab) server: their pointer, their fillet
+and the history arrive live, each from a real command. The chat panel illustrates the conversation and is
+replayed by a script ([`tools/demo/`](https://github.com/DukeOfCheese/openswx/blob/main/tools/demo)); the
+people are made-up demo accounts. Claude is made by [Anthropic](https://www.anthropic.com/).</sub>
 
 openswx is an alternate CAD program for engineers. Its screen is laid out the way many mechanical engineers
 already know from SOLIDWORKS: a command bar across the top, a design tree on the left, a property panel for
