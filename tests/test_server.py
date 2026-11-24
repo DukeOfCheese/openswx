@@ -119,9 +119,9 @@ def test_presence_checks_arguments_and_keeps_error_details_in_the_log(monkeypatc
         assert r.status_code == 400
         assert r.json() == {"ok": False, "error": "presence not sent: the active document is not a live cloud "
                                                   "document (details in the log)"}
-        assert "collab_enable" not in r.text  # (the exception's own text)
-        assert any("collab_enable" in (rec.exc_text or "") or "collab_enable" in str(rec.exc_info[1])
-                   for rec in caplog.records if rec.exc_info)
+        logged = [rec.exc_info[1] for rec in caplog.records if rec.exc_info]  # (the reason, kept in the log)
+        assert logged and isinstance(logged[-1], S.DocumentError)
+        assert str(logged[-1]) not in r.text  # (whichever it is: not a cloud document, or the collab extra missing)
 
         monkeypatch.setattr(CC, "_client", lambda document=None: Fake())
         r = c.post("/api/collab/presence", json={"args": {"pointer": {"point": [1, 2, 3]}, "tool": "fillet",
