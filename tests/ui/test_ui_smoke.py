@@ -286,6 +286,19 @@ def test_agent_toasts(page):
     assert "<b>" not in "".join(got["shown"]) and got["dot"]
     assert got["whileOpen"] == 0
 
+def test_agent_setup_dialog_fits_without_sideways_scrolling(page):
+    """Help > Agent (MCP) Setup: long paths, the JSON config and the claude mcp add command wrap inside the dialog."""
+    wide = page.evaluate("""async () => {
+        T.close(); await window.app.mcpDialog(); document.querySelector('#mcp-show')?.click();
+        const box = document.querySelector('#modal-box');
+        const right = box.getBoundingClientRect().right;
+        const out = [...box.querySelectorAll('*')].filter((e) => e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX !== 'visible'
+            || e.getBoundingClientRect().right > right + 1).map((e) => e.tagName);
+        T.close();
+        return out;
+    }""")
+    assert wide == []
+
 def test_no_script_errors(page):
     assert page.errors == []
 
