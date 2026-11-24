@@ -1,6 +1,6 @@
 // openswx UI controller.
 import { icon } from "./icons.js";
-import { Viewport } from "./viewport.js";
+import { Viewport, decodeMeshBinary } from "./viewport.js";
 import { PropertyManager, SPECS, UNITS, el, escapeHtml } from "./propman.js";
 import { Sketcher } from "./sketcher.js";
 import { DrawingEditor } from "./drawing.js";
@@ -90,6 +90,19 @@ class App {
     return r.json();
   }
 
+  async fetchMesh() {
+    try {
+      const r = await fetch("/api/mesh.bin");
+      if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+      const mesh = decodeMeshBinary(await r.arrayBuffer());
+      if (!mesh || !Array.isArray(mesh.faces)) throw new Error("no faces in the document");
+      return mesh;
+    } catch (err) {
+      console.warn("binary mesh unavailable, using JSON:", err);
+      return this.api("/api/mesh");
+    }
+  }
+
   // Long solves run as background jobs (start_job): a progress toast with Cancel, and the UI stays usable.
   async commandOrJob(name, args = {}) {
     if (!LONG_JOBS.has(name)) return this.api("/api/command", { name, args });
@@ -152,7 +165,7 @@ class App {
   async refreshOnce() {
     const st = await this.api("/api/state");
     const meshFresh = this.mesh && st.version === this.meshVersion && this.model && this.model.name === st.model.name;
-    const mesh = meshFresh ? this.mesh : await this.api("/api/mesh");
+    const mesh = meshFresh ? this.mesh : await this.fetchMesh();
     const first = this.version < 0 || (this.model && this.model.name !== st.model.name);
     this.version = st.version; this.model = st.model; this.docs = st.documents; this.mesh = mesh; this.meshVersion = st.version;
     if (UNITS.name !== (this.model.units || "mm")) { UNITS.set(this.model.units || "mm"); if (this.pm?.active) this.pm.render(); }

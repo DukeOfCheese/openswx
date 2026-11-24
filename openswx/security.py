@@ -25,7 +25,7 @@ from urllib.parse import parse_qs, urlsplit
 COOKIE = "openswx_token"
 VIEW_COOKIE = "openswx_view"
 # what a view-only link may ask for: the page, the model as shown, live updates, pictures - and queries
-VIEW_GET = ("/api/state", "/api/mesh", "/api/events", "/api/image", "/api/commands", "/api/drawing", "/api/health")
+VIEW_GET = ("/api/state", "/api/mesh", "/api/mesh.bin", "/api/events", "/api/image", "/api/commands", "/api/drawing", "/api/health")
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 OPEN_PATHS = {"/api/health"}  # (liveness only: says whether a command is running)
 

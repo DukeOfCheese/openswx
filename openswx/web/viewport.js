@@ -1,6 +1,40 @@
 // 3D graphics area: orthographic camera, SOLIDWORKS-style navigation, picking, highlighting, previews.
 import * as THREE from "three";
 
+// Decode /api/mesh.bin: magic "OSWXMESH", version, header length, compact JSON header in which {"$buf": i}
+// marks the little-endian typed arrays that follow, back to back. Builds the same object setMesh() expects.
+export function decodeMeshBinary(data) {
+  const magic = String.fromCharCode(...new Uint8Array(data, 0, 8));
+  if (magic !== "OSWXMESH") throw new Error("not an openswx mesh document");
+  const view = new DataView(data);
+  const version = view.getUint32(8, true);
+  if (version !== 1) throw new Error(`unsupported mesh document version ${version}`);
+  const start = 16 + view.getUint32(12, true);
+  const header = JSON.parse(new TextDecoder().decode(new Uint8Array(data, 16, start - 16)));
+  const arrays = [];
+  let offset = start;
+  for (const [kind, count] of header.buf || []) {
+    arrays.push(kind === 0 ? new Float32Array(data, offset, count) : new Uint32Array(data, offset, count));
+    offset += 4 * count;
+  }
+  const revive = (value) => {
+    if (Array.isArray(value)) return value.map(revive);
+    if (value && typeof value === "object") {
+      if (typeof value.$buf === "number" && Object.keys(value).length === 1) return arrays[value.$buf];
+      for (const key of Object.keys(value)) value[key] = revive(value[key]);
+    }
+    return value;
+  };
+  return revive(header.mesh);
+}
+
+// A geometry built from /api/mesh.bin already has typed-array indices; setIndex() would store a bare typed array
+// where the renderer expects a BufferAttribute, so those become one here (plain JSON arrays go through as before).
+const applyIndex = (geo, t) => {
+  if (ArrayBuffer.isView(t)) geo.setIndex(new THREE.Uint32BufferAttribute(t, 1)); // (typed arrays are no BufferAttribute)
+  else geo.setIndex(t);
+};
+
 const COL = {
   body: 0xc4cad3, hover: 0xf08a00, sel: 0x2f7be0, edge: 0x101010, preview: 0xffcf33,
   sketchUnder: 0x1d4fd6, sketchFull: 0x111111, sketchOver: 0xd0312d, sketchDangling: 0x8a6516, construction: 0x6b7cab, plane: 0x6f9ee0,
@@ -72,7 +106,7 @@ export class Viewport {
     for (const f of mesh.faces) {
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.Float32BufferAttribute(f.v, 3));
-      geo.setIndex(f.t); geo.computeVertexNormals(); geo.computeBoundingBox(); box.union(geo.boundingBox);
+      applyIndex(geo, f.t); geo.computeVertexNormals(); geo.computeBoundingBox(); box.union(geo.boundingBox);
       const hex = f.color || mesh.material_color; // appearance: face/feature/part colour, else the material colour
       const base = hex ? parseInt(hex.slice(1), 16) : COL.body;
       const mat = new THREE.MeshPhongMaterial({ color: base, specular: 0x2a2a2a, shininess: 38, side: THREE.DoubleSide,
@@ -82,14 +116,14 @@ export class Viewport {
     }
     for (const f of mesh.surfaces || []) { // surface bodies: light, double-sided, not pickable
       const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.Float32BufferAttribute(f.v, 3)); geo.setIndex(f.t); geo.computeVertexNormals();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(f.v, 3)); applyIndex(geo, f.t); geo.computeVertexNormals();
       geo.computeBoundingBox(); box.union(geo.boundingBox);
       this.groups.body.add(new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: 0xd9c98a, side: THREE.DoubleSide, transparent: true, opacity: 0.85,
         polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 })));
     }
     for (const f of mesh.context || []) { // Edit Part in context: the rest of the assembly, ghosted and not pickable
       const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.Float32BufferAttribute(f.v, 3)); geo.setIndex(f.t); geo.computeVertexNormals();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(f.v, 3)); applyIndex(geo, f.t); geo.computeVertexNormals();
       this.groups.body.add(new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: 0x8fa4bf, transparent: true, opacity: 0.28, depthWrite: false,
         side: THREE.DoubleSide })));
     }
@@ -199,7 +233,7 @@ export class Viewport {
     if (!this.groups.section) { this.groups.section = new THREE.Group(); this.scene.add(this.groups.section); }
     this._clear(this.groups.section);
     for (const f of sec?.cap || []) {
-      const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(f.v, 3)); geo.setIndex(f.t); geo.computeVertexNormals();
+      const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(f.v, 3)); applyIndex(geo, f.t); geo.computeVertexNormals();
       this.groups.section.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x9fb6dd, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1 })));
     }
     for (const e of sec?.cap_edges || []) {
@@ -233,7 +267,7 @@ export class Viewport {
       const f = by[id];
       if (f) {
         m.userData.origGeo ??= m.geometry;
-        const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(f.v, 3)); geo.setIndex(f.t); geo.computeVertexNormals();
+        const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(f.v, 3)); applyIndex(geo, f.t); geo.computeVertexNormals();
         if (m.geometry !== m.userData.origGeo) m.geometry.dispose();
         m.geometry = geo;
       } else if (m.userData.origGeo) { if (m.geometry !== m.userData.origGeo) m.geometry.dispose(); m.geometry = m.userData.origGeo; delete m.userData.origGeo; }
@@ -329,7 +363,7 @@ export class Viewport {
     if (mesh && mesh.faces) {
       for (const f of mesh.faces) {
         const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(f.v, 3));
-        geo.setIndex(f.t); geo.computeVertexNormals();
+        applyIndex(geo, f.t); geo.computeVertexNormals();
         // translucent overlay drawn over the model, which stays visible and pickable
         const m = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: COL.preview, transparent: true, opacity: 0.42,
           depthWrite: false, depthTest: false, side: THREE.DoubleSide }));

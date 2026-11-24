@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import session as S
+from .mesh_binary import encode_mesh
 
 _log = logging.getLogger("openswx.web")
 
@@ -141,6 +142,10 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
     @app.get("/api/mesh")
     def mesh():
         return S.get_mesh()
+
+    @app.get("/api/mesh.bin")
+    def mesh_binary():
+        return Response(encode_mesh(S.get_mesh()), media_type="application/octet-stream")
 
     def collab_revision() -> int:
         mod = sys.modules.get("openswx.collab.client")
