@@ -51,7 +51,6 @@ const MIXIN = {
     }
   },
 
-  // ================================================================== status / task pane
   renderStatus() {
     $("#sb-units").textContent = { mm: "MMGS", cm: "CGS", m: "MKS", in: "IPS", ft: "FPS" }[this.model?.units || "mm"] || "MMGS";
     if (!this.sk.active) $("#sb-editing").textContent = this.model?.kind === "assembly" ? "Editing Assembly" : "Editing Part";
@@ -113,7 +112,6 @@ const MIXIN = {
     }
   },
 
-  // ------------------------------------------------------------------ simulation (linear static)
   async simFixture() {
     const faces = this.selection.filter((s) => s.kind === "face");
     if (!faces.length) return this.toast("Select the face(s) to fix, then Fixed Geometry.");
@@ -267,7 +265,6 @@ const MIXIN = {
       min: lo, max: hi, color: (t) => `rgb(${rgb(t).map((c) => Math.round(c * 255)).join(",")})` });
   },
 
-  // ------------------------------------------------------------------ evaluate tools
   async evalCall(name, args = {}) { const r = await this.commandOrJob(name, args); if (!r.ok) { this.toast(r.error, "err"); return null; } return r.result; },
 
   sectionDialog() {

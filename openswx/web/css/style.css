@@ -1,13 +1,10 @@
-/* openswx UI styles. The parts below are imported in cascade order; edit the file that owns the
-   widget rather than this list. */
-
-@import url("base.css"); /* design tokens, light/dark theme, reset */
-@import url("titlebar.css"); /* title bar, menu bar, cascading menus */
-@import url("commandmanager.css"); /* CommandManager trays and tabs */
-@import url("workspace.css"); /* workspace grid, left pane, FeatureManager tree, PropertyManager */
-@import url("graphics.css"); /* graphics area, overlays, heads-up toolbar, triad */
-@import url("taskpane.css"); /* task pane */
-@import url("statusbar.css"); /* status bar */
-@import url("dialogs.css"); /* context menus, modals, toasts, drawing editor, measure, view cube, keyboard focus */
-@import url("home.css"); /* Home page */
-@import url("collab.css"); /* live collaboration and its Home tab */
+@import url("base.css");
+@import url("titlebar.css");
+@import url("commandmanager.css");
+@import url("workspace.css");
+@import url("graphics.css");
+@import url("taskpane.css");
+@import url("statusbar.css");
+@import url("dialogs.css");
+@import url("home.css");
+@import url("collab.css");

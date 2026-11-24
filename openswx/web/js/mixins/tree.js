@@ -382,7 +382,6 @@ const MIXIN = {
     }, "circular_pattern");
   },
 
-  // ------------------------------------------------------------------ configurations / equations
   renderConfigPane() {
     const pane = $("#config"); const m = this.model; if (!pane || !m) return;
     pane.innerHTML = "";

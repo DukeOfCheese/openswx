@@ -63,7 +63,6 @@ class App {
     }, "open");
   }
 
-  // ================================================================== server
   async api(path, body) {
     const r = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
     return r.json();

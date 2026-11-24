@@ -129,7 +129,6 @@ const MIXIN = {
     this.setSelection([]); this.prompt("");
   },
 
-  // ================================================================== sketch mode
   sketchCommand() {
     const s = this.selection[0];
     if (s && (s.kind === "face" || s.kind === "plane")) return this.createSketch(s.id);
@@ -324,7 +323,6 @@ const MIXIN = {
 
   suppressSelected(on) { const f = this.selection.find((s) => s.kind === "feature"); if (f) this.run("suppress_feature", { name: f.id, suppressed: on }); },
 
-  // ================================================================== view helpers
   normalTo() {
     if (this.sk.active) { const ov = this.mesh.sketches.find((s) => s.name === this.sk.name); if (ov) return this.vp.normalTo(ov.z, ov.x); }
     const s = this.selection[0];

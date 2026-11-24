@@ -29,7 +29,6 @@ def _part():
     return doc
 
 
-# ====================================================================== CAM
 @command(mutates=False, category="cam")
 def cam_generate(setup: Literal["+Z", "-Z", "+X", "-X", "+Y", "-Y"] = "+Z", tool_diameter: float = 6.0, flutes: int = 3,
                  stepdown: float | None = None, stepover: float | None = None, leave: float = 0.3,
@@ -177,7 +176,6 @@ def cam_toolpaths() -> dict:
     return {**_cam_summary(r), "paths": toolpath_display(r)}
 
 
-# ====================================================================== plastics
 @command(mutates=False, category="plastics")
 def plastics_materials() -> dict:
     """The plastics library: generic grades with melt / mold / ejection temperatures, viscosity (power law)."""
@@ -236,7 +234,6 @@ def plastics_results(field: Literal["fill_time", "pressure", "thickness", "weld"
             "gates": [g for g in cached[3] if not isinstance(g, str)], "fill_time_s": r["fill_time_s"]}
 
 
-# ====================================================================== Inspection
 def _insp_doc():
     from openswx.session import _drawing_state
     doc = APP.active_doc
@@ -322,7 +319,6 @@ def inspection_report(path: str, format: Literal["html", "csv"] = "html", includ
     return {"path": str(p.resolve()), **I.summary(chars)}
 
 
-# ====================================================================== electrical
 def _elec():
     asm = APP.asm
     e = getattr(asm, "electrical", None)
@@ -482,7 +478,6 @@ def electrical_info() -> dict:
     return {"connectors": e["connectors"], "routes": e["routes"], "wires": e["wires"], "component": e.get("component")}
 
 
-# ====================================================================== Composer
 def _comp():
     asm = APP.asm
     c = getattr(asm, "composer", None)

@@ -19,7 +19,6 @@ def _kind(doc) -> str:
     return getattr(doc, "kind", "part")
 
 
-# ====================================================================== the document as a script
 @command(mutates=False, category="file")
 def export_script(path: str | None = None) -> dict:
     """The active document as a Python script: the commands that built it, in order, through the openswx API
@@ -51,7 +50,6 @@ def export_script(path: str | None = None) -> dict:
     return out
 
 
-# ====================================================================== compare
 def _load(ref: str):
     """An open document by name, or a native file read without opening it in the session."""
     if ref in APP.documents:
@@ -167,7 +165,6 @@ def compare_documents(a: str, b: str | None = None) -> dict:
     return out
 
 
-# ====================================================================== requirements
 QUANTITIES = ("mass", "volume", "surface_area", "size_x", "size_y", "size_z", "longest_side", "min_thickness",
               "dimension", "bodies", "errors", "components", "interferences")
 _OPS = {"<": operator.lt, "<=": operator.le, ">": operator.gt, ">=": operator.ge, "==": None, "!=": None}
@@ -285,7 +282,6 @@ def check_requirements() -> dict:
             "ok": all(r["passes"] for r in results)}
 
 
-# ====================================================================== review
 @command(mutates=False, category="evaluate")
 def review_model(min_wall: float = 1.0, draft_direction: str | None = None, draft_angle: float = 1.0) -> dict:
     """An automatic design review of the active part: every finding names what it is about, how serious it is
@@ -359,7 +355,6 @@ def review_model(min_wall: float = 1.0, draft_direction: str | None = None, draf
             "requirements_checked": len(req["requirements"])}
 
 
-# ====================================================================== hand-off pack
 @command(mutates=False, category="file")
 def export_handoff_pack(folder: str, zip_file: bool = True, formats: list[str] | None = None) -> dict:
     """Everything a workshop or supplier needs, in one folder (and a .zip): the model as STEP (formats: e.g.
@@ -428,7 +423,6 @@ def export_handoff_pack(folder: str, zip_file: bool = True, formats: list[str] |
     return result
 
 
-# ====================================================================== tolerance stack-up, design study
 @command(mutates=False, category="evaluate")
 def tolerance_stack(contributors: list[dict], general_class: Literal["f", "m", "c", "v"] | None = None) -> dict:
     """Tolerance stack-up along one direction: `contributors` is the chain of model dimensions that make up a
@@ -562,7 +556,6 @@ def design_study(variables: dict[str, list[float]], measures: list[str] | None =
             "best": best, "kept_best": kept}
 
 
-# ====================================================================== 3D printing, sheet-metal gauges
 @command(mutates=False, category="evaluate")
 def print_orientation(overhang_angle: float = 45.0, bed: list[float] | None = None) -> dict:
     """3D-print orientation advisor: for each of the six axis-aligned ways up, the build height, the area that

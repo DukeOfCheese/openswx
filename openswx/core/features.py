@@ -71,7 +71,6 @@ class Ctx:
     unfold: dict = field(default_factory=dict)  # sheet metal: bend feature -> the Unfold that lays it flat
 
 
-# ---------------------------------------------------------------------- reference resolution
 def end_condition_name(v) -> str:
     if isinstance(v, int):
         for k, n in END_CONDITIONS.items():
@@ -253,7 +252,6 @@ def _through_length(ctx: Ctx, plane: Plane) -> float:
     return 2 * size + 10
 
 
-# ---------------------------------------------------------------------- builders
 def _ext_alive(body, ref: dict) -> bool:
     """Does the model edge a converted sketch entity came from still exist (same kind, same place)?"""
     from openswx.core.geom import closest_point, geom_name
@@ -772,7 +770,6 @@ def build_thicken(ctx: Ctx, p: dict, name: str) -> None:
         ctx.surfaces.pop(p["surface"], None)
 
 
-# ---------------------------------------------------------------------- B8 sheet metal extras
 def build_hem(ctx: Ctx, p: dict, name: str) -> None:
     """Sheet metal Hem on a straight edge: the sheet folded back 180 deg. closed = tight (gap ~ 0), open =
     `gap` between the faces; `length` of the folded-back leg."""
@@ -1387,7 +1384,6 @@ def build_jog(ctx: Ctx, p: dict, name: str) -> None:
     ctx.info[name] = {"allowance": BA, "flat_distance": D, "offset": round(rise, 9)}
 
 
-# ---------------------------------------------------------------------- B8 surfaces
 def _sketch_wires(ctx: Ctx, name: str):
     from build123d import Wire
     if name in ctx.curves:
@@ -1579,7 +1575,6 @@ def build_trim_surface(ctx: Ctx, p: dict, name: str) -> None:
     _add_surface(ctx, name, out)
 
 
-# ---------------------------------------------------------------------- B8 weldments
 def build_end_cap(ctx: Ctx, p: dict, name: str) -> None:
     """Weldments > End Cap: close the open ends of a structural member's tubes/pipes with plates of
     `thickness`, inset into the member end."""
@@ -2636,7 +2631,6 @@ def encode_shape(shape: Shape) -> str:
     return base64.b64encode(buf.getvalue()).decode()
 
 
-# ---------------------------------------------------------------------- body / face editing and curves
 def _cutting_tool(ctx: Ctx, spec):
     """A plane (name or planar face) or a surface body (its feature name) to split with."""
     if isinstance(spec, str) and spec in ctx.surfaces:

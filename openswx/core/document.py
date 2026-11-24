@@ -98,7 +98,6 @@ class PartDocument:
         self.journal: list | None = []  # (a new document: everything done to it gets recorded)
         self.rebuild()
 
-    # ------------------------------------------------------------------ persistence
     def to_dict(self) -> dict:
         return {
             "format": FORMAT, "version": VERSION, "name": self.name, "units": self.units,
@@ -178,7 +177,6 @@ class PartDocument:
         doc.dirty = False
         return doc
 
-    # ------------------------------------------------------------------ undo
     def _checkpoint(self) -> None:
         self._undo.append(snapshots.pack(self.to_dict()))
         self._undo = self._undo[-100:]
@@ -198,7 +196,6 @@ class PartDocument:
         self.load_dict(snapshots.unpack(self._redo.pop()))
         self.dirty = True
 
-    # ------------------------------------------------------------------ tree editing
     def find(self, name: str) -> dict:
         for f in self.features:
             if f["name"] == name or f["id"] == name:
@@ -383,7 +380,6 @@ class PartDocument:
             self._config(config)["suppressed"][feat["name"]] = suppressed
         self.rebuild()
 
-    # ------------------------------------------------------------------ equations & variables
     def set_variable(self, name: str, expression) -> None:
         if not name.isidentifier():
             raise DocumentError("global variable names must be identifiers (letters, digits, _)")
@@ -465,7 +461,6 @@ class PartDocument:
         return {"global_variables": [{"name": k, "expression": v, "value": ev_globals.get(k)} for k, v in self.variables.items()],
                 "equations": eqs, "dimensions": self.dim_values}
 
-    # ------------------------------------------------------------------ configurations
     def _config(self, name: str) -> dict:
         if name not in self.configurations:
             raise DocumentError(f"no configuration {name!r}")
@@ -517,7 +512,6 @@ class PartDocument:
             self.active_config = "Default"
         self.rebuild()
 
-    # ------------------------------------------------------------------ display states (saved appearances)
     def save_display_state(self, name: str, hidden: list | None = None) -> None:
         if not name:
             raise DocumentError("give the display state a name")
@@ -568,7 +562,6 @@ class PartDocument:
             self.configurations[config]["values"][k] = value
         self.rebuild()
 
-    # ------------------------------------------------------------------ design table
     def get_design_table(self) -> dict:
         """The design table: the stored one, or one made from the configurations (a column per overridden
         value and per feature suppressed somewhere; $STATE@Feature cells are S / U)."""
@@ -734,7 +727,6 @@ class PartDocument:
                     cols[i] = item["color"]
         return cols
 
-    # ------------------------------------------------------------------ rebuild
     def rebuild(self) -> dict:
         t0 = time.perf_counter()
         ctx = Ctx(flat=getattr(self, "flattened", False))
@@ -812,7 +804,6 @@ class PartDocument:
         self.dirty = True
         return {"seconds": round(time.perf_counter() - t0, 3), "errors": {k: v["error"] for k, v in state.items() if "error" in v}}
 
-    # ------------------------------------------------------------------ queries
     @property
     def body(self):
         return self.ctx.body

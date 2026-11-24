@@ -32,7 +32,6 @@ _TABLE = {
     "Natural Rubber": ("Rubber", 1000, 6.1, 0.49, 0.0, 13.8, 0.14, "#2b2b2b", 1800),
     "Oak": ("Woods", 700, 11e3, 0.35, 0.0, 90.0, 0.17, "#a77b46", 2000),
     "Glass": ("Other", 2500, 70e3, 0.22, 0.0, 33.0, 1.0, "#bcd9e0", 840),
-    # --- more grades (typical handbook values; the condition in brackets where it matters)
     "AISI 1010 (hot rolled)": ("Steel", 7870, 200e3, 0.29, 180.0, 325.0, 65.2, "#8e9399", 450),
     "AISI 1018 (cold drawn)": ("Steel", 7870, 205e3, 0.29, 370.0, 440.0, 51.9, "#8d9298", 486),
     "AISI 1040 (cold drawn)": ("Steel", 7845, 200e3, 0.29, 490.0, 585.0, 50.7, "#8b9097", 486),

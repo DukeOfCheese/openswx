@@ -103,7 +103,6 @@ def _rotation(el) -> float:
     return float(m.group(1)) if m else 0.0
 
 
-# ---------------------------------------------------------------------- PDF
 def svg_to_pdf(svg: str) -> bytes:
     return svgs_to_pdf([svg])
 
@@ -223,7 +222,6 @@ def _page(svg: str):
     return W, H, "\n".join(ops).encode("latin-1")
 
 
-# ---------------------------------------------------------------------- DXF
 def svg_to_dxf(svg: str, path: str) -> str:
     import ezdxf
     from ezdxf.enums import TextEntityAlignment

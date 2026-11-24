@@ -21,7 +21,6 @@ const faceItem = (id) => ({ kind: "face", label: id, value: id });
 const edgeItem = (id) => ({ kind: "edge", label: id, value: id });
 const refItems = (kind, refs) => (refs || []).map((r, i) => ({ kind, label: `${kind[0].toUpperCase()}${kind.slice(1)}<${i + 1}>`, value: r }));
 
-// ====================================================================== PropertyManagers
 const moldSpec = (cmd, title, ic, extra = [], extraArgs = () => ({})) => ({
   title, icon: ic, command: cmd,
   groups: [{ title: "Mold Parameters", fields: [{ key: "direction", type: "select", options: DIR, value: "Y" },
@@ -211,7 +210,6 @@ export const MORE_TYPE_ICON = { flex: "revolve", deform: "dimple", freeform: "di
   ruled_surface: "surface", radiate_surface: "surface", extend_surface: "offset_surface", untrim_surface: "trim_surface", flatten_surface: "flatten",
   connection_point: "ref_point", mate_reference: "mate" };
 
-// ====================================================================== menus: cascading submenus from "A > B > C" paths
 export function menuTree(items) {
   const root = [];
   const find = (list, label) => list.find((n) => n.children && n.label === label);
@@ -258,7 +256,6 @@ export function renderMenu(drop, nodes, onPick) {
   }
 }
 
-// ====================================================================== charts
 export function lineChart(series, { xlabel = "", ylabel = "", w = 380, h = 190 } = {}) {
   const all = series.flatMap((s) => s.points); if (!all.length) return "";
   const xs = all.map((p) => p[0]), ys = all.map((p) => p[1]);
@@ -280,7 +277,6 @@ const kv = (rows) => `<div class="kv">${rows.filter((r) => r && r[1] !== undefin
 const rgbRamp = (t) => { t = Math.max(0, Math.min(1, t)); return t < 0.25 ? [0, 4 * t, 1] : t < 0.5 ? [0, 1, 2 - 4 * t] : t < 0.75 ? [4 * t - 2, 1, 0] : [1, 4 - 4 * t, 0]; };
 const css = (c) => `rgb(${c.map((x) => Math.round(x * 255)).join(",")})`;
 
-// ====================================================================== rendering: environment, floor, shadows, decals
 const SCENES = {
   studio: { bg: 0xeef0f3, walls: 0xc9cdd3, lights: 0xffffff, floor: 0xdcdfe4, sky: null },
   warehouse: { bg: 0x9a8f80, walls: 0xa08a6c, lights: 0xffe2b8, floor: 0x8d8478, sky: null },
@@ -312,9 +308,7 @@ function pbrFor(hex, mat) {
     side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
 }
 
-// ====================================================================== App mixin
 const MIXIN = {
-  // ---------------------------------------------------------------- generic command form
   /** fields: [key, label, type ("number"|"text"|"vec"|"list"|"points"|"select"|"check"), default, options] */
   cmdForm(title, cmd, fields, { ic = "properties", fixed = {}, note = "", xf = (x) => x } = {}) {
     const id = (k) => `cf_${k}`;
@@ -354,7 +348,6 @@ const MIXIN = {
 
   selectedIds(kind) { return (this.selection || []).filter((s) => s.kind === kind).map((s) => s.id); },
 
-  // ---------------------------------------------------------------- analysis studies
   async nonlinearDialog() {
     const r = await this.cmdForm("Nonlinear Static Study", "nonlinear_run", [["steps", "Load steps", "number", 10], ["hardening", "Hardening (tangent modulus / E)", "number", 0.05],
       ["element_size", "Element size (mm, blank: auto)", "number", ""]], { ic: "sim_run", note: "Elastic-plastic material (bilinear) with the study's fixtures and loads." });
@@ -463,7 +456,6 @@ const MIXIN = {
     this.vp.setLegend({ title: "Pressure coefficient Cp", unit: `U = ${r.speed} m/s, q = ${r.dynamic_pressure_Pa.toFixed(1)} Pa`, min: lo, max: hi, color: (t) => css(rgbRamp(t)) });
   },
 
-  // ---------------------------------------------------------------- costing, sustainability
   async costingDialog() {
     const r = await this.cmdForm("Costing", "costing", [["method", "Method", "select", this.model?.sheet_metal ? "sheet_metal" : "machining",
       [["machining", "Machining"], ["sheet_metal", "Sheet metal"], ["additive", "3D printing"], ["casting", "Casting"]]], ["quantity", "Quantity", "number", 1],
@@ -492,7 +484,6 @@ const MIXIN = {
     this.showResult("Sustainability", { material: r.material || "-", mass_kg: r.mass_kg, region: r.region }, bars + `<p class="muted">${legend}<br>Generic published figures for the material class; end of life credits recycling.</p>`, "material");
   },
 
-  // ---------------------------------------------------------------- DimXpert / PMI overlay
   async dimxpertDialog() {
     const r = await this.cmdForm("DimXpert - Auto Dimension Scheme", "dimxpert_auto", [["general_tolerance", "General tolerance (±mm)", "number", 0.1],
       ["position_tolerance", "Position tolerance (⌀mm)", "number", 0.1]], { ic: "gdt", note: "Datums, sizes and hole patterns with tolerances, as 3D annotations." });
@@ -517,7 +508,6 @@ const MIXIN = {
     hook.pmi = true; this.vp.frameHooks.push(hook); this.vp.dirty = true;
   },
 
-  // ---------------------------------------------------------------- decals in the viewport
   updateDecals() {
     const vp = this.vp;
     if (!vp.groups.decals) { vp.groups.decals = new THREE.Group(); vp.scene.add(vp.groups.decals); }
@@ -542,7 +532,6 @@ const MIXIN = {
 
   afterRefreshMore() { this.updatePMI(); this.updateDecals(); },
 
-  // ---------------------------------------------------------------- photo rendering
   renderSettings() {
     return { scene: $("#rsc").value, floor: $("#rfl").checked, shadows: $("#rsh").checked, exposure: parseFloat($("#rex").value), background: $("#rbgu").checked ? $("#rbg").value : null };
   },
@@ -702,7 +691,6 @@ const MIXIN = {
     }
   },
 
-  // ---------------------------------------------------------------- assembly tools
   altPositionsDialog() {
     const names = Object.keys(this.model?.alternate_positions || {});
     this.modal("Alternate Position", `<div class="field"><label>Save the current positions as</label><input id="apn" value="Position${names.length + 1}"></div>
@@ -782,7 +770,6 @@ const MIXIN = {
     if (r) this.toast(r.result?.mate ? `Snapped: ${escapeHtml(r.result.mate)}` : "No connection point within reach.");
   },
 
-  // ---------------------------------------------------------------- Design Library
   async designLibraryDialog() {
     const lib = await this.evalCall("list_design_library"); if (!lib) return;
     const asm = this.model?.kind === "assembly";
@@ -805,7 +792,6 @@ const MIXIN = {
     const ap = $("#dlpart"); if (ap) ap.onclick = async () => { await this.run("add_part_to_design_library", {}).catch(() => {}); this.designLibraryDialog(); };
   },
 
-  // ---------------------------------------------------------------- PDM
   async pdmDialog(filter = "") {
     const all = await this.evalCall("pdm_list"); if (!all) return;
     const files = filter ? ((await this.evalCall("pdm_search", { text: filter }))?.files || []) : all.files;
@@ -838,7 +824,6 @@ const MIXIN = {
     });
   },
 
-  // ---------------------------------------------------------------- eDrawings, macros
   async publishEDrawing() {
     const path = await this.askPath("save", `${this.model.name}.html`, ["eDrawings-style viewer (*.html)"], "Publish eDrawings File");
     if (!path) return;

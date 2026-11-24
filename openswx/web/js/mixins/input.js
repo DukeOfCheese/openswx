@@ -84,7 +84,6 @@ const MIXIN = {
     });
   },
 
-  // ------------------------------------------------------------------ box select / zoom to area
   moveBox(e) {
     const b = this.box; b.x1 = e.x; b.y1 = e.y;
     if (!b.moved && Math.hypot(b.x1 - b.x0, b.y1 - b.y0) < 5) return;
@@ -139,7 +138,6 @@ const MIXIN = {
     this.vp.zoomToItems(items);
   },
 
-  // ------------------------------------------------------------------ selection filter (F5; X faces, E edges, V vertices)
   filterHas(k) { return !!this.filter?.has(k); },
 
   toggleFilter(k) {
@@ -151,7 +149,6 @@ const MIXIN = {
 
   filterKinds() { return this.filter ? [...this.filter] : null; },
 
-  // ------------------------------------------------------------------ Select Other (right-click): everything under the cursor
   selectOther(e) {
     const list = this.vp.pickAll(e.x, e.y).filter((p) => !this.filter || this.filter.has(p.kind));
     if (!list.length) return this.toast("Nothing else under the cursor.");
@@ -171,7 +168,6 @@ const MIXIN = {
     setTimeout(() => m.classList.remove("hidden"));
   },
 
-  // ------------------------------------------------------------------ mouse gestures (right-drag), S-key shortcut bar, repeat last command
   gestureItems() {
     if (this.sk.active) return { up: ["smart_dim", "Smart Dimension", () => this.setSketchTool("smart_dim")], right: ["line", "Line", () => this.setSketchTool("line")],
       down: ["rectangle", "Corner Rectangle", () => this.setSketchTool("rectangle")], left: ["circle", "Circle", () => this.setSketchTool("circle")] };
@@ -221,7 +217,6 @@ const MIXIN = {
 
   remember(label, fn) { this.lastCommand = { label, fn }; },
 
-  // ------------------------------------------------------------------ assembly: drag components, Hide/Show, Isolate
   startCompDrag(e, pick) {
     const name = pick.id.split("/")[0], c = (this.model.components || []).find((x) => x.name === name);
     if (!c) return;
@@ -266,7 +261,6 @@ const MIXIN = {
 
   showAllComponents() { this.hiddenComps.clear(); this.vp.setHiddenComponents([]); this.renderTree(); },
 
-  // ------------------------------------------------------------------ documents
   async switchDocument(name) { if (name !== this.model.name) { await this.run("activate_document", { name }); this.vp.zoomFit(); } },
 
   nextDocument() {
@@ -329,7 +323,6 @@ const MIXIN = {
     this.pm.accept(item);
   },
 
-  // ================================================================== features / PropertyManager
   selectedSketch() {
     for (const s of this.selection) {
       if (s.kind === "feature" && s.type === "sketch") return s.id;
@@ -339,7 +332,6 @@ const MIXIN = {
     return null;
   },
 
-  // ================================================================== selection
   setSelection(list) {
     this.selection = list;
     this.vp.setSelection(list.filter((s) => ["face", "edge", "sketch", "plane", "axis", "point", "csys", "curve"].includes(s.kind)));

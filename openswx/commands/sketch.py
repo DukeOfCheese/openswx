@@ -34,7 +34,6 @@ __all__ = ["create_sketch", "edit_sketch_plane", "sketch_line", "sketch_centerli
            "sketch_move_point", "set_sketch_visibility", "create_3d_sketch", "add_3d_sketch_segment"]
 
 
-# ====================================================================== sketching
 @command(category="sketch")
 def create_sketch(plane: str | dict = "Front", name: str | None = None) -> dict:
     """Insert a new sketch on 'Front', 'Top', 'Right', a reference plane name (e.g. 'Plane1') or a

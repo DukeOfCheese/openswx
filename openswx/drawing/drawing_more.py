@@ -16,7 +16,6 @@ PHANTOM = 'stroke="#000" stroke-width="0.18" stroke-dasharray="6 1.2 1.2 1.2 1.2
 THIN = 'stroke="#000" stroke-width="0.25"'
 
 
-# ====================================================================== layers
 def _layered(root: dict, item: dict, chunks: list[str]) -> list[str]:
     """An annotation's SVG on its layer: hidden layers drop it, coloured layers recolour it."""
     lay = (root.get("layers") or {}).get(item.get("layer") or "")
@@ -54,7 +53,6 @@ def layered_dims(root: dict, sheet: dict, v: dict, render) -> list[str]:
     return out
 
 
-# ====================================================================== surface finish (ISO 1302)
 def surface_finish_svg(f: dict) -> list[str]:
     """The surface texture symbol with its tip at (x, y): a short and a long leg at 60 degrees; `process`
     any (open), required (material removal: a bar) or prohibited (a circle); Ra above the extension line;
@@ -82,7 +80,6 @@ def surface_finish_svg(f: dict) -> list[str]:
     return out
 
 
-# ====================================================================== weld symbols (ISO 2553 / AWS A2.4 style)
 WELD_TYPES = ("fillet", "v_groove", "square", "bevel", "plug", "spot", "u_groove", "j_groove")
 
 
@@ -148,7 +145,6 @@ def weld_svg(w: dict) -> list[str]:
     return out
 
 
-# ====================================================================== stacked balloons
 def stacked_svg(b: dict, items: dict) -> list[str]:
     """The extra balloons of a stack, touching the first one downwards or to the right."""
     out, r = [], 4.0
@@ -161,7 +157,6 @@ def stacked_svg(b: dict, items: dict) -> list[str]:
     return out
 
 
-# ====================================================================== cosmetic threads in views
 def thread_marks(doc, st: dict, v: dict, t, frame, to2d, scale: float) -> list[str]:
     """Cosmetic threads drawn as in ISO 6410: seen end-on, a thin three-quarter circle at the thread diameter;
     seen side-on, thin lines along the thread (hidden lines for internal threads)."""
@@ -192,7 +187,6 @@ def thread_marks(doc, st: dict, v: dict, t, frame, to2d, scale: float) -> list[s
     return out
 
 
-# ====================================================================== alternate position views
 def alternate_phantom(doc, st: dict, v: dict, t, frame, project) -> list[str]:
     """An assembly view's alternate position: the components that move, drawn where that position puts them
     in phantom lines (long dash, two short dashes)."""
@@ -220,7 +214,6 @@ def alternate_phantom(doc, st: dict, v: dict, t, frame, project) -> list[str]:
     return [f'<polyline points="{" ".join(f"{a:.3f},{b:.3f}" for a, b in (t(*q) for q in poly))}" {PHANTOM}/>' for poly in vis]
 
 
-# ====================================================================== sheet formats (title-block templates)
 def _cell(x, y, w, h, label, text, size=3.0, bold=False):
     return {"x": x, "y": y, "w": w, "h": h, "label": label, "text": text, "size": size, "bold": bold}
 

@@ -26,7 +26,6 @@ export class Sketcher {
 
   setTool(t) { this.tool = t; this.reset(); this.app.prompt(TOOL_HINT[t] || ""); }
 
-  // --- data from the server
   update(detail, overlay) {
     this.detail = detail; this.overlay = overlay;
     this.vp.dirty = true; // (the dimensions and relations are redrawn with the next frame)
@@ -111,7 +110,6 @@ export class Sketcher {
     return { uv: b, rel: null };
   }
 
-  // ------------------------------------------------------------------ events
   async click(e) {
     const t = this.tool;
     if (t === "select") return false;
@@ -328,7 +326,6 @@ export class Sketcher {
 
   setToolSelect() { this.app.setSketchTool("select"); }
 
-  // ------------------------------------------------------------------ dragging points (select tool)
   down(e) {
     if (this.tool !== "select" || e.button !== 0) return false;
     const s = this.snap(e.x, e.y);
@@ -368,7 +365,6 @@ export class Sketcher {
     return true;
   }
 
-  // ------------------------------------------------------------------ Smart Dimension
   // As in SOLIDWORKS: pick one or two items and the dimension follows the cursor; where it is placed chooses a
   // horizontal, vertical or aligned distance (and which side of two lines an angle is), the click places it there
   // and the Modify box opens on it. A click on an existing dimension edits it.
@@ -540,7 +536,6 @@ export class Sketcher {
   }
   closeModify() { this.modify?.remove(); this.modify = null; }
 
-  // ------------------------------------------------------------------ overlay: dimensions and relation glyphs
   renderOverlay() {
     const v = !this.name && this.showDims;
     if (!v) return this._renderOverlay();
@@ -730,7 +725,6 @@ const TOOL_HINT = {
   select: "",
 };
 
-// ---------------------------------------------------------------------- math helpers
 function sub(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
 function onArc(c, s, e, q) { // q (on the circle) lies on the counter-clockwise arc from s to e
   const a = (p) => (Math.atan2(p[1] - c[1], p[0] - c[0]) + 2 * Math.PI) % (2 * Math.PI);

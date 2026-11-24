@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-# ---------------------------------------------------------------------- base schema (13006)
 # field spec: "name:code" ; code = d n u c l w f p v i b h ; fixed arrays "code[k]" ; variable "code[]"
 _CURVE = "node_id:d attributes_groups:p owner:p next:p previous:p geometric_owner:p sense:c"
 _SURF = _CURVE
@@ -118,7 +117,6 @@ class XTError(ValueError):
     pass
 
 
-# ---------------------------------------------------------------------- streams
 # Both encodings expose the same semantic reads, so one schema-driven parser serves text and binary files.
 class _Text:
     def __init__(self, data: str):
@@ -289,7 +287,6 @@ class _Binary:
         raise XTError(f"unknown field type {c!r}")
 
 
-# ---------------------------------------------------------------------- file reader
 @dataclass
 class Model:
     nodes: dict = field(default_factory=dict)  # index -> (type, {field: value})
@@ -402,7 +399,6 @@ def read_xt_file(path: str) -> Model:
         return read_xt_bytes(fh.read())
 
 
-# ---------------------------------------------------------------------- B-rep construction (OpenCASCADE)
 SCALE = 1000.0  # XT lengths are metres; openswx works in millimetres
 
 
@@ -572,7 +568,6 @@ class _Builder:
         if msg not in self.warnings:
             self.warnings.append(msg)
 
-    # ----------------------------------------------------------------- geometry
     @staticmethod
     def _pnt(v):
         from OCP.gp import gp_Pnt
@@ -929,7 +924,6 @@ class _Builder:
 
     v_fastest = True
 
-    # ----------------------------------------------------------------- topology
     def vertex(self, idx):
         if idx not in self.vertices:
             from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeVertex

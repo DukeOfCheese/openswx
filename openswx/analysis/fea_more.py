@@ -72,7 +72,6 @@ def _grid(m, vm, U) -> dict:
             "elem_ijk": np.stack([m["I"], m["J"], m["K"]], 1), "vm": vm, "U": U.reshape(-1, 3), "used": m["used"]}
 
 
-# ====================================================================== nonlinear static (elastic-plastic)
 def solve_nonlinear(body, material: dict, fixtures: list, loads: list, steps: int = 10, hardening: float = 0.05,
                     element_size: float | None = None, target_elements: int = 12000) -> dict:
     """Elastic-plastic static study: bilinear material (yield strength, then a tangent modulus `hardening` x E),
@@ -116,7 +115,6 @@ def solve_nonlinear(body, material: dict, fixtures: list, loads: list, steps: in
             "iterations": iters, "curve": curve, "_grid": _grid(m, stress, U)}
 
 
-# ====================================================================== linear dynamics (modal superposition)
 def _modal_basis(body, material, fixtures, modes, element_size, target_elements, mesh: str = "voxel"):
     if mesh == "tetrahedral":
         from openswx.analysis.fea_tet import modal_basis
@@ -189,7 +187,6 @@ def solve_step_response(body, material: dict, fixtures: list, loads: list, durat
             "peak_displacement": peak, "dynamic_amplification": peak / (mags[node] or 1.0), "element_size": m["h"]}
 
 
-# ====================================================================== drop test
 def solve_drop(body, material: dict, impact_faces: list, height: float, direction, element_size: float | None = None,
                target_elements: int = 12000) -> dict:
     """Drop test (energy method): the part falls `height` mm along `direction` onto a rigid floor and lands on
@@ -240,7 +237,6 @@ def solve_drop(body, material: dict, impact_faces: list, height: float, directio
             "factor_of_safety": float(ys / vm.max()) if ys and vm.max() > 0 else None, "_grid": _grid(m, vm, U * Gs)}
 
 
-# ====================================================================== fatigue
 INFINITE_LIFE = 1e12
 
 

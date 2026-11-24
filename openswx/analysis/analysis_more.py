@@ -11,7 +11,6 @@ import numpy as np
 FLUIDS = {"air": {"density": 1.204, "viscosity": 1.81e-5}, "water": {"density": 998.0, "viscosity": 1.0e-3}}
 
 
-# ====================================================================== flow (potential flow)
 def flow_study(body, direction, speed: float, fluid: str = "air", cells_across: int = 20) -> dict:
     """Steady potential (inviscid, incompressible) flow past a part in a free stream of `speed` m/s along
     `direction`: velocity potential on a voxel grid around the part (zero flux into the part, the free stream
@@ -121,7 +120,6 @@ def flow_surface_values(result: dict, mesh: dict) -> dict:
     return out
 
 
-# ====================================================================== costing
 PRICE_PER_KG = {"Steel": 1.2, "Stainless Steel": 4.5, "Iron": 0.9, "Aluminium Alloys": 3.5, "Copper Alloys": 8.5,
                 "Titanium Alloys": 35.0, "Plastics": 3.0, "Rubber": 4.0, "Woods": 1.5, "Other": 2.0}  # generic, USD/kg
 REMOVAL_CM3_MIN = {"Steel": 12.0, "Stainless Steel": 8.0, "Iron": 15.0, "Aluminium Alloys": 50.0, "Copper Alloys": 25.0,
@@ -187,7 +185,6 @@ def cost_estimate(doc, method: str = "machining", quantity: int = 1, rate_per_ho
             "cost_batch": round(each * batch, 2), "mass_kg": mass_kg, **detail}
 
 
-# ====================================================================== sustainability
 IMPACT = {  # per kg of material: kg CO2e, MJ, litres of water (generic primary-production figures)
     "Steel": (2.0, 25.0, 45.0), "Stainless Steel": (6.2, 80.0, 120.0), "Iron": (1.9, 20.0, 40.0),
     "Aluminium Alloys": (12.0, 200.0, 1100.0), "Copper Alloys": (4.0, 60.0, 300.0), "Titanium Alloys": (35.0, 600.0, 500.0),
@@ -232,7 +229,6 @@ def sustainability(doc, region: str = "Oceania", process: str = "machining", tra
             "units": {"co2": "kg CO2e", "energy": "MJ", "water": "L"}}
 
 
-# ====================================================================== DimXpert (model-based definition)
 def _hole_tol(dia: float) -> str:  # ISO 286 H7
     for top, tol in ((3, "+0.010"), (6, "+0.012"), (10, "+0.015"), (18, "+0.018"), (30, "+0.021"), (50, "+0.025"),
                      (80, "+0.030"), (120, "+0.035")):

@@ -258,7 +258,6 @@ def _slice(field, solid, org, h, k):
             "extent": [float(org[0]), float(org[0] + field.shape[0] * h), float(org[1]), float(org[1] + field.shape[1] * h)]}
 
 
-# ====================================================================== external flow
 def external_flow(body, direction, speed: float, fluid: str = "air", cells_across: int = 16,
                   max_steps: int = 20000, budget: float = 600.0) -> dict:
     """The part in a free stream of `speed` m/s along `direction`: drag and lift (coefficients on the frontal
@@ -344,7 +343,6 @@ def external_flow(body, direction, speed: float, fluid: str = "air", cells_acros
             "_slice": _slice(sp, solid, org, h, N[2] // 2)}
 
 
-# ====================================================================== internal flow
 def _inside_outline(solid2d: np.ndarray) -> np.ndarray:
     """Cells of a 2D section enclosed by material (not joined to the section's border through empty cells)."""
     from scipy.ndimage import label

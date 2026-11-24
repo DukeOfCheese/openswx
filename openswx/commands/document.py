@@ -44,7 +44,6 @@ __all__ = ["new_part", "open_part", "save_part", "recent_files", "clear_recent_f
            "list_materials", "set_appearance", "set_custom_property", "set_units", "parent_child", "get_view_image"]
 
 
-# ====================================================================== document commands
 @command(category="document")
 def new_part(name: str | None = None) -> dict:
     """Create a new, empty part document (like File > New > Part) and make it active."""
@@ -339,7 +338,6 @@ def export_file(path: str, format: Literal["step", "stl", "brep", "x_t", "iges",
     return {"exported": str(Path(path).resolve()), "format": fmt}
 
 
-# ====================================================================== queries
 @command(mutates=False, category="query")
 def get_model() -> dict:
     """Summary of the active document. Parts: FeatureManager tree (with status/errors), rollback, bodies,
@@ -492,7 +490,6 @@ def measure_items(items: list[str | Vec3]) -> dict:
     return out
 
 
-# ====================================================================== tree editing
 @command(category="edit")
 def undo() -> dict:
     """Undo the last change to the active document. In a cloud document (live collaboration) this takes back
@@ -629,7 +626,6 @@ def suppress_feature(name: str, suppressed: bool = True, configuration: str | No
     return APP.doc.summary()
 
 
-# ====================================================================== equations / configurations
 @command(category="equations")
 def set_global_variable(name: str, expression: str | float) -> dict:
     """Create or change a global variable (Equations > Global Variables), e.g. ('width', 120) or
@@ -827,7 +823,6 @@ def parent_child(name: str) -> dict:
     return {"feature": feat["name"], "parents": parents, "children": children}
 
 
-# ====================================================================== view capture
 @command(mutates=False, category="query")
 def get_view_image(view: Literal["isometric", "front", "back", "top", "bottom", "left", "right", "trimetric"] = "isometric",
                    width: int = 800, height: int = 600, show_edges: bool = True) -> dict:

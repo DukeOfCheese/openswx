@@ -19,7 +19,6 @@ class VaultError(ValueError):
     pass
 
 
-# ====================================================================== PDM vault
 def _user() -> str:
     try:
         return getpass.getuser()
@@ -203,7 +202,6 @@ class Vault:
         return out
 
 
-# ====================================================================== macros
 def macro_source(entries: list[dict]) -> str:
     """A Python macro replaying recorded commands through the openswx API."""
     lines = [f'"""openswx macro, recorded {_dt.datetime.now():%Y-%m-%d %H:%M}. Run it with Tools > Macro > Run (or',
@@ -215,7 +213,6 @@ def macro_source(entries: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
-# ====================================================================== eDrawings-style HTML
 def viewer_html(title: str, payload: dict, three_js: str) -> str:
     """A single-file HTML viewer (three.js inlined): orbit / pan / zoom, standard views, component visibility,
     section plane, measure, and markup (pen, notes) that can be saved as a PNG and JSON."""

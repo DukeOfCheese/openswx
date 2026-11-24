@@ -98,7 +98,6 @@ const MIXIN = {
     Promise.resolve(tab.render.call(this, panel)).catch((e) => { panel.innerHTML = `<p class="hm-empty">${escapeHtml(String(e?.message || e))}</p>`; });
   },
 
-  // ---------------------------------------------------------------- the Local tab
   async homeLocal(panel) {
     panel.innerHTML = `<h1>Local files</h1>
       <div class="hm-actions">

@@ -199,7 +199,6 @@ const MIXIN = {
 
   closeMenus() { document.querySelectorAll(".menu-root.open").forEach((r) => r.classList.remove("open")); if (!document.querySelector(".menu-root.open")) $("#menubar").classList.remove("open"); },
 
-  // ================================================================== CommandManager
   renderCommandManager() {
     const sketching = this.sk.active;
     const B = (k, label, fn, opts = {}) => ({ k, label, fn, ...opts });
@@ -372,7 +371,6 @@ const MIXIN = {
     }
   },
 
-  // ================================================================== heads-up toolbar, confirmation corner
   buildHeadsUp() {
     const hu = $("#headsup");
     const btn = (k, title, fn) => { const b = el("button", "hu", icon(k)); b.title = title; b.onclick = (e) => { e.stopPropagation(); fn(b); }; return b; };
@@ -415,7 +413,6 @@ const MIXIN = {
 
   prompt(msg) { const p = $("#prompt-msg"); p.textContent = msg || ""; p.classList.toggle("show", !!msg); },
 
-  // ================================================================== left pane / tree
   buildLeftTabs() {
     const keys = { tree: "tab_tree", pm: "tab_pm", config: "tab_config", display: "tab_display" };
     document.querySelectorAll(".lp-tab").forEach((b) => { b.innerHTML = icon(keys[b.dataset.pane]); b.onclick = () => this.showPane(b.dataset.pane); });

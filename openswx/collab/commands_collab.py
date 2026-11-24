@@ -70,7 +70,6 @@ def _client(document: str | None = None):
     return c
 
 
-# ---------------------------------------------------------------------- account
 @command(mutates=False, category="collab")
 def collab_sign_in(server: str, email: str | None = None, password: str | None = None,
                    provider: Literal["google", "github"] | None = None, invite: str | None = None) -> dict:
@@ -229,7 +228,6 @@ def collab_documents(project: str) -> dict:
         return {"project": p, "documents": _ok(s.get(f"/api/projects/{p['id']}/documents"), "listing documents")}
 
 
-# ---------------------------------------------------------------------- sharing
 @command(category="collab")
 def collab_enable(project: str, name: str | None = None) -> dict:
     """Turn live collaboration on for the active part: it becomes a cloud document in the given project (id or
@@ -343,7 +341,6 @@ def collab_new_part(project: str, name: str = "Part") -> dict:
     return {**_open(info["id"], info), "project": p["name"]}
 
 
-# ---------------------------------------------------------------------- team: organisations, members, invites
 def _org(s, org: str | None) -> dict:
     orgs = _ok(s.get("/api/orgs"), "listing organisations")
     pick = [o for o in orgs if org is None or org == o["id"] or org.lower() == o["name"].lower()]
@@ -490,7 +487,6 @@ def collab_disable() -> dict:
     return {"stopped": c.document_id, "document": c.doc.name, "pending_dropped": pending}
 
 
-# ---------------------------------------------------------------------- working together
 @command(mutates=False, category="collab")
 def collab_lock(features: list[str], document: str | None = None, owner: str | None = None) -> dict:
     """Lock features or sketches of the active cloud document (by name) so nobody else can change them while you

@@ -76,7 +76,6 @@ def bend_radius(size: str, radius: str = "long") -> float:
     return float(_need(ELBOW_LR if radius == "long" else ELBOW_SR, size, f"{radius} radius elbow"))
 
 
-# ------------------------------------------------------------------ geometry (local frames, mm)
 def _zcyl(r: float, length: float, z0: float = 0.0):
     """Solid cylinder along +Z from z0."""
     from build123d import Align, Cylinder, Pos
@@ -158,7 +157,6 @@ def flange_shape(size: str, schedule: str):
     return body, float(Y)
 
 
-# ------------------------------------------------------------------ placing parts along a route
 def frame(origin, z_dir, x_dir=None):
     """A Location whose +Z is z_dir at origin (x_dir: where local +X points, made square to z_dir)."""
     from build123d import Location, Plane, Vector

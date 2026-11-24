@@ -15,7 +15,6 @@ const warnings = (list) => (list || []).map((w) => `<p class="muted">⚠ ${escap
 const download = (name, text, type = "text/plain") => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); };
 
 const MIXIN = {
-  // ---------------------------------------------------------------- CAM
   async camFinish3d() {
     const r = await this.cmdForm("CAM - 3D Parallel Finishing", "cam_finish_3d", [
       ["tool", "Tool", "select", "ball", [["ball", "Ball end mill"], ["bull", "Bull nose end mill"], ["flat", "Flat end mill"]]],
@@ -80,7 +79,6 @@ const MIXIN = {
     }, "export");
   },
 
-  // ---------------------------------------------------------------- Plastics
   async plasticsDialog() {
     const faces = this.selectedIds("face");
     const fields = [["material", "Plastic", "select", "ABS", PLASTICS]];
@@ -116,7 +114,6 @@ const MIXIN = {
     this.toast("Markers: weld lines magenta, air traps blue, gates yellow.");
   },
 
-  // ---------------------------------------------------------------- Inspection
   async inspectionDialog() {
     const r = await this.evalCall("inspection_characteristics"); if (!r) return;
     const s = r.summary;
@@ -154,7 +151,6 @@ const MIXIN = {
     $("#ins_csv").onclick = () => save("csv");
   },
 
-  // ---------------------------------------------------------------- Electrical
   async connectorDialog() {
     const comps = (this.model.components || []).map((c) => c.name);
     if (!comps.length) return this.toast("Insert the connector components first.", "err");
@@ -199,7 +195,6 @@ const MIXIN = {
     if (r) this.toast(`Saved ${escapeHtml(r.result.path)}`);
   },
 
-  // ---------------------------------------------------------------- Composer
   composerAuto() {
     this.modal("Composer - Steps from Exploded View", `<label class="pm-check"><input type="radio" name="cmo" value="assembly" checked> Assembly instructions (parts laid out, then put together)</label>
       <label class="pm-check"><input type="radio" name="cmo" value="disassembly"> Disassembly (assembled, then taken apart)</label>`, () => {

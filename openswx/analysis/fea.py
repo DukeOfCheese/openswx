@@ -606,7 +606,6 @@ def refine_mesh(mesh: dict, h: float, max_tris: int = 400000) -> dict:
     return {"faces": faces}
 
 
-# ---------------------------------------------------------------------- steady-state thermal
 def _thermal_point_matrices(h, sub):
     """Per midpoint (x-major, sub^3): grad(N)' grad(N) (8x8) times the point weight; and exact Gauss Ke."""
     w = np.prod(h) / sub ** 3

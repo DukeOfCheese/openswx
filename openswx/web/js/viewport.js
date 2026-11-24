@@ -63,7 +63,6 @@ export class Viewport {
   on(ev, fn) { (this.listeners[ev] ||= []).push(fn); }
   emit(ev, ...a) { (this.listeners[ev] || []).forEach((f) => f(...a)); }
 
-  // ------------------------------------------------------------------ geometry
   setMesh(mesh) {
     this.mesh = mesh;
     for (const g of ["body", "edges", "sketch", "planes"]) this._clear(this.groups[g]);
@@ -189,7 +188,6 @@ export class Viewport {
     }
   }
 
-  // ------------------------------------------------------------------ evaluate overlays
   // section view: clip everything beyond the plane (kept side: (p - origin) . normal <= 0) and draw the cap
   setSection(sec) {
     this.section = sec || null;
@@ -401,7 +399,6 @@ export class Viewport {
     this._applyHighlights();
   }
 
-  // ------------------------------------------------------------------ highlighting
   setHover(h) { if (JSON.stringify(h) !== JSON.stringify(this.hover)) { this.hover = h; this._applyHighlights(); } }
   setSelection(list) { this.selection = list.slice(); this._applyHighlights(); }
 
@@ -432,7 +429,6 @@ export class Viewport {
     this.dirty = true;
   }
 
-  // ------------------------------------------------------------------ camera
   resize() {
     const el = this.canvas.parentElement; const w = el.clientWidth, h = el.clientHeight;
     if (!w || !h) return;
@@ -590,7 +586,6 @@ export class Viewport {
     this.target.add(before.sub(after)); this._placeCamera();
   }
 
-  // ------------------------------------------------------------------ projections
   ndc(sx, sy) { return new THREE.Vector2((sx / this.w) * 2 - 1, -(sy / this.h) * 2 + 1); }
   ray(sx, sy) { const r = new THREE.Raycaster(); r.setFromCamera(this.ndc(sx, sy), this.camera); return r; }
   screenToWorldOnTargetPlane(sx, sy) {
@@ -609,7 +604,6 @@ export class Viewport {
     return [(p.x + 1) / 2 * this.w, (1 - p.y) / 2 * this.h, p.z];
   }
 
-  // ------------------------------------------------------------------ picking
   pick(sx, sy, opts = {}) {
     const { sketchOnly = false, kinds = null } = opts;
     const want = (k) => !kinds || kinds.includes(k);
@@ -713,7 +707,6 @@ export class Viewport {
     if (this.faces.size) { this.applyStyle(this.style); this._applyHighlights(); }
   }
 
-  // ------------------------------------------------------------------ input
   _bindInput() {
     const c = this.canvas;
     let drag = null;
@@ -759,7 +752,6 @@ export class Viewport {
     c.addEventListener("pointerleave", () => this.emit("leave"));
   }
 
-  // ------------------------------------------------------------------ render loop
   _loop() {
     const tick = (t) => {
       requestAnimationFrame(tick); // first: an exception in a frame hook must not stop the view updating

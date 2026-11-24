@@ -1,11 +1,37 @@
-/* status bar */
-/* ---------------- status bar */
-#statusbar { display: flex; align-items: center; gap: 0; background: var(--chrome); font-size: 11.5px; color: var(--muted); box-shadow: 0 -1px 0 var(--chrome-2); position: relative; z-index: 1; }
-#statusbar > span { padding: 0 10px; height: 100%; display: flex; align-items: center; }
-#statusbar > span + span:not(.sb-fill) { box-shadow: inset 1px 0 0 var(--chrome-2); }
-#statusbar .sb-fill { flex: 1; }
-#sb-state.under { color: var(--accent); }
-#sb-state.full { color: var(--text); font-weight: 600; }
-#sb-state.over { color: var(--cancel); font-weight: 600; }
-#sb-agent { color: var(--muted); }
-
+#statusbar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--chrome);
+  font-size: 11.5px;
+  color: var(--muted);
+  box-shadow: 0 -1px 0 var(--chrome-2);
+  position: relative;
+  z-index: 1;
+}
+#statusbar > span {
+  padding: 0 10px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+#statusbar > span + span:not(.sb-fill) {
+  box-shadow: inset 1px 0 0 var(--chrome-2);
+}
+#statusbar .sb-fill {
+  flex: 1;
+}
+#sb-state.under {
+  color: var(--accent);
+}
+#sb-state.full {
+  color: var(--text);
+  font-weight: 600;
+}
+#sb-state.over {
+  color: var(--cancel);
+  font-weight: 600;
+}
+#sb-agent {
+  color: var(--muted);
+}

@@ -22,7 +22,6 @@ class XTWriteError(ValueError):
     pass
 
 
-# ---------------------------------------------------------------------- text encoding
 def _num(v) -> str:
     if v is None:
         return "?"
@@ -85,7 +84,6 @@ def _header(key: str, filename: str) -> str:
                       stars("**END_OF_HEADER")]) + "\n"
 
 
-# ---------------------------------------------------------------------- node graph
 class _Out:
     def __init__(self):
         self.nodes: dict[int, tuple[int, dict]] = {}

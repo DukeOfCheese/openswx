@@ -38,7 +38,6 @@ def feeds(material: str, diameter: float, flutes: int = 3, drill: bool = False) 
     return {"rpm": round(rpm), "feed": round(f, 1), "plunge": round(f * 0.3, 1)}
 
 
-# ---------------------------------------------------------------------------------------------- set-up
 def setup_rotation(setup: str) -> np.ndarray:
     """Rotation taking part coordinates to machine coordinates (the tool comes down from machine +Z)."""
     s = setup.upper().strip()
@@ -79,7 +78,6 @@ def heightmap(V: np.ndarray, T: np.ndarray, x0: float, y0: float, cell: float, n
     return H
 
 
-# ---------------------------------------------------------------------------------------------- contours
 # marching squares: corners b0 (i, j), b1 (i+1, j), b2 (i+1, j+1), b3 (i, j+1); edges B, R, T, L
 _SEGS = {1: [("L", "B")], 2: [("B", "R")], 3: [("L", "R")], 4: [("R", "T")], 6: [("B", "T")], 7: [("L", "T")],
          8: [("T", "L")], 9: [("B", "T")], 11: [("R", "T")], 12: [("L", "R")], 13: [("B", "R")], 14: [("L", "B")]}
@@ -175,7 +173,6 @@ def simplify(P: np.ndarray, tol: float, closed: bool = True) -> np.ndarray:
     return P[keep]
 
 
-# ---------------------------------------------------------------------------------------------- holes
 def find_holes(body, R: np.ndarray, max_diameter: float) -> list[dict]:
     """Cylindrical holes along the machine Z axis: [{x, y, diameter, top, bottom}] (machine coordinates,
     before the origin shift). Faces of one hole (split cylinders) are grouped by axis and radius."""
@@ -214,7 +211,6 @@ def find_holes(body, R: np.ndarray, max_diameter: float) -> list[dict]:
     return [g for g in groups.values() if g["span"] >= 2 * math.pi - 1e-3]
 
 
-# ---------------------------------------------------------------------------------------------- toolpaths
 def _runs(row: np.ndarray, xs: np.ndarray) -> list[tuple[float, float]]:
     """Intervals of a row where the field is >= 0, ends interpolated to the zero crossing."""
     ins = row >= 0
@@ -519,7 +515,6 @@ def _op_time(op, tool):
     return feed_len, tmin
 
 
-# ---------------------------------------------------------------------------------------------- G-code
 def _f(v):
     s = f"{v:.4f}".rstrip("0").rstrip(".")
     return "0" if s in ("-0", "") else s
@@ -631,7 +626,6 @@ def toolpath_display(result: dict) -> list[dict]:
     return out
 
 
-# ---------------------------------------------------------------------------------------------- 3D finishing
 def tool_profile(kind: str, radius: float, corner_radius: float, d: np.ndarray) -> np.ndarray:
     """Height of the tool's cutting surface above its tip at radial distance d from the axis (d <= radius):
     flat 0; ball r - sqrt(r2 - d2); bull nose flat in the middle with a corner radius."""

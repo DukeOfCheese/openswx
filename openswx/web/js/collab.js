@@ -56,7 +56,6 @@ function plainArgs(v, key = "", depth = 0) {
 const storage = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch { /* (no storage) */ } } };
 
 const MIXIN = {
-  // ---------------------------------------------------------------- set-up and state
   initCollab() {
     const groups = {};
     for (const k of ["sel", "drafts", "ghost"]) { groups[k] = new THREE.Group(); this.vp.scene.add(groups[k]); }
@@ -150,7 +149,6 @@ const MIXIN = {
     return p;
   },
 
-  // ---------------------------------------------------------------- the bar: state, avatars, follow
   collabRenderBar(d) {
     const cl = this.cl, bar = cl.bar;
     if (!d) { bar.classList.add("hidden"); cl.barHtml = ""; return; }
@@ -205,7 +203,6 @@ const MIXIN = {
     cl.followRaf = requestAnimationFrame(step);
   },
 
-  // ---------------------------------------------------------------- presence out
   collabToolLabel() {
     if (this.sk.active) return this.sk.tool && this.sk.tool !== "select" ? `${words(this.sk.tool)} in ${this.sk.name}` : `Editing ${this.sk.name}`;
     if (this.pm.active) return this.editing ? `Editing ${this.editing}` : this.pm.spec?.title || null;
@@ -290,7 +287,6 @@ const MIXIN = {
     this.collabRelease("pm");
   },
 
-  // ---------------------------------------------------------------- locks (a sketch or a feature's panel)
   // Opening a sketch or a feature's panel on a cloud document locks it; when someone else holds the lock it
   // does not open (a toast says who), as SOLIDWORKS PDM does with a checked-out file.
   async collabLock(name, slot) {
@@ -352,7 +348,6 @@ const MIXIN = {
     }
   },
 
-  // ---------------------------------------------------------------- presence in
   collabDrawPeers(d, names) {
     const cl = this.cl;
     const peers = d ? (d.peers || []).filter((p) => !p.you) : [];
@@ -543,7 +538,6 @@ const MIXIN = {
     this.collabApply();
   },
 
-  // ---------------------------------------------------------------- conflicts
   collabConflicts(d) {
     const cl = this.cl;
     if (!d) return;
@@ -579,7 +573,6 @@ const MIXIN = {
       the model shows their version:</p><table class="dw-bom cl-refused"><tr><th>Your change</th><th>Changed first by</th><th>Why</th></tr>${rows}</table>`, null, "warning");
   },
 
-  // ---------------------------------------------------------------- the Collaborate menu: only what belongs to the open document
   // (signing in, opening and creating cloud parts, and the team are on Home's Cloud tab)
   collabMenu() {
     const d = this.collabDoc();
@@ -625,7 +618,6 @@ const MIXIN = {
     if (this.homeOpen && this.homeTab === "cloud") this.homeRender();
   },
 
-  // ---------------------------------------------------------------- Home: the Cloud tab
   // What the tab last loaded (organisations and projects, each project's parts, each team) is kept for the server
   // and account it came from: coming back to the tab draws it at once, then asks the server again behind it and
   // draws again only what changed. Signing in as someone else, or on another server, starts afresh.
@@ -915,7 +907,6 @@ const MIXIN = {
     }, "part");
   },
 
-  // ---------------------------------------------------------------- New Part: local or cloud (once a server is set up)
   async collabChooseNewPart() {
     const r = await this.api("/api/command", { name: "collab_status", args: {} }).catch(() => null);
     const st = r?.ok ? r.result : null;

@@ -23,7 +23,6 @@ def openswx_home() -> Path:
     return Path(os.environ.get("OPENSWX_HOME") or Path.home() / ".openswx")
 
 
-# ====================================================================== Flex / Deform / Freeform
 @command(category="features")
 def flex(type: Literal["bend", "twist", "taper", "stretch"], axis: str | Vec3 = "X", angle: float = 90.0,
          factor: float = 0.5, distance: float = 10.0, start: float | None = None, end: float | None = None,
@@ -50,7 +49,6 @@ def freeform(face: str, distance: float, radius: float | None = None) -> dict:
     return _feat("freeform", {"face": _face(APP.doc, face), "distance": distance, "radius": radius})
 
 
-# ====================================================================== fillets
 @command(category="features")
 def fillet_profile(edges: list[str], radius: float, profile: Literal["conic", "curvature_continuous"] = "conic",
                    rho: float = 0.5) -> dict:
@@ -87,7 +85,6 @@ def fillet_xpert(edges: list[str], radius: float) -> dict:
     return {"features": made, "failed": failed, "model": doc.summary()}
 
 
-# ====================================================================== mold tools
 @command(category="mold")
 def parting_line(direction: str | Vec3 = "Y", level: float | None = None) -> dict:
     """Mold Tools > Parting Line: the edges dividing the part between core and cavity for the pull direction."""
@@ -115,7 +112,6 @@ def tooling_split(direction: str | Vec3 = "Y", margin: float = 10.0, level: floa
     return _feat("tooling_split", {"direction": direction, "margin": margin, "level": level, "keep_part": keep_part})
 
 
-# ====================================================================== derived parts, cosmetic threads
 @command(category="features")
 def insert_part(path: str, position: Vec3 | None = None, rotation_deg: Vec3 | None = None,
                 op: Literal["add", "cut"] = "add", merge: bool = True) -> dict:
@@ -138,7 +134,6 @@ def cosmetic_thread(face: str, label: str | None = None, length: float | None = 
     return _feat("cosmetic_thread", {"face": _face(APP.doc, face), "label": label, "length": length})
 
 
-# ====================================================================== surfaces
 @command(category="surfaces")
 def ruled_surface(edges: list[str], distance: float = 10.0,
                   type: Literal["normal", "tangent", "direction"] = "normal", direction: str | Vec3 = "Y") -> dict:
@@ -188,7 +183,6 @@ def filled_surface_edges(edges: list[str], continuity: Literal["contact", "tange
     return _feat("filled_surface", {"edges": [_edge(doc, e) for e in edges], "continuity": continuity, "points": points})
 
 
-# ====================================================================== library features / Design Library
 def _library_dir() -> Path:
     d = openswx_home() / "library"
     (d / "parts").mkdir(parents=True, exist_ok=True)
@@ -309,7 +303,6 @@ def insert_library_feature(name: str, plane: str | dict = "Top", offset: Vec2 | 
     return {"inserted": added, "model": doc.summary()}
 
 
-# ====================================================================== Hole Series (assembly)
 @command(category="assembly")
 def hole_series(position: Vec3, direction: Vec3, diameters: list[float],
                 components: list[str] | None = None) -> dict:
@@ -358,7 +351,6 @@ def hole_series(position: Vec3, direction: Vec3, diameters: list[float],
 
 
 
-# ====================================================================== assemblies: smart / magnetic mates, mate references
 __all__ += ["smart_mate", "connection_point", "mate_reference", "magnetic_mate", "magnetic_snap", "apply_mate_references",
             "save_alternate_position", "show_alternate_position", "delete_alternate_position", "set_envelope",
             "set_speedpak", "large_assembly_mode", "defeature", "pack_and_go", "route_pipe", "route_cable", "weld_bead",
@@ -471,7 +463,6 @@ def apply_mate_references(component: str | None = None) -> dict:
     return {"mates": made, "assembly": asm.summary()}
 
 
-# ====================================================================== alternate positions, envelopes, display modes
 @command(category="assembly")
 def save_alternate_position(name: str) -> dict:
     """Alternate Position: remember where every component is now under a name (for drawings' alternate
@@ -543,7 +534,6 @@ def large_assembly_mode(on: bool = True) -> dict:
     return asm.summary()
 
 
-# ====================================================================== Defeature
 def defeature_shape(body, max_hole: float | None = None, max_fillet: float | None = None):
     """Remove holes up to max_hole diameter and fillets / rounds up to max_fillet radius (defaults: 10% and 3%
     of the part's size) with OCC's defeaturing; if that fails the body is returned unchanged."""
@@ -606,7 +596,6 @@ def defeature(max_hole_diameter: float | None = None, max_fillet_radius: float |
             "model": doc.summary()}
 
 
-# ====================================================================== Pack and Go
 @command(mutates=False, category="document")
 def pack_and_go(folder: str, prefix: str = "", suffix: str = "", zip_file: str | None = None) -> dict:
     """Pack and Go: save the active document and every open document it uses (an assembly's parts) into a
@@ -635,7 +624,6 @@ def pack_and_go(folder: str, prefix: str = "", suffix: str = "", zip_file: str |
     return {"files": written}
 
 
-# ====================================================================== routing, weld beads
 def _virtual_component(shape, base: str, description: str, properties: dict | None = None) -> dict:
     """Add a shape to the active assembly as a virtual (embedded) part component, fixed where it is."""
     from openswx.core.document import PartDocument
@@ -840,7 +828,6 @@ def weld_bead(face1: str, face2: str, size: float) -> dict:
 
 
 
-# ====================================================================== drawings: symbols, stacked balloons, layers, formats
 __all__ += ["drawing_add_surface_finish", "drawing_add_weld_symbol", "drawing_add_stacked_balloon", "drawing_add_layer",
             "drawing_set_layer", "drawing_set_sheet_format", "drawing_save_sheet_format", "list_sheet_formats",
             "drawing_view_alternate_position"]
@@ -1007,7 +994,6 @@ def drawing_view_alternate_position(view: str, position: str | None) -> dict:
 
 
 
-# ====================================================================== analysis: nonlinear, dynamics, drop, fatigue
 __all__ += ["nonlinear_run", "harmonic_run", "step_response_run", "drop_test_run", "fatigue_run", "fatigue_results",
             "flow_simulation", "flow_results", "cfd_external", "cfd_internal", "cfd_results",
             "costing", "sustainability_report", "dimxpert_auto", "dimxpert_clear",
@@ -1146,7 +1132,6 @@ def fatigue_results() -> dict:
     return {"faces": mesh["faces"], "log_life": out["stress"], **_public(r)}
 
 
-# ====================================================================== flow, costing, sustainability
 @command(mutates=False, category="simulation")
 def flow_simulation(speed: float = 10.0, direction: Vec3 = (1, 0, 0), fluid: Literal["air", "water"] = "air",
                     cells_across: int = 20) -> dict:
@@ -1274,7 +1259,6 @@ def sustainability_report(region: Literal["Asia", "Europe", "North America", "Oc
         raise DocumentError(str(exc)) from exc
 
 
-# ====================================================================== DimXpert / MBD
 def _doc_edit(doc, fn):
     doc._checkpoint()
     out = fn(doc)
@@ -1312,7 +1296,6 @@ def dimxpert_clear() -> dict:
     return {"pmi": []}
 
 
-# ====================================================================== rendering (scene and decals)
 @command(category="render")
 def set_render_scene(scene: Literal["studio", "warehouse", "outdoor", "plain_white", "dark"] = "studio",
                      floor: bool = True, shadows: bool = True, exposure: float = 1.0,
@@ -1379,7 +1362,6 @@ def delete_decal(name: str) -> dict:
 
 
 
-# ====================================================================== PDM vault
 __all__ += ["pdm_set_vault", "pdm_list", "pdm_check_in", "pdm_check_out", "pdm_undo_check_out", "pdm_get_version",
             "pdm_change_state", "pdm_history", "pdm_search", "pdm_where_used", "export_edrawing", "macro_start",
             "macro_stop", "macro_status", "run_macro"]
@@ -1486,7 +1468,6 @@ def pdm_where_used(name: str) -> dict:
     return _pdm(lambda v: {"name": name, "used_in": v.where_used(name)})
 
 
-# ====================================================================== eDrawings-style export
 def viewer_payload(doc) -> dict:
     """The model for the single-file HTML viewer: faces / edges (per component in an assembly), properties, PMI."""
     from openswx.core.features import mass_properties
@@ -1537,7 +1518,6 @@ def export_edrawing(path: str) -> dict:
     return {"path": str(p.resolve()), "faces": len(payload["faces"]), "size_bytes": p.stat().st_size}
 
 
-# ====================================================================== macros
 @command(mutates=False, category="tools")
 def macro_start() -> dict:
     """Tools > Macro > Record: record the model-changing commands run from now on (UI or API)."""

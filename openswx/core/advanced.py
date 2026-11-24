@@ -29,7 +29,6 @@ def _dir(spec) -> Vector:
     return v.normalized()
 
 
-# ====================================================================== Flex / Deform / Freeform
 def map_shape(shape: Shape, fn, n: int = 20) -> Shape:
     """Deform a shape by moving the control points of its NURBS geometry through fn(x, y, z) -> (x, y, z).
     The geometry is converted to NURBS, refined (degree >= 3, at least n poles per direction) so a nonlinear
@@ -218,7 +217,6 @@ def build_freeform(ctx: Ctx, p: dict, name: str) -> None:
     _set_body(ctx, map_shape(ctx.body, _falloff(pts, r), int(p.get("resolution", 20))), "freeform")
 
 
-# ====================================================================== fillet profiles
 def _faces_of(body: Shape, edge: Edge) -> list[Face]:
     return [f for f in body.faces() if any(edge.is_same(e) for e in f.edges())]
 
@@ -272,7 +270,6 @@ def build_profile_fillet(ctx: Ctx, p: dict, name: str) -> None:
     ctx.tools[name] = [("cut", t) for t in tools_cut] + [("add", t) for t in tools_add]
 
 
-# ====================================================================== mold tools
 def _parting_edges(body: Shape, d: Vector) -> list[Edge]:
     """Edges where the part turns from faces that see the pull direction (and walls along it) to faces
     that face away: the parting line for a two-plate mold."""
@@ -376,7 +373,6 @@ def build_tooling_split(ctx: Ctx, p: dict, name: str) -> None:
     ctx.info[name] = {"level": level, "direction": list(d), "core_volume": core.volume, "cavity_volume": cavity.volume}
 
 
-# ====================================================================== Insert Part / Mirror Part
 _PART_CACHE: dict = {}
 
 
@@ -419,7 +415,6 @@ def build_insert_part(ctx: Ctx, p: dict, name: str) -> None:
     ctx.info[name] = {"source": p["path"], "volume": shape.volume}
 
 
-# ====================================================================== cosmetic thread
 def build_cosmetic_thread(ctx: Ctx, p: dict, name: str) -> None:
     """Cosmetic Thread on a cylindrical face (hole or shaft): records the thread (label, diameters, length) for
     drawings and shows the thread diameter as circles at its ends; the geometry is not changed."""
@@ -449,7 +444,6 @@ def build_cosmetic_thread(ctx: Ctx, p: dict, name: str) -> None:
                                           "axis_origin": list(o + a * t0), "axis": list(a)}}
 
 
-# ====================================================================== surface tools
 def _ruled_from(edges, dir_fn, distance):
     from OCP.BRepFill import BRepFill
     faces = []

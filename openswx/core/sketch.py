@@ -44,7 +44,6 @@ class Sketch:
         self.counter: int = d.get("counter", 0)
         self.status: dict = d.get("status", {})
 
-    # ------------------------------------------------------------------ serialization
     def to_dict(self) -> dict:
         return copy.deepcopy({
             "points": self.points, "entities": self.entities, "relations": self.relations,
@@ -55,7 +54,6 @@ class Sketch:
         self.counter += 1
         return f"{prefix}{self.counter}"
 
-    # ------------------------------------------------------------------ geometry creation
     def point_id(self, p) -> str:
         """Accept an existing point id or coordinates; return a point id."""
         if isinstance(p, str):
@@ -201,7 +199,6 @@ class Sketch:
                 self.add_relation("tangent", [ln, arc])
         return [l1, a1, l2, a2]
 
-    # ------------------------------------------------------------------ sketch tools
     def _copy_entities(self, entity_ids: list[str], xf, rot: float = 0.0) -> list[str]:
         """Copy entities through the 2D point map `xf` (a rigid motion rotating by `rot` radians)."""
         mapping: dict[str, str] = {}
@@ -525,7 +522,6 @@ class Sketch:
                                     "driven": False, "value": abs(distance)})
         return created
 
-    # ------------------------------------------------------------------ trim / extend
     def _intersections(self, eid: str) -> list[float]:
         """Parameters along entity `eid` where other entities cross it.
         Lines: t in [0,1]; circles/arcs: angle (rad, CCW from +x about the centre)."""
@@ -753,7 +749,6 @@ class Sketch:
         if len(self.relations) + len(self.dimensions) == n:
             raise SketchError(f"no sketch entity, relation or dimension named {item_id!r}")
 
-    # ------------------------------------------------------------------ relations / dimensions
     def add_relation(self, kind: str, refs: list[str]) -> str:
         if kind not in RELATIONS:
             raise SketchError(f"unknown relation {kind!r}; expected one of {sorted(RELATIONS)}")
@@ -815,7 +810,6 @@ class Sketch:
         e = self.entities[ref]
         return {k: (list(self.points[v]) if isinstance(v, str) and v in self.points else v) for k, v in e.items()}
 
-    # ------------------------------------------------------------------ evaluation helpers
     def coords(self, pid: str) -> list[float]:
         return [0.0, 0.0] if pid == ORIGIN else self.points[pid]
 
@@ -823,7 +817,6 @@ class Sketch:
         x, idx = self._vector()
         return float(_dim_measure(self, dim, _Getter(self, x, idx)))
 
-    # ------------------------------------------------------------------ solver
     def _vector(self):
         idx: dict[tuple, int] = {}
         vals: list[float] = []
@@ -947,7 +940,6 @@ class Sketch:
                        "entities": ent_state}
         return self.status
 
-    # ------------------------------------------------------------------ 3D conversion
     def to_edges(self, plane: Plane, construction: bool = False) -> list[tuple[str, Edge]]:
         out = []
         for eid, e in self.entities.items():
@@ -1086,7 +1078,6 @@ class Sketch:
         }
 
 
-# ---------------------------------------------------------------------- internals
 class _Getter:
     def __init__(self, sk: Sketch, x, idx):
         self.sk, self.x, self.idx = sk, x, idx

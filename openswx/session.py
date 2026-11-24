@@ -475,7 +475,6 @@ def _short(args: dict) -> dict:
     return out
 
 
-# ---------------------------------------------------------------------- selection helpers
 def _face(doc: PartDocument, sel) -> dict:
     """Accept 'Face3' (from get_topology) or a reference dict."""
     if isinstance(sel, dict):
@@ -1047,7 +1046,6 @@ def _direction(direction) -> tuple:
     return tuple(direction)
 
 
-# ====================================================================== simulation (linear static)
 def _sim_doc():
     return APP.active_doc
 
@@ -1220,7 +1218,6 @@ def _next_ann(st: dict, prefix: str) -> str:
     return f"{prefix}{i}"
 
 
-# ---- drawing documents: sheets and placed views (SOLIDWORKS drawing workflow) -------------------------
 def _views_edit(fn):
     """fn(st, module) on a drawing that has sheets; returns its result."""
     from openswx.drawing import drawing_sheets as DS
@@ -1309,7 +1306,6 @@ def _new_balloon(st, sh, view, q, x, y, component, text=None) -> dict:
     return b
 
 
-# ====================================================================== assemblies
 def _asm_ref(sel):
     return sel if isinstance(sel, dict) else APP.asm.face_ref_for(sel)
 
@@ -1378,7 +1374,6 @@ def _add_projected(sk, plane, edges, body=None) -> list[str]:
     return created
 
 
-# ====================================================================== features
 def _up_to(doc, up_to):
     """Up-to target: a face id ('Face3') / face reference, or a vertex position [x, y, z]."""
     if up_to is None:

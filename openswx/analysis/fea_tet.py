@@ -38,7 +38,6 @@ def available() -> bool:
     return importlib.util.find_spec("netgen") is not None
 
 
-# ------------------------------------------------------------------------------------------------ meshing
 # netgen-occt's libraries in dependency order (as netgen's own loader takes them)
 _OCCT_ORDER = ["TKernel", "TKMath", "TKDE", "TKG2d", "TKG3d", "TKGeomBase", "TKBRep", "TKGeomAlgo", "TKTopAlgo",
                "TKShHealing", "TKService", "TKMesh", "TKHLR", "TKV3d", "TKCDF", "TKLCAF", "TKPrim", "TKBO", "TKCAF",
@@ -155,7 +154,6 @@ def mesh_body(body, element_size: float | None = None, target_elements: int = 12
     return m
 
 
-# ------------------------------------------------------------------------------------------------ elements
 _A, _B = 0.5854101966249685, 0.1381966011250105
 GAUSS = np.array([(_B, _B, _B), (_A, _B, _B), (_B, _A, _B), (_B, _B, _A)])  # (xi, eta, zeta); weights 1/24
 CORNERS = np.array([(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)])
@@ -271,7 +269,6 @@ def _inverse(A):
     return LinearOperator(A.shape, matvec=lu.solve, dtype=float)
 
 
-# ------------------------------------------------------------------------------------------------ the model
 class Model:
     """A meshed body with per-element material factors and the face lookups the studies need."""
 
@@ -508,7 +505,6 @@ def _solve_contact(model: Model, K, F, free, contacts: list, E: float, max_iter:
     return (K + _pair_matrix(pairs, np.where(active, k_pen, k_soft), nn)).tocsc(), U
 
 
-# ------------------------------------------------------------------------------------------------ studies
 def solve_static(body, material: dict, fixtures: list, loads: list, element_size: float | None = None,
                  target_elements: int = 12000, regions: list | None = None, connectors: list | None = None,
                  _keep: bool = False) -> dict:
@@ -768,7 +764,6 @@ def map_to_mesh(g: dict, mesh: dict, key: str = "vm") -> dict:
     return {"stress": out_s, "displacement": out_u}
 
 
-# ------------------------------------------------------------------------------------------------ nonlinear, dynamics
 def _element_stiffness(model: Model, E: float, nu: float) -> np.ndarray:
     """Element stiffness matrices (E, 30, 30) at unit material factor; sets model.edofs."""
     G, det = _gradients(model.X, GAUSS)

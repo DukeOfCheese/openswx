@@ -37,7 +37,6 @@ class DrawingError(ValueError):
     pass
 
 
-# ---------------------------------------------------------------------- frames
 def _unit(v) -> np.ndarray:
     v = np.asarray(v, float)
     n = np.linalg.norm(v)
@@ -103,7 +102,6 @@ def to3d(xy, fr, depth: float = 0.0) -> np.ndarray:
     return x * xy[0] + up * xy[1] + d * depth
 
 
-# ---------------------------------------------------------------------- lookup
 def sheet_of(st: dict, view_id: str) -> dict:
     for sh in st.get("sheets", []):
         if any(v["id"] == view_id for v in sh["views"]):
@@ -144,7 +142,6 @@ def view_scale(st: dict, view: dict) -> float:
     return float(sheet_of(st, view["id"]).get("scale") or 1.0)
 
 
-# ---------------------------------------------------------------------- geometry of a view
 _FAR = 1e5
 
 
@@ -220,7 +217,6 @@ def view_geometry(doc, st: dict, view: dict, cache: dict | None = None) -> dict:
     return out
 
 
-# ---------------------------------------------------------------------- broken-out, crop and break
 BREAK_GAP = 6.0  # sheet mm between the two break lines of a broken view
 
 
@@ -413,7 +409,6 @@ def half_size(st: dict, view: dict, g: dict) -> tuple[float, float]:
     return (b[2] - b[0]) * s / 2, (b[3] - b[1]) * s / 2
 
 
-# ---------------------------------------------------------------------- rendering
 def _polyline(pts, style: str) -> str:
     return f'<polyline points="{" ".join(f"{a:.3f},{b:.3f}" for a, b in pts)}" fill="none" {style}/>'
 
@@ -518,7 +513,6 @@ def _render_view(doc, st, v, cache) -> list[str]:
     return out
 
 
-# ---------------------------------------------------------------------- dimensions picked in views
 def snap_vertex(g: dict, xy, tol: float):
     """The view-geometry vertex (polyline end or corner) nearest to xy within tol, else None."""
     best, bd = None, tol
@@ -1102,7 +1096,6 @@ def _table(x0, y0, heads, widths, rows, rh=5.5, attr="") -> list[str]:
     return out
 
 
-# ---------------------------------------------------------------------- bill of materials
 def bom_rows(doc, tb: dict) -> list[dict]:
     """The BOM's rows: {"item", "part", "part_number", "description", "qty"} - parts grouped by source, in the
     table's own order (tb["order"]) then as they come, with the user's part number / description overrides."""
@@ -1129,7 +1122,6 @@ def _bom_table(doc, tb, W, H, margin, title_h=44) -> list[str]:
                   [(r["item"], r["part_number"], r["description"], r["qty"]) for r in rows], attr=' data-table="BOM"')
 
 
-# ---------------------------------------------------------------------- hole table
 def view_holes(doc, st: dict, view: dict, cache: dict | None = None) -> list[dict]:
     """The holes seen end-on in a view, tagged as a SOLIDWORKS hole table does (a letter per size, smallest
     first, numbered left to right): {"tag", "c" (view coordinates), "d" (diameter), "depth" (None: through)}."""
@@ -1286,7 +1278,6 @@ def _title_block(doc, sheet, W, H, margin, title_h, fields: dict | None = None) 
     return out
 
 
-# ---------------------------------------------------------------------- building a drawing
 def new_drawing(doc, size: str = "A3", projection: str = "third", scale: float | None = None,
                 standard_views: bool = True) -> dict:
     """A drawing with one sheet; with standard_views: Front, Top, the side view and an isometric, laid out

@@ -122,7 +122,6 @@ class AssemblyDocument:
         self.drawing: dict = {}
         self.study: dict = {"fixtures": [], "loads": [], "element_size": None}
 
-    # ------------------------------------------------------------------ persistence
     def to_dict(self) -> dict:
         return {"format": FORMAT, "version": 1, "name": self.name, "mate_counter": self.mate_counter,
                 "components": [{"name": c.name, "part": c.part, "link": c.link, "x": c.x.tolist(), "fixed": c.fixed,
@@ -190,7 +189,6 @@ class AssemblyDocument:
         self.path, self.name, self.dirty = str(p), p.stem, False
         return str(p)
 
-    # ------------------------------------------------------------------ configurations and display states
     def _all_components(self) -> list:
         out = list(self.components)
         for i, c in sorted(self._parked, key=lambda e: e[0]):
@@ -330,7 +328,6 @@ class AssemblyDocument:
         self._undo.append(snapshots.pack(self.to_dict()))
         self.load_dict(snapshots.unpack(self._redo.pop()))
 
-    # ------------------------------------------------------------------ editing
     def component(self, name: str) -> Component:
         if name == ASSEMBLY:
             return self.__dict__.setdefault("_frame", _AssemblyFrame())
@@ -392,7 +389,6 @@ class AssemblyDocument:
         self.mates = [m for m in self.mates if m["a"]["component"] not in gone and m["b"]["component"] not in gone]
         self.solve()
 
-    # ------------------------------------------------------------------ assembly features
     def _instance_number(self, base: str) -> int:
         """The next instance number of a part: one past the highest in use (counting instances gave a deleted
         component's number to the next one inserted - or the number of one still there)."""
@@ -537,7 +533,6 @@ class AssemblyDocument:
         self.dirty = True
         return feat
 
-    # ------------------------------------------------------------------ exploded view / motion
     def add_explode_step(self, components: list[str], direction, distance: float) -> dict:
         for n in components:
             self.component(n)
@@ -660,7 +655,6 @@ class AssemblyDocument:
         self.mates = [m for m in self.mates if m["name"] != name]
         self.solve()
 
-    # ------------------------------------------------------------------ geometry
     def _local_entity(self, ref: dict):
         """Resolve a mate reference to local geometry: ('plane', p, n) or ('axis', p, d). Results are cached
         per component body and reference (resolving a face matches it against every face of the part)."""
@@ -826,7 +820,6 @@ class AssemblyDocument:
         shapes = [s for c, s in self.world_shapes() if not c.envelope]  # (envelopes are reference only)
         return Compound([sol for s in shapes for sol in s.solids()]) if shapes else None
 
-    # ------------------------------------------------------------------ queries
     def summary(self) -> dict:
         # mass properties integrate every component: reuse them while nothing has moved or changed
         key = (self.revision, tuple(tuple(np.round(c.x, 9)) for c in self.components),

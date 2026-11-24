@@ -111,7 +111,6 @@ def batch(commands: list[dict], atomic: bool = True) -> dict:
     return {"results": results, "count": len(results)}
 
 
-# ====================================================================== background jobs
 @command(mutates=False, category="tools")
 def start_job(name: str, args: dict | None = None) -> dict:
     """Start a long command (simulation_run, cfd_external, cfd_internal, plastics_fill, cam_generate, ...) in the
@@ -153,7 +152,6 @@ def cancel_job(id: str) -> dict:
     return {**jobs.public(job, with_result=False), "cancel_requested": jobs.cancel(id)}
 
 
-# ====================================================================== SOLIDWORKS configurations
 @command(category="configurations")
 def import_sw_configurations(path: str, limit: int = 12) -> dict:
     """Bring the other configurations of a SOLIDWORKS part (.sldprt) into the active part, which was opened

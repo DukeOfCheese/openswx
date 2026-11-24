@@ -37,7 +37,6 @@ __all__ = ["create_drawing", "drawing_settings", "drawing_move_view", "drawing_a
            "drawing_info", "export_drawing"]
 
 
-# ====================================================================== drawings
 @command(mutates=False, category="drawing")
 def create_drawing(path: str | None = None, sheet: SheetSize = "A3",
                    projection: Literal["third", "first"] = "third", scale: float | None = None) -> dict:
