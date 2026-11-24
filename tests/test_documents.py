@@ -189,7 +189,7 @@ def test_disk_cache_for_files(tmp_path, monkeypatch):
 def test_disk_cache_rehashes_recent_files(tmp_path, monkeypatch):
     import os
     import time
-    from openswx.system import cache
+    from openswx import cache
     src = tmp_path / "part.bin"
     src.write_bytes(b"x" * 1000)
     monkeypatch.setenv("OPENSWX_CACHE", str(tmp_path / "cache"))
@@ -213,7 +213,7 @@ def test_disk_cache_rehashes_recent_files(tmp_path, monkeypatch):
 
 
 def test_disk_cache_prunes_at_most_once_a_minute(tmp_path, monkeypatch):
-    from openswx.system import cache
+    from openswx import cache
     monkeypatch.setenv("OPENSWX_CACHE", str(tmp_path / "cache"))
     pruned = []
     monkeypatch.setattr(cache, "_prune", pruned.append)
