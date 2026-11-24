@@ -339,6 +339,36 @@ def test_agent_setup_dialog_fits_without_sideways_scrolling(page):
     assert wide == []
 
 
+def test_save_on_a_never_saved_part_is_save_as(page, tmp_path):
+    """Ctrl+S on a part with no file yet opens Save As (also while typing in a text box); Cancel leaves it unsaved
+    without an error; after saving, Ctrl+S writes to that file without asking."""
+    page.evaluate("""async () => { T.close(); document.querySelector('#toasts').innerHTML = '';
+        await T.run('new_part', {name: 'NeverSaved'}); await T.run('create_sketch', {plane: 'Top'});
+        await T.run('sketch_rectangle', {sketch: 'Sketch1', corner1: [0, 0], corner2: [10, 10]});
+        await T.run('extrude', {sketch: 'Sketch1', depth: 2}); await window.app.refresh();
+        document.querySelector('#cmdsearch').focus(); }""")
+    page.keyboard.press("Control+s")
+    page.wait_for_function("T.open()")
+    assert "Save As" in page.evaluate("T.text()")
+    page.click("#modal-box .mb-foot button:not(.primary)")  # Cancel
+    page.wait_for_function("!T.open()")
+    assert page.evaluate("window.app.model.path") is None
+    assert page.evaluate("document.querySelectorAll('#toasts .toast.err').length") == 0
+    page.evaluate("document.activeElement?.blur()")
+    page.keyboard.press("Control+s")
+    page.wait_for_function("T.open()")
+    target = tmp_path / "NeverSaved.oswprt"
+    page.fill("#savepath", str(target))
+    page.evaluate("T.ok()")
+    page.wait_for_function("window.app.model.path !== null")
+    assert page.evaluate("window.app.model.path") == str(target) and target.is_file()
+    before = target.stat().st_mtime_ns
+    os.utime(target, ns=(before - 10**9, before - 10**9))
+    page.keyboard.press("Control+s")  # the file is known now: saved there, no dialog
+    page.wait_for_function("[...document.querySelectorAll('#toasts .toast')].some(t => t.innerText.startsWith('Saved'))")
+    assert not page.evaluate("T.open()") and target.stat().st_mtime_ns > before - 10**9
+
+
 def test_no_script_errors(page):
     assert page.errors == []
 

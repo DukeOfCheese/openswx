@@ -26,6 +26,12 @@ const MIXIN = {
       focus_tree: () => this.focusTree(), open_menu: () => this.menuKeyOpen(0), home: () => this.homeShow(),
     };
     this.bindTreeKeys();
+    // Save works from a text box too, as in any program (the desktop app has no browser Save to fall back on, so
+    // the key used to do nothing there). Capture phase: some boxes keep their keys from the handler below.
+    document.addEventListener("keydown", (e) => {
+      if (this.keyMap.get(comboOf(e)) !== "save" || !$("#modal").classList.contains("hidden")) return;
+      e.preventDefault(); e.stopPropagation(); this.save();
+    }, true);
     document.addEventListener("keydown", (e) => {
       if (this.menuKey(e)) return; // (an open menu takes the arrows, Enter and Escape)
       if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;

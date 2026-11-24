@@ -2,8 +2,8 @@
 
 <!-- mcp-name: io.github.DukeOfCheese/openswx -->
 
-**Open-source parametric CAD with a familiar layout, and a built-in MCP server so AI agents can design
-parts in it while you watch.**
+**Open-source parametric CAD with a familiar layout, a built-in MCP server so AI agents can design parts in
+it while you watch, and live collaboration so your team can edit the same part at once.**
 
 [![tests](https://github.com/DukeOfCheese/openswx/actions/workflows/test.yml/badge.svg)](https://github.com/DukeOfCheese/openswx/actions/workflows/test.yml)
 [![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](https://github.com/DukeOfCheese/openswx/blob/main/LICENSE)
@@ -37,6 +37,7 @@ here without retraining. Underneath, it is a different program, built on differe
 - [Install](#install)
 - [Your first part](#your-first-part)
 - [Agents: how they get access](#agents-how-they-get-access)
+- [Work together live](#work-together-live)
 - [How it differs from SOLIDWORKS](#how-it-differs-from-solidworks)
 - [Status and limitations](#status-and-limitations)
 - [Contributing](#contributing)
@@ -66,6 +67,11 @@ here without retraining. Underneath, it is a different program, built on differe
   compare.
 - **Agents**: <!-- counts -->463 commands, 443 of them MCP tools ([full list](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md))<!-- /counts -->,
   over stdio or streamable HTTP, shown live in the UI's Agent activity pane.
+- **Live collaboration**: several people in one part at once, on a server you host yourself
+  ([openswx-collab](https://github.com/DukeOfCheese/openswx-collab)). Edits appear for everyone as they are
+  made, others' pointers move in the view, an open sketch or feature is locked for the others, and undo takes
+  back only your own changes. Edit history, named versions and restore; organisations, projects and roles on
+  Home's Cloud tab. See [Work together live](#work-together-live).
 - **Files**: native `.oswprt` / `.oswasm` / `.oswdrw` (versioned JSON). Reads SOLIDWORKS `.sldprt` / `.sldasm` /
   `.slddrw` (2015 and later) natively; clean-room Parasolid reader (`.x_t`, `.x_b`) and writer (`.x_t`); STEP and
   IGES in and out; STL, 3MF, glTF, BREP out; DXF in and out.
@@ -189,6 +195,25 @@ Try: *"Make a 120×60×10 mm mounting plate with four Ø8 holes 12 mm from the e
 counterbored hole, fillet the corners R6, material 6061."* [`tools/agent_demo.py`](https://github.com/DukeOfCheese/openswx/blob/main/tools/agent_demo.py) is a
 scripted agent that does exactly that. Every command and its arguments: [`docs/commands.md`](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md).
 
+## Work together live
+
+Several people can edit the same part at the same time. It is built into the desktop app (from source:
+`pip install openswx[collab]`) and is off until you sign in to a server.
+
+1. Run an [openswx-collab](https://github.com/DukeOfCheese/openswx-collab) server, or use one your team runs:
+   `pip install openswx-collab-server`, or the Docker image `ghcr.io/dukeofcheese/openswx-collab-server`. It
+   is small (it never runs a geometry kernel: each person's openswx applies the edits locally) and stores
+   everything in SQLite or PostgreSQL. The first account on a server is its admin; others join by invitation.
+2. In openswx, open **Home → Cloud** and sign in with the server's address (email and password, Google or
+   GitHub). Your organisations, projects and parts are listed there, with who is in each part right now.
+3. **New Cloud Part**, or **Collaborate → Move to Cloud** on a part you have open. Everyone in the project can
+   open it, at any time.
+
+While you work, each change reaches the others as it is made and their pointers glide over the model with a
+name bubble. A sketch or feature someone has open is locked for everyone else, and Undo takes back only your
+own changes. **Collaborate → History** lists every change with its author; name a version, or restore one.
+Agents take part too: the `collab` toolset gives them the same commands.
+
 ## How it differs from SOLIDWORKS
 
 openswx is alternate CAD software, not a copy. It borrows the layout because engineers already know it;
@@ -206,7 +231,7 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
 | AI agents | none built in | MCP server built in, with toolsets, atomic batches and persistent face and edge names |
 | Headless use | needs the full application | `openswx convert`, `render`, `massprops`, `check`, `drawing`, `script` and `diff` run without a window, for example in CI |
 | Requirements | not part of the model | requirements live in the document and are checked like tests (`openswx check` exits non-zero on failure) |
-| Collaboration | PDM server | today file-based: a local vault with check-in / check-out, and a live view-only share link. Live multi-user editing is in development (see below) |
+| Collaboration | PDM server, check-in / check-out | live: several people edit one part at once through a self-hosted [openswx-collab](https://github.com/DukeOfCheese/openswx-collab) server, with feature locks, history and named versions. Also a local vault with check-in / check-out and a view-only share link |
 | Rendering | PhotoView 360 / Visualize | in the browser: real-time PBR, or path traced on the GPU |
 
 **Compatibility with SOLIDWORKS files**
@@ -236,14 +261,8 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
   and washers). The material library has about 100 common grades with typical handbook values; add your own
   as custom materials.
 - Icons are original, and some commands sit in slightly different places.
-- Live collaboration is not in openswx yet: it is being built in a separate repository,
-  [openswx-collab](https://github.com/DukeOfCheese/openswx-collab) (Apache-2.0, no release yet): several people
-  editing the same part at once with live cursors and feature locks, full edit
-  history with named versions and restore, assemblies that reference parts pinned to a version, and a server
-  you can host yourself (SQLite or PostgreSQL). The server never runs a geometry kernel: each person's openswx
-  applies the edits locally and sends the change. The server and its protocol are built and tested; the part
-  inside openswx (sharing a file, the sync client, cursors) has not started, and will be an optional module
-  that is off by default.
+- Live collaboration covers parts. Assemblies that pin each part to a version are ready on the server, but not
+  in openswx yet.
 
 ## Status and limitations
 

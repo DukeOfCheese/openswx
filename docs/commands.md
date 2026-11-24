@@ -60,7 +60,7 @@ Open a document. .oswprt/.oswasm open natively; .step/.stp/.brep and Parasolid .
 save_part(path: str | None = None)
 ```
 
-Save the active document (part .oswprt or assembly .oswasm), optionally to a new path (Save As). A cloud part (live collaboration) is kept by its server and needs no saving: with a path, this writes a local copy of it, and it stays the cloud part.
+Save the active document (part .oswprt or assembly .oswasm). path: the file to write (Save As); the extension is added when missing. Without path the document is written to the file it was opened from or last saved to; a document never saved to a file needs a path, and gets an error that says so. Later saves without path go to the file last written. A cloud part (live collaboration) is kept by its server and needs no saving: with a path, this writes a local copy of it, and it stays the cloud part. Returns {"saved": path}.
 
 ### `recent_files` *(read-only)*
 
