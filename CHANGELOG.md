@@ -37,11 +37,40 @@ formats or commands; files are migrated automatically and the change is listed h
 
 - Passwords, invitation codes and tokens given to a command are never written to the log.
 
+## 0.3.1 (2026-11-24)
+
+The macOS app uses the system menu bar and no longer hangs on quit; the Home page shows first at start-up; agent
+setup shows your token and the Windows installer can put openswx on PATH; tidier agent notifications.
+
+### Added
+
+- macOS desktop app: File, Edit, View, Insert, Tools, Window and Help are in the system menu bar at the top of the
+  screen instead of the window (Edit has the standard Cut, Copy, Paste and Select All). Elsewhere, or if the menu
+  bar cannot be used, the window keeps its own menus.
+- Help > Agent (MCP) Setup shows your token (Show token / Copy command) and the full command that prints it.
+- The Windows installer can add openswx to PATH (ticked by default), so `openswx-cli token` works in a terminal;
+  uninstalling removes it again.
+
+### Changed
+
+- Help > Agent (MCP) Setup: every command and config snippet has a Copy button (the Claude Code command is copied
+  with your token filled in, though it is shown masked), and the Claude Desktop path is Settings > Desktop App >
+  Extensions > Manage > Edit Config.
+
 ### Fixed
 
+- The CommandManager keeps one height on every tab: the tabs and the workspace no longer move up and down when you
+  switch tabs (a tab with four buttons in a stack, a three-line label, or a horizontal scrollbar made it taller).
 - The Home page is the first thing the window shows at start-up, not the empty graphics area with the planes and
   triad. New Part, New Assembly, Open or a recent file keep Home up until the document is loaded, so it goes
   straight to the document with no flash of the empty part (cancelling Open stays on Home).
+- macOS: quitting with unsaved changes hung the app (the "Close without saving?" question waited on the thread
+  that had to show it).
+- Agent notifications showed raw markup on failures; they now read cleanly with readable command names, and none
+  appear while the Agent activity pane is open (a dot on its tab marks new activity instead).
+- Dialogs no longer need sideways scrolling: long commands, JSON and paths wrap.
+- Some chat apps (which show the tools but not the server's instructions) still called the program SOLIDWORKS:
+  the first tools an agent uses now say openswx is not SOLIDWORKS.
 
 ## 0.3.0 (2026-11-24)
 
