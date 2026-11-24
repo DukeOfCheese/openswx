@@ -115,3 +115,10 @@ def test_agents_are_told_this_is_openswx_not_solidworks():
     assert "same as SOLIDWORKS" not in ins and "SOLIDWORKS-style" not in ins
     likeness = re.compile(r"\b(like|as in|as)\s+(the\s+)?SOLIDWORKS\b", re.I)
     assert [k for k, m in S.COMMANDS.items() if likeness.search(m["doc"] or "")] == []
+    # clients that ignore the instructions still read it on the first tools an agent uses
+    import asyncio
+    tools = {t.name: t.description for t in asyncio.run(mcp_server.build_mcp().list_tools())}
+    for name in mcp_server.NOTED:
+        assert "It is not SOLIDWORKS" in tools[name] and "call it openswx" in tools[name], name
+        assert not likeness.search(tools[name])
+    assert "It is not SOLIDWORKS" not in tools["extrude"]  # (only on those few)

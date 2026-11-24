@@ -2,6 +2,9 @@
 // files, tutorials). It shows at start-up (User Settings > show_home) when openswx opened without a file, and
 // from File > Home. It never blocks anything: it hides when you pick something on it, press Escape, when the
 // active document changes (features, a file, another document) or when an agent acts.
+// Start-up order: the server serves index.html with #home already up (class "starting") when Home will show, so
+// it is the first thing painted, never the empty graphics area. New Part / New Assembly / Open / a recent file
+// leave Home up while the document loads: it goes once refresh() has the new document in the view.
 // Other code adds tabs with this.homeTabs.push({ id, label, icon, render(panel) }); render fills the panel.
 // Mixed into the App class by installHome().
 import { icon } from "./icons.js";
@@ -43,12 +46,17 @@ const MIXIN = {
     requestAnimationFrame(() => this.vp.resize());
   },
 
-  // the page hides itself once the document behind it is no longer the one it opened over, or has content
+  // the page hides itself once the document behind it is no longer the one it opened over, or has content.
+  // (Called by refresh() once the new mesh is in the viewport: the view is fitted to it first, so the first frame
+  // after Home is the document as it will be shown, not the empty part it opened over.)
   homeCheck() {
     if (!this.homeOpen || !this.model) return;
     const now = this.homeSnapshot(), at = this.homeAt;
     if (!at) { this.homeAt = now; return; }
-    if (now.name !== at.name || now.features !== at.features || now.path !== at.path) this.homeHide();
+    if (now.name !== at.name || now.features !== at.features || now.path !== at.path) {
+      this.vp.zoomFit(false);
+      this.homeHide();
+    }
   },
 
   homeSnapshot() {
@@ -58,15 +66,19 @@ const MIXIN = {
 
   // start-up: Home unless switched off, or openswx opened with a file (the active document is then not the
   // untouched part made on demand)
+  // untouched part made on demand). The server already decided when it served the page (#home.starting): take
+  // that over at once, before the first frame, then check it against the state as it is now.
   async homeStart() {
+    const box = $("#home");
+    if (box.classList.contains("starting")) { box.classList.remove("starting"); this.homeShow("local"); }
     const [s, st] = await Promise.all([
       this.api("/api/command", { name: "get_settings", args: {} }).catch(() => null),
       this.api("/api/state").catch(() => null),
     ]);
-    if (!s?.ok || !s.result.settings.show_home || !st?.model?.throwaway) return;
-    if ((st.documents?.documents || []).length > 1) return;
     if (this.homeDismissed) return; // (e.g. an agent acted while this was loading)
-    this.homeShow("local");
+    const want = !!(s?.ok && s.result.settings.show_home && st?.model?.throwaway && (st.documents?.documents || []).length <= 1);
+    if (want && !this.homeOpen) this.homeShow("local");
+    else if (!want && this.homeOpen) this.homeHide();
   },
 
   homeRender() {
@@ -99,8 +111,9 @@ const MIXIN = {
       <div class="hm-recent"><p class="hm-empty">Loading…</p></div>
       <h2>Tutorials</h2>
       <div class="hm-tuts">${TUTORIALS.map((t, i) => `<button class="hm-tut" data-i="${i}">${icon("help")}<span>${escapeHtml(t.name)}</span></button>`).join("")}</div>`;
+    // (Home stays up until the new or opened document is in: homeCheck hides it then. Cancelling Open keeps it.)
     const act = { part: () => this.newPart(), assembly: () => this.newAssembly(), open: () => this.openFile() };
-    for (const b of panel.querySelectorAll(".hm-action")) b.onclick = () => { this.homeHide(); act[b.dataset.act](); };
+    for (const b of panel.querySelectorAll(".hm-action")) b.onclick = () => act[b.dataset.act]();
     for (const b of panel.querySelectorAll(".hm-tut")) b.onclick = () => { this.homeHide(); this.tutorialDialog(+b.dataset.i); };
     panel.querySelector(".hm-clear").onclick = async () => { await this.api("/api/command", { name: "clear_recent_files", args: {} }); this.homeRecent(panel); };
     await this.homeRecent(panel);
