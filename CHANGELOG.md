@@ -6,8 +6,16 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Changed
+
+- Help > Agent (MCP) Setup: every command and config snippet has a Copy button (the Claude Code command is copied
+  with your token filled in, though it is shown masked), and the Claude Desktop path is Settings > Desktop App >
+  Extensions > Manage > Edit Config.
+
 ### Fixed
 
+- The CommandManager keeps one height on every tab: the tabs and the workspace no longer move up and down when you
+  switch tabs (a tab with four buttons in a stack, a three-line label, or a horizontal scrollbar made it taller).
 - The Home page is the first thing the window shows at start-up, not the empty graphics area with the planes and
   triad. New Part, New Assembly, Open or a recent file keep Home up until the document is loaded, so it goes
   straight to the document with no flash of the empty part (cancelling Open stays on Home).

@@ -262,6 +262,44 @@ def test_macos_desktop_menus_go_to_the_menu_bar(page):
     assert got["titles"] == ["File", "Edit", "View", "Insert", "Tools", "Window", "Help"]
     assert got["hidden"] and got["shown"] and got["back"] and got["hasSub"]
 
+def test_connect_an_agent_dialog_copies_every_code_section(page, server):
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=server)
+    page.evaluate("async () => { T.close(); await window.app.mcpDialog(); }")
+    page.wait_for_function("T.open()")
+    assert "Settings > Desktop App > Extensions > Manage > Edit Config" in page.evaluate("T.text()")
+    # (what each Copy button must copy: the shown text, except the Claude Code block, whose token is shown masked)
+    codes = page.evaluate("[...document.querySelectorAll('#modal-box pre.code, #modal-box code')].map(c => c.dataset.copy ?? c.textContent)")
+    assert len(codes) >= 4 and page.evaluate("document.querySelectorAll('#modal-box .copy-btn').length") == len(codes)
+    for i, text in enumerate(codes):
+        page.evaluate("i => document.querySelectorAll('#modal-box .copy-btn')[i].click()", i)
+        page.wait_for_function("i => document.querySelectorAll('#modal-box .copy-btn')[i].textContent === 'Copied'", arg=i)
+        assert page.evaluate("navigator.clipboard.readText()").replace("\r\n", "\n") == text  # (Windows: CRLF)
+    assert '"mcpServers"' in codes[1] and codes[2].startswith("claude mcp add")
+    assert codes[2].endswith(f'"Authorization: Bearer {TOKEN}"')  # (the real token, not the dots shown)
+    assert TOKEN not in page.evaluate("T.text()")
+    info = page.evaluate("async () => (await T.run('agent_connection_info', {port: 8765})).result")
+    assert info["token_command"] in codes  # (the command that prints the token, not a fixed name)
+    page.evaluate("navigator.clipboard.writeText('')")
+    page.click("#mcp-copy")  # (the button row under the command: the same copy, real token)
+    page.wait_for_function("async () => (await navigator.clipboard.readText()).length > 0")
+    assert page.evaluate("navigator.clipboard.readText()") == codes[2]
+    page.evaluate("T.close()")
+
+
+def test_command_manager_keeps_its_height_on_every_tab(page):
+    tops = page.evaluate("""async () => {
+        const out = {};
+        for (const t of [...document.querySelectorAll('#cm-tabs .cm-tab')].map(b => b.textContent)) {
+            [...document.querySelectorAll('#cm-tabs .cm-tab')].find(b => b.textContent === t).click();
+            await new Promise(requestAnimationFrame);
+            out[t] = [document.querySelector('#cm-tabs').getBoundingClientRect().top, document.querySelector('#workspace').getBoundingClientRect().top];
+        }
+        document.querySelector('#cm-tabs .cm-tab').click();
+        return out;
+    }""")
+    assert len(tops) > 5 and len({tuple(v) for v in tops.values()}) == 1, tops  # (the tabs and the workspace never move)
+
+
 def test_agent_toasts(page):
     """An agent's command shows a tidy toast (no markup shown as text, readable command name), failures included;
     with the Agent activity pane open there is no toast (the pane lists it)."""
@@ -298,6 +336,7 @@ def test_agent_setup_dialog_fits_without_sideways_scrolling(page):
         return out;
     }""")
     assert wide == []
+
 
 def test_no_script_errors(page):
     assert page.errors == []

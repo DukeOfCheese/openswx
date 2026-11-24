@@ -2674,7 +2674,7 @@ class App {
     const info = r.ok ? r.result : { stdio: { command: "openswx-cli", args: ["mcp"] }, http: `${location.origin}/mcp`, claude_desktop_config: "claude_desktop_config.json" };
     const desktop = { mcpServers: { openswx: info.stdio } };
     this.modal("Connect an agent (MCP)", `<p><b>Claude Desktop</b> (and other chat apps that start local MCP servers): add this to
-      <code>${escapeHtml(info.claude_desktop_config)}</code> (Claude Desktop: Settings &gt; Developer &gt; Edit Config), then restart it.
+      <code>${escapeHtml(info.claude_desktop_config)}</code> (Claude Desktop: Settings &gt; Desktop App &gt; Extensions &gt; Manage &gt; Edit Config), then restart it.
       While openswx is open, the agent works in this window and you watch its edits live.</p>
       <pre class="code">${escapeHtml(JSON.stringify(desktop, null, 1))}</pre>
       <p><b>Claude Code</b> (and clients that reach this computer over HTTP):</p>
@@ -2684,14 +2684,37 @@ class App {
       <code>${escapeHtml(info.token_command || "openswx token")}</code> prints it.</p>
       <p><b>Claude on the web (claude.ai)</b> connects to MCP servers from Anthropic's servers, which cannot reach an app on
       this computer: use Claude Desktop or Claude Code.</p>`, null, "agent");
-    const tok = $("#mcp-tok"), show = $("#mcp-show"), copy = $("#mcp-copy");
-    if (show) show.onclick = () => { const on = tok.textContent !== info.token; tok.textContent = on ? info.token : "••••••••"; show.textContent = on ? "Hide token" : "Show token"; };
-    if (copy) {
-      copy.onclick = async () => {
-        const cmd = `claude mcp add --transport http openswx ${location.origin}/mcp --header "Authorization: Bearer ${info.token}"`;
-        try { await navigator.clipboard.writeText(cmd); this.toast("Copied: paste it in a terminal where Claude Code runs."); } catch { tok.textContent = info.token; show && (show.textContent = "Hide token"); this.toast("Copy blocked here: the token is shown, select the command and copy it."); }
+    // the Claude Code block shows the token masked; its Copy button copies the command with the real token
+    const tok = $("#mcp-tok"), show = $("#mcp-show"), cc = $("#mcp-cc");
+    if (info.token) cc.dataset.copy = `claude mcp add --transport http openswx ${location.origin}/mcp --header "Authorization: Bearer ${info.token}"`;
+    else tok.textContent = "<token>";
+    const reveal = (on) => { tok.textContent = on ? info.token : "••••••••"; show.textContent = on ? "Hide token" : "Show token"; };
+    if (show) show.onclick = () => reveal(tok.textContent !== info.token);
+    this.addCopyButtons($("#modal-box .mb-body"), (c) => { if (c === cc && show) reveal(true); }); // (copy blocked: show the token to select)
+    const copy = $("#mcp-copy"); // (the same copy as the block's own button, on the row under it)
+    if (copy) copy.onclick = () => cc.parentElement.querySelector(".copy-btn").click();
+  }
+
+  // a Copy button on every code block and inline code in `root` (dialogs that show commands or config to paste).
+  // It copies the element's data-copy when it has one (e.g. a command whose secret is shown masked), else its text;
+  // onFail(element) runs when the clipboard refuses, so the dialog can help the user select the text instead.
+  addCopyButtons(root, onFail = null) {
+    for (const c of root.querySelectorAll("pre.code, code")) {
+      const b = el("button", "copy-btn", "Copy"); b.type = "button"; b.title = "Copy to the clipboard";
+      b.onclick = async () => {
+        const ok = await this.copyText(c.dataset.copy ?? c.textContent);
+        if (!ok) onFail?.(c);
+        b.textContent = ok ? "Copied" : "Select and copy"; b.classList.toggle("done", ok);
+        setTimeout(() => { b.textContent = "Copy"; b.classList.remove("done"); }, 1500);
       };
+      if (c.tagName === "PRE") { const w = el("div", "copy-wrap"); c.replaceWith(w); w.append(c, b); } else c.after(b);
     }
+  }
+
+  async copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* (no clipboard API here: the old way) */ }
+    const t = el("textarea", ""); t.value = text; t.style.cssText = "position:fixed;opacity:0"; document.body.append(t); t.select();
+    try { return document.execCommand("copy"); } catch { return false; } finally { t.remove(); }
   }
 
   async checkUpdates() {
