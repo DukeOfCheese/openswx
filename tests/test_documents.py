@@ -224,3 +224,21 @@ def test_disk_cache_prunes_at_most_once_a_minute(tmp_path, monkeypatch):
     monkeypatch.setattr(cache, "_PRUNE_AT", 0.0)
     cache.put_json("history", "c", {})
     assert len(pruned) == 1
+
+
+def test_disk_cache_does_not_store_a_recent_hash(tmp_path, monkeypatch):
+    import os
+    import time
+    from openswx import cache
+    src = tmp_path / "part.bin"
+    src.write_bytes(b"a" * 1000)
+    monkeypatch.setenv("OPENSWX_CACHE", str(tmp_path / "cache"))
+    cache._DIGESTS.clear()
+    before = cache.key(str(src), "body")
+    assert cache._DIGESTS == {}, "a recently modified file must not populate the digest memo"
+    st = src.stat()
+    src.write_bytes(b"b" * 1000)
+    os.utime(src, ns=(st.st_atime_ns, st.st_mtime_ns))
+    real = time.time_ns
+    monkeypatch.setattr(cache.time, "time_ns", lambda: real() + 5_000_000_000)
+    assert cache.key(str(src), "body") != before

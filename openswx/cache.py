@@ -82,8 +82,7 @@ def _digest(path: Path) -> str | None:
         return None
     memo = (str(path), st.st_size, st.st_mtime_ns, st.st_ctime_ns, getattr(st, "st_ino", 0))
     hit = _DIGESTS.get(memo)
-    # a file modified recently can change again inside the filesystem timestamp resolution
-    if hit is not None and st.st_mtime_ns <= time.time_ns() - _RACY_NS:
+    if hit is not None:
         _DIGESTS.move_to_end(memo)
         return hit
     try:
@@ -91,9 +90,11 @@ def _digest(path: Path) -> str | None:
             digest = hashlib.file_digest(f, "sha1").hexdigest()
     except OSError:
         return None
-    _DIGESTS[memo] = digest
-    if len(_DIGESTS) > _DIGEST_MAX:
-        _DIGESTS.popitem(last=False)
+    # only store a digest once the file is old enough that a same-size rewrite cannot keep its timestamps
+    if st.st_mtime_ns <= time.time_ns() - _RACY_NS:
+        _DIGESTS[memo] = digest
+        if len(_DIGESTS) > _DIGEST_MAX:
+            _DIGESTS.popitem(last=False)
     return digest
 
 
