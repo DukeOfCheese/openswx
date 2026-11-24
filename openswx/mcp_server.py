@@ -103,6 +103,18 @@ DESTRUCTIVE = {"close_document", "delete_custom_material", "discard_recovered", 
                "save_part", "export_file", "pack_and_go", "pdm_undo_check_out"}
 ALWAYS = ("batch",)  # (listed whatever the toolsets)
 
+# Some MCP clients show the model the tool list but not the server's instructions; the tools an agent meets first
+# then say themselves what the program is (the command docstrings and docs/commands.md stay as they are)
+NOT_SOLIDWORKS = ("openswx is its own open-source CAD program (OpenCASCADE kernel). It is not SOLIDWORKS and does "
+                  "not run or connect to SOLIDWORKS; call it openswx when you talk to the user.")
+NOTED = ("new_part", "open_part", "import_file", "get_model", "batch")
+
+
+def tool_description(name: str) -> str:
+    """A command's MCP tool description: its docstring, plus the note on what openswx is for the NOTED tools."""
+    doc = S.COMMANDS[name]["doc"] or ""
+    return f"{doc}\n\n{NOT_SOLIDWORKS}" if name in NOTED else doc
+
 
 def toolset_commands(name: str) -> list[str]:
     if name == "core":
@@ -150,7 +162,7 @@ def build_mcp(toolsets: str | list[str] | None = None) -> MCPServer:
             meta = S.COMMANDS[name]
             if name in listed or not meta["mcp"] or name == "get_view_image":
                 continue
-            mcp.add_tool(_agent_errors(meta["fn"]), name=name, description=meta["doc"], annotations=_annotations(name, meta))
+            mcp.add_tool(_agent_errors(meta["fn"]), name=name, description=tool_description(name), annotations=_annotations(name, meta))
             listed.add(name)
             new.append(name)
         return new

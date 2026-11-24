@@ -262,6 +262,43 @@ def test_macos_desktop_menus_go_to_the_menu_bar(page):
     assert got["titles"] == ["File", "Edit", "View", "Insert", "Tools", "Collaborate", "Window", "Help"]
     assert got["hidden"] and got["shown"] and got["back"] and got["hasSub"]
 
+def test_agent_toasts(page):
+    """An agent's command shows a tidy toast (no markup shown as text, readable command name), failures included;
+    with the Agent activity pane open there is no toast (the pane lists it)."""
+    got = page.evaluate("""async () => {
+        document.querySelector('#toasts').innerHTML = '';
+        const tp = document.querySelector('#taskpane');
+        if (!tp.classList.contains('collapsed')) window.app.showTask('agent');  // (closed to start with)
+        tp.classList.add('collapsed');
+        window.app.onAgent({command: 'sketch_circle', ok: true});
+        window.app.onAgent({command: 'extrude', ok: false, message: 'unknown sketch <Sketch9>'});
+        const shown = [...document.querySelectorAll('#toasts .toast')].map((t) => t.innerText);
+        const dot = !!document.querySelector('.tp-tab[data-pane="agent"] .dot');
+        document.querySelector('#toasts').innerHTML = '';
+        window.app.showTask('agent');
+        window.app.onAgent({command: 'fillet', ok: true});
+        const whileOpen = document.querySelectorAll('#toasts .toast').length;
+        window.app.showTask('agent');  // (close it again)
+        return {shown, dot, whileOpen};
+    }""")
+    assert got["shown"][0].replace(" ", " ") == "Agent Sketch circle"
+    assert got["shown"][1].replace(" ", " ") == "Agent Extrude failed: unknown sketch <Sketch9>"
+    assert "<b>" not in "".join(got["shown"]) and got["dot"]
+    assert got["whileOpen"] == 0
+
+def test_agent_setup_dialog_fits_without_sideways_scrolling(page):
+    """Help > Agent (MCP) Setup: long paths, the JSON config and the claude mcp add command wrap inside the dialog."""
+    wide = page.evaluate("""async () => {
+        T.close(); await window.app.mcpDialog(); document.querySelector('#mcp-show')?.click();
+        const box = document.querySelector('#modal-box');
+        const right = box.getBoundingClientRect().right;
+        const out = [...box.querySelectorAll('*')].filter((e) => e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX !== 'visible'
+            || e.getBoundingClientRect().right > right + 1).map((e) => e.tagName);
+        T.close();
+        return out;
+    }""")
+    assert wide == []
+
 def test_no_script_errors(page):
     assert page.errors == []
 

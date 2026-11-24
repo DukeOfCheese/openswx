@@ -36,6 +36,12 @@ formats or commands; files are migrated automatically and the change is listed h
 
 - Passwords, invitation codes and tokens given to a command are never written to the log.
 
+### Fixed
+
+- The Home page is the first thing the window shows at start-up, not the empty graphics area with the planes and
+  triad. New Part, New Assembly, Open or a recent file keep Home up until the document is loaded, so it goes
+  straight to the document with no flash of the empty part (cancelling Open stays on Home).
+
 ## 0.3.0 (2026-11-24)
 
 A new look with a dark theme, a Home page with recent files, customisable keyboard shortcuts, mouse presets and

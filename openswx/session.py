@@ -111,6 +111,18 @@ class Application:
 
 APP = Application()
 _LOG = applog.setup()
+
+
+def home_at_start() -> bool:
+    """Whether a window that opens now starts on the Home page: show_home is on and nothing but the untouched
+    part made on demand is open (or nothing at all yet: the window's first request makes that part). Decided
+    when the page is served, so Home is the first thing it paints; a file opened at launch makes this False."""
+    from . import settings
+    if not settings.get("show_home"):
+        return False
+    if not APP.documents:
+        return True
+    return len(APP.documents) == 1 and APP.is_throwaway(APP.documents.get(APP.active))
 COMMANDS: dict[str, dict] = {}
 ERRORS = (DocumentError, FeatureError, SketchError, ValueError, KeyError, FileNotFoundError)
 _TL = threading.local()  # .origin = "ui" for web requests; MCP/tests default to "agent"

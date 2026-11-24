@@ -42,3 +42,29 @@ def test_menus_reach_the_macos_menu_bar():
     assert out["ok"] is True
     assert out["bar"][1:] == ["File", "Edit", "Help"]  # (the first is the app menu)
     assert out["edit"][:4] == ["Cut", "Copy", "Paste", "Select All"] and out["edit"][5] == "Undo"
+
+
+def test_closing_asks_without_deadlocking_on_macos(monkeypatch):
+    """Quitting with unsaved changes hung on macOS: pywebview runs closing handlers on the main thread, and its
+    create_confirmation_dialog waits for that same thread. On the main thread on macOS the alert is shown
+    directly; elsewhere (other platforms, or another thread) pywebview's dialog is used as before."""
+    import threading
+    import types
+    from openswx import desktop
+    asked = []
+
+    class Win:
+        def create_confirmation_dialog(self, title, msg):
+            asked.append(("pywebview", msg))
+            return True
+    fake = types.ModuleType("webview.platforms.cocoa")
+    fake.BrowserView = types.SimpleNamespace(display_confirmation_dialog=lambda a, b, msg: asked.append(("direct", msg)) or False)
+    monkeypatch.setitem(sys.modules, "webview.platforms.cocoa", fake)
+    monkeypatch.setattr(desktop.sys, "platform", "darwin")
+    assert desktop.confirm_close(Win(), "Close?") is False and asked[-1] == ("direct", "Close?")
+    out = []
+    t = threading.Thread(target=lambda: out.append(desktop.confirm_close(Win(), "Close?")))
+    t.start(); t.join()  # noqa: E702
+    assert out == [True] and asked[-1] == ("pywebview", "Close?")
+    monkeypatch.setattr(desktop.sys, "platform", "win32")
+    assert desktop.confirm_close(Win(), "Close?") is True and asked[-1] == ("pywebview", "Close?")
