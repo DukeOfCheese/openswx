@@ -529,6 +529,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 .cl-warn { color: var(--note-fg); }
 /* Home's Cloud tab (collab.js) */
 .cl-acct { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); }
+.cl-stale { padding: 1px 8px; border-radius: 999px; background: var(--note-bg); color: var(--note-fg); font-size: 11px; }
 .cl-home { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; margin-top: 18px; }
 .cl-orgs { display: flex; flex-direction: column; gap: 10px; }
 .cl-org { display: flex; flex-direction: column; gap: 1px; }

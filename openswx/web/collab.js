@@ -18,6 +18,7 @@ import { icon } from "./icons.js";
 
 const $ = (s) => document.querySelector(s);
 const PRESENCE_MS = 50; // presence out: ~20 a second at most
+const HOME_REFRESH_MS = 10000; // Home's Cloud tab: who is in each part, asked for again this often while it is up
 const GLIDE_MS = 90; // a pointer eases toward where its owner's pointer now is (time constant)
 const ARROW_SVG = '<svg width="18" height="22" viewBox="0 0 18 22"><path d="M2 2 L2 18 L6.5 14 L9.5 20.5 L12.5 19.2 L9.6 12.8 L15.5 12.5 Z" fill="var(--c)" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>';
 // readable text on a person's colour: dark on light colours
@@ -625,17 +626,52 @@ const MIXIN = {
   },
 
   // ---------------------------------------------------------------- Home: the Cloud tab
+  // What the tab last loaded (organisations and projects, each project's parts, each team) is kept for the server
+  // and account it came from: coming back to the tab draws it at once, then asks the server again behind it and
+  // draws again only what changed. Signing in as someone else, or on another server, starts afresh.
+  collabHomeCache(key) {
+    const cl = this.cl;
+    if (!cl.hc || (key !== undefined && cl.hc.key !== key)) cl.hc = { key: key ?? null, m: new Map() };
+    return cl.hc;
+  },
+
+  // draw what is kept under `k` at once, then fetch(); draw again only when the answer differs. fail(error,
+  // shown): the fetch failed (shown: something kept is on screen). True when the fetch worked.
+  async collabFresh(k, fetch, draw, fail) {
+    const m = this.collabHomeCache().m, had = m.get(k);
+    if (had) draw(had.value);
+    const r = await fetch().catch((e) => ({ ok: false, error: String(e) }));
+    if (!r?.ok) { fail(r?.error || "no answer", !!had); return false; }
+    const sig = JSON.stringify(r.result);
+    if (!had || had.sig !== sig) { m.set(k, { value: r.result, sig }); draw(r.result); }
+    this.collabHomeOffline(null);
+    return true;
+  },
+
+  // the server could not be reached: say so next to the account, over what was last loaded (null: it can)
+  collabHomeOffline(error) {
+    const n = document.querySelector("#home .cl-stale");
+    if (!n) return;
+    n.classList.toggle("hidden", !error);
+    n.textContent = error ? "Offline: showing what was last loaded" : "";
+    n.title = error || "";
+  },
+
   async collabHome(panel) {
     const head = `<h1>Cloud files</h1>`;
-    panel.innerHTML = `${head}<p class="hm-empty">Loading…</p>`;
+    clearInterval(this.cl.homeTimer);
+    if (!this.cl.hc?.m.size) panel.innerHTML = `${head}<p class="hm-empty">Loading…</p>`;
     const r = await this.api("/api/command", { name: "collab_status", args: {} }).catch(() => null);
+    if (!panel.isConnected) return;
     if (!r?.ok) { panel.innerHTML = `${head}<p class="hm-empty">${esc(r?.error || "Could not read the collaboration status.")}</p>`; return; }
     const st = r.result;
     if (st.available === false) { panel.innerHTML = `${head}<p class="hm-empty">${esc(st.message)}</p>`; return; }
-    if (!st.signed_in) return this.collabHomeSignIn(panel, st);
+    if (!st.signed_in) { this.cl.hc = null; return this.collabHomeSignIn(panel, st); }
     const u = st.user || {};
+    this.collabHomeCache(`${st.server}\n${u.id || u.email || ""}`);
     panel.innerHTML = `${head}
       <div class="cl-acct"><span>Signed in as <b>${esc(u.name || u.email || "you")}</b> <span class="muted">${esc(u.email && u.name ? `${u.email} · ` : "")}${esc(st.server)}</span></span>
+        <span class="cl-stale hidden"></span>
         <span class="hm-fill"></span><button class="btn" id="cl-hmeth">Sign-in Methods…</button><button class="btn" id="cl-hout">Sign Out</button></div>
       <div class="cl-home"><p class="hm-empty">Loading…</p></div>
       <h2>Join with an invitation</h2>
@@ -651,14 +687,21 @@ const MIXIN = {
       this.cl.homeOrg = j.org?.id; this.cl.homeProject = null; this.collabHomeRefresh();
     };
     const box = panel.querySelector(".cl-home");
-    const pr = await this.api("/api/command", { name: "collab_projects", args: {} }).catch((e) => ({ ok: false, error: String(e) }));
-    if (!panel.isConnected) return;
-    if (!pr.ok) {
-      box.innerHTML = `<p class="hm-empty">${esc(pr.error)}</p><button class="btn" id="cl-retry">Try Again</button>`;
-      box.querySelector("#cl-retry").onclick = () => this.collabHomeRefresh();
-      return;
-    }
-    this.collabHomeOrgs(box, pr.result.orgs || [], u);
+    await this.collabFresh("orgs", () => this.api("/api/command", { name: "collab_projects", args: {} }),
+      (v) => { if (box.isConnected) this.collabHomeOrgs(box, v.orgs || [], u); },
+      (error, shown) => {
+        if (!box.isConnected) return;
+        if (shown) return this.collabHomeOffline(error);
+        box.innerHTML = `<p class="hm-empty">${esc(error)}</p><button class="btn" id="cl-retry">Try Again</button>`;
+        box.querySelector("#cl-retry").onclick = () => this.collabHomeRefresh();
+      });
+    // who is in each part: the shown project's list is asked for again every 10 s while the tab is up
+    clearInterval(this.cl.homeTimer);
+    this.cl.homeTimer = setInterval(() => {
+      if (!panel.isConnected || !this.homeOpen) { clearInterval(this.cl.homeTimer); return; }
+      const docs = box.querySelector(".cl-docs");
+      if (docs && this.cl.homeProject && this.cl.homeDocOpts) this.collabDocTable(docs, this.cl.homeProject, this.cl.homeDocOpts);
+    }, this.cl.homeRefreshMs || HOME_REFRESH_MS); // (tests make it shorter)
   },
 
   collabHomeSignIn(panel, st) {
@@ -715,8 +758,9 @@ const MIXIN = {
     box.querySelector(".cl-neworg").onclick = () => this.collabNewOrgDialog();
     if (proj) {
       box.querySelector("#cl-newcloud")?.addEventListener("click", () => this.collabNewCloudPartDialog(proj));
-      this.collabDocTable(box.querySelector(".cl-docs"), proj.id, { open: (id) => this.collabHomeOpen(id),
-        empty: `No parts in ${esc(proj.name)} yet.${["owner", "editor"].includes(proj.role) ? " Make one with New Cloud Part." : ""}` });
+      cl.homeDocOpts = { open: (id) => this.collabHomeOpen(id),
+        empty: `No parts in ${esc(proj.name)} yet.${["owner", "editor"].includes(proj.role) ? " Make one with New Cloud Part." : ""}` };
+      this.collabDocTable(box.querySelector(".cl-docs"), proj.id, cl.homeDocOpts);
     }
     this.collabHomeTeam(box.querySelector(".cl-team"), org, proj, me);
   },
@@ -728,12 +772,17 @@ const MIXIN = {
   },
 
   // a project's parts: name, who is in it now, last change; pick (one click) and open (double click)
-  async collabDocTable(box, project, { open, pick = null, empty = "No parts in this project yet." }) {
-    box.innerHTML = `<p class="muted">Loading…</p>`;
-    const r = await this.api("/api/command", { name: "collab_documents", args: { project } }).catch((e) => ({ ok: false, error: String(e) }));
-    if (!box.isConnected) return;
-    if (!r.ok) { box.innerHTML = `<p class="hm-empty">${esc(r.error)}</p>`; return; }
-    const docs = (r.result.documents || []).filter((x) => (x.kind || "part") === "part");
+  async collabDocTable(box, project, opts) {
+    const k = `docs\n${project}`;
+    if (!this.collabHomeCache().m.has(k) && !box.querySelector(".cl-doc")) box.innerHTML = `<p class="muted">Loading…</p>`;
+    await this.collabFresh(k, () => this.api("/api/command", { name: "collab_documents", args: { project } }),
+      (v) => { if (box.isConnected) this.collabDrawDocs(box, v.documents || [], opts); },
+      (error, shown) => { if (!box.isConnected) return; if (shown) this.collabHomeOffline(error); else box.innerHTML = `<p class="hm-empty">${esc(error)}</p>`; });
+  },
+
+  collabDrawDocs(box, all, { open, pick = null, empty = "No parts in this project yet." }) {
+    const picked = box.querySelector(".cl-doc.picked")?.dataset.id; // (kept across a redraw)
+    const docs = all.filter((x) => (x.kind || "part") === "part");
     if (!docs.length) { box.innerHTML = `<p class="hm-empty">${empty}</p>`; return; }
     const N = (v) => (Number.isFinite(Number(v)) ? Number(v) : "");
     const people = (x) => {
@@ -746,6 +795,7 @@ const MIXIN = {
       `<tr class="cl-doc hm-file" data-id="${esc(x.id)}"><td><span class="hm-name">${icon("part")}${esc(x.name)}</span></td><td><div class="cl-here">${people(x)}</div></td>
         <td class="hm-when">${esc(when(x.updated_at))}</td><td>${esc(N(x.seq ?? x.head_seq))}</td><td><button class="btn cl-open">Open</button></td></tr>`).join("")}</tbody></table>`;
     for (const tr of box.querySelectorAll(".cl-doc")) {
+      if (tr.dataset.id === picked) tr.classList.add("picked");
       tr.onclick = (e) => {
         if (e.target.closest(".cl-open")) return open(tr.dataset.id);
         box.querySelectorAll(".cl-doc").forEach((x) => x.classList.toggle("picked", x === tr)); pick?.(tr.dataset.id);
@@ -756,13 +806,19 @@ const MIXIN = {
 
   // the organisation's people, invitations and the project's roles (owners and admins change them; the others see them)
   async collabHomeTeam(box, org, proj, me) {
-    box.innerHTML = `<div class="hm-head"><h2>Team · ${esc(org.name)}</h2></div><p class="muted">Loading…</p>`;
-    const [mr, pr] = await Promise.all([
-      this.api("/api/command", { name: "collab_members", args: { org: org.id } }).catch((e) => ({ ok: false, error: String(e) })),
-      proj ? this.api("/api/command", { name: "collab_project_members", args: { project: proj.id } }).catch(() => null) : null]);
-    if (!box.isConnected) return;
-    if (!mr.ok) { box.innerHTML = `<div class="hm-head"><h2>Team · ${esc(org.name)}</h2></div><p class="hm-empty">${esc(mr.error)}</p>`; return; }
-    const { members, invites } = mr.result;
+    const k = `team\n${org.id}\n${proj?.id || ""}`, title = `<div class="hm-head"><h2>Team · ${esc(org.name)}</h2></div>`;
+    if (!this.collabHomeCache().m.has(k)) box.innerHTML = `${title}<p class="muted">Loading…</p>`;
+    await this.collabFresh(k, async () => {
+      const [mr, pr] = await Promise.all([
+        this.api("/api/command", { name: "collab_members", args: { org: org.id } }).catch((e) => ({ ok: false, error: String(e) })),
+        proj ? this.api("/api/command", { name: "collab_project_members", args: { project: proj.id } }).catch(() => null) : null]);
+      return mr.ok ? { ok: true, result: { ...mr.result, project_members: pr?.ok ? pr.result.members : null } } : mr;
+    }, (v) => { if (box.isConnected) this.collabDrawTeam(box, org, proj, me, v); },
+    (error, shown) => { if (!box.isConnected) return; if (shown) this.collabHomeOffline(error); else box.innerHTML = `${title}<p class="hm-empty">${esc(error)}</p>`; });
+  },
+
+  collabDrawTeam(box, org, proj, me, data) {
+    const { members, invites } = data;
     const mine = org.role, admin = ["owner", "admin"].includes(mine), owner = mine === "owner";
     const roleSel = (m) => {
       const may = admin && (owner || m.role !== "owner");
@@ -780,7 +836,7 @@ const MIXIN = {
         <select id="cl-irole"><option value="member">member</option><option value="admin">admin</option></select>
         ${proj ? `<label class="cl-ip"><input type="checkbox" id="cl-iproj" checked> and ${esc(proj.name)} as <select id="cl-iprole"><option>editor</option><option>viewer</option><option>owner</option></select></label>` : ""}
         <button class="btn primary" id="cl-ibtn">Invite</button></div>` : "";
-    const pmembers = pr?.ok ? pr.result.members : null, powner = proj?.role === "owner";
+    const pmembers = data.project_members, powner = proj?.role === "owner";
     const inProj = new Set((pmembers || []).map((m) => m.id));
     const prole = (m) => powner ? `<select class="cl-prole" data-u="${esc(m.id)}">${["owner", "editor", "viewer"].map((r) => `<option${r === m.role ? " selected" : ""}>${r}</option>`).join("")}</select>` : esc(m.role);
     const proj_ = proj && pmembers ? `<h3>Who can open ${esc(proj.name)}</h3><table class="hm-files"><tbody>${pmembers.map((m) => `<tr><td><b>${esc(m.name)}</b>${you(m) ? ' <span class="muted">(you)</span>' : ""}</td>
@@ -976,6 +1032,7 @@ const MIXIN = {
   async collabSignOut() {
     const r = await this.run("collab_sign_out").catch(() => null);
     if (!r) return;
+    this.cl.hc = null; // (nothing of this account stays on screen)
     const stopped = r.result.stopped || [];
     this.toast(`Signed out${stopped.length ? `; stopped syncing ${stopped.map(esc).join(", ")} (still open here as local copies)` : ""}`);
     this.refreshCollab();
