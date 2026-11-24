@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import session as S
@@ -60,7 +60,10 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
 
     @app.get("/")
     def index():
-        return FileResponse(WEB / "index.html")
+        html = (WEB / "index.html").read_text(encoding="utf-8")
+        if S.home_at_start():  # Home up from the first paint: no frame of the empty graphics area before it
+            html = html.replace('<div id="home" class="hidden">', '<div id="home" class="starting">', 1)
+        return HTMLResponse(html)
 
     @app.get("/api/health")
     def health():

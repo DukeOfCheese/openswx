@@ -138,3 +138,34 @@ def test_new_part_is_kept_when_another_opens(tmp_path):
     S.new_part("Mine")
     S.open_part(str(p))
     assert [d["name"] for d in S.list_documents()["documents"]] == ["Mine", "Block"]
+
+
+# ---------------------------------------------------------------------------- the first paint
+def test_home_at_start_decides_before_the_window_loads(tmp_path, monkeypatch):
+    p = _part(tmp_path)
+    monkeypatch.setenv("OPENSWX_SHOW_HOME", "1")
+    S.APP.documents.clear(); S.APP.active = None
+    assert S.home_at_start() is True  # (nothing open yet: the window gets the part made on demand)
+    S.get_model()
+    assert S.home_at_start() is True  # (the untouched part made on demand)
+    S.open_part(str(p))  # (as `openswx file.SLDPRT` does before the window loads)
+    assert S.home_at_start() is False
+    S.APP.documents.clear(); S.APP.active = None
+    monkeypatch.setenv("OPENSWX_SHOW_HOME", "0")
+    assert S.home_at_start() is False
+
+
+def test_index_page_starts_with_home_up_only_when_it_will_show(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from openswx.web_server import create_app
+    p = _part(tmp_path)
+    S.APP.documents.clear(); S.APP.active = None
+    client = TestClient(create_app(token=None, mount_mcp=False), base_url="http://127.0.0.1:8765")
+    home_div = lambda: next(l for l in client.get("/").text.splitlines() if 'id="home"' in l)  # noqa: E731
+    monkeypatch.setenv("OPENSWX_SHOW_HOME", "1")
+    assert "hidden" not in home_div()
+    S.open_part(str(p))
+    assert "hidden" in home_div()
+    S.APP.documents.clear(); S.APP.active = None
+    monkeypatch.setenv("OPENSWX_SHOW_HOME", "0")
+    assert "hidden" in home_div()
