@@ -127,6 +127,10 @@ def test_escape_hides_and_file_home_brings_it_back(page):
     page.wait_for_function(HIDDEN)
     page.keyboard.press("Control+Shift+H")
     page.wait_for_function(SHOWN)
+    page.keyboard.press("Escape")
+    page.wait_for_function(HIDDEN)
+    page.click("#brand")  # the logo in the title bar
+    page.wait_for_function(SHOWN)
 
 
 def test_new_part_hides_home_and_leaves_one_document(page):

@@ -30,7 +30,19 @@ background:#F2F3F5;font:14px 'Segoe UI',sans-serif;color:#333"><div style="width
 <div id="bar" style="height:100%;width:0;background:#c8102e;transition:width .2s"></div></div>
 <div id="detail" style="margin-top:6px;height:16px;font-size:11px;color:#888;white-space:nowrap;overflow:hidden;
 text-overflow:ellipsis;text-align:left"></div></div>
-<script>function progress(p, msg, detail, error) {
+<button id="x" title="Close" style="display:none;position:fixed;top:0;right:0;width:46px;height:30px;border:0;
+background:none;font:16px 'Segoe UI',sans-serif;color:#333">&#x2715;</button>
+<script>
+// the window has no title bar of its own (see integrate_title_bar): until the page with one loads, the splash can
+// be dragged anywhere and, on Windows, closed with its own button (macOS keeps the window's buttons)
+addEventListener("pywebviewready", async () => {
+  const kind = await pywebview.api.window_chrome();
+  if (kind === "mac") document.body.classList.add("pywebview-drag-region");
+  if (kind !== "windows") return;
+  const x = document.getElementById("x"); x.style.display = "block"; x.onclick = () => pywebview.api.window_control("close");
+  addEventListener("mousedown", (e) => { if (e.button === 0 && e.target !== x) pywebview.api.window_control("drag"); });
+});
+function progress(p, msg, detail, error) {
   document.getElementById("pct").textContent = Math.round(p) + "%";
   document.getElementById("bar").style.width = p + "%";
   const m = document.getElementById("msg"); m.textContent = msg; m.style.color = error ? "#c8102e" : "";
@@ -80,6 +92,33 @@ class DesktopApi:
     """Native dialogs exposed to the UI as window.pywebview.api.* (replaces browser downloads/uploads)."""
 
     _window = None  # (private: pywebview walks every public attribute of the js_api object)
+    _chrome = ""  # "windows" / "mac" once integrate_title_bar took the window's title bar over, else ""
+    _hwnd = 0
+
+    def window_chrome(self):
+        """Which platform's title bar the page stands in for: "windows" (the page draws minimise, maximise and
+        close and asks for window drags), "mac" (the window's own buttons sit over the page's bar) or "" (the
+        window kept its title bar)."""
+        return self._chrome
+
+    def window_control(self, action: str = ""):
+        """Windows, with the page's title bar: "minimize", "maximize" (or restore, when maximised), "close" or
+        "drag" (start moving the window; called on mouse-down on the bar). False where it does not apply."""
+        if self._chrome != "windows" or not self._hwnd:
+            return False
+        import ctypes
+        user32 = ctypes.windll.user32
+        if action == "minimize":
+            user32.ShowWindow(self._hwnd, 6)  # SW_MINIMIZE
+        elif action == "maximize":
+            user32.ShowWindow(self._hwnd, 9 if user32.IsZoomed(self._hwnd) else 3)  # SW_RESTORE / SW_MAXIMIZE
+        elif action == "close":
+            user32.PostMessageW(self._hwnd, 0x0010, 0, 0)  # WM_CLOSE (asks about unsaved changes as usual)
+        elif action == "drag":
+            user32.PostMessageW(self._hwnd, _WM_START_DRAG, 0, 0)
+        else:
+            return False
+        return True
 
     def set_native_menu(self, menus):
         """macOS: show the page's menus in the system menu bar; True if they are there (the page then hides its own)."""
@@ -230,6 +269,74 @@ def install_native_menu(window, menus: list) -> bool:
     return ok[0]
 
 
+_WM_START_DRAG = 0x8000 + 0x51  # (WM_APP + n: ours, handled by the window procedure below)
+_KEEP = []  # the window procedure must outlive the window (ctypes frees a callback nobody references)
+
+
+def client_top(window_top: int, maximized: bool, frame: int) -> int:
+    """Where the page starts in a window whose title bar the page replaces: at the window's very top, except
+    maximised, when Windows hangs the frame's thickness off every screen edge and the page must start below it."""
+    return window_top + (frame if maximized else 0)
+
+
+def integrate_title_bar(window, api) -> str:
+    """Make the page's title bar the window's: no second bar above it. Called on the GUI thread just before the
+    window shows. Returns what the page then has to do ("windows", "mac") or "" when the window keeps its own
+    title bar (other platforms, or the toolkit is not as expected).
+
+    Windows: the window keeps its frame (resize borders, snapping, shadow, animations); only the caption is
+    taken out of the non-client area, and a drag on the page's bar is handed to the system as a caption drag.
+    macOS: the window is created frameless (content under a transparent title bar); the close, minimise and zoom
+    buttons pywebview hides are shown again."""
+    try:
+        if sys.platform == "win32":
+            import ctypes
+            from ctypes import wintypes
+            hwnd = int(window.native.Handle.ToInt64())
+            user32, comctl32 = ctypes.windll.user32, ctypes.windll.comctl32
+            lresult = ctypes.c_ssize_t
+            proc_type = ctypes.WINFUNCTYPE(lresult, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM,
+                                           ctypes.c_size_t, ctypes.c_size_t)
+            comctl32.DefSubclassProc.restype = lresult
+            comctl32.DefSubclassProc.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+            comctl32.SetWindowSubclass.argtypes = [wintypes.HWND, proc_type, ctypes.c_size_t, ctypes.c_size_t]
+            user32.SendMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+            user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+            user32.IsZoomed.argtypes = user32.GetDpiForWindow.argtypes = [wintypes.HWND]
+
+            def frame(h) -> int:  # the sizing frame's thickness at the window's DPI
+                dpi = user32.GetDpiForWindow(h) or 96
+                return user32.GetSystemMetricsForDpi(33, dpi) + user32.GetSystemMetricsForDpi(92, dpi)
+
+            def proc(h, msg, wparam, lparam, _id, _ref):
+                if msg == 0x0083 and wparam:  # WM_NCCALCSIZE: the client area, from the proposed window rectangle
+                    rect = ctypes.cast(lparam, ctypes.POINTER(wintypes.RECT))  # (the first RECT of the structure)
+                    top = rect[0].top
+                    comctl32.DefSubclassProc(h, msg, wparam, lparam)  # the borders left, right and below
+                    rect[0].top = client_top(top, bool(user32.IsZoomed(h)), frame(h))
+                    return 0
+                if msg == _WM_START_DRAG:
+                    user32.ReleaseCapture()
+                    user32.SendMessageW(h, 0x00A1, 2, 0)  # WM_NCLBUTTONDOWN on HTCAPTION: the system moves the window
+                    return 0
+                return comctl32.DefSubclassProc(h, msg, wparam, lparam)
+
+            callback = proc_type(proc)
+            _KEEP.append(callback)
+            if not comctl32.SetWindowSubclass(hwnd, callback, 1, 0):
+                return ""
+            user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, 0x0020 | 0x0002 | 0x0001 | 0x0004 | 0x0010)  # frame changed
+            api._hwnd, api._chrome = hwnd, "windows"
+        elif sys.platform == "darwin":
+            import AppKit
+            for button in (AppKit.NSWindowCloseButton, AppKit.NSWindowMiniaturizeButton, AppKit.NSWindowZoomButton):
+                window.native.standardWindowButton_(button).setHidden_(False)
+            api._chrome = "mac"
+    except Exception as exc:  # noqa: BLE001 - the window then simply keeps (or lacks) its own title bar
+        print(f"openswx: could not integrate the title bar ({exc})", file=sys.stderr)
+    return api._chrome
+
+
 def confirm_close(window, message: str) -> bool:
     """Ask before closing with unsaved changes; True closes. On macOS pywebview runs the closing handlers on the
     main thread (inside Cmd+Q / the close button), and its create_confirmation_dialog queues the dialog onto that
@@ -248,9 +355,21 @@ def run(port: int = 8765, file: str | None = None) -> int:
     import webview
 
     api = DesktopApi()
-    window = webview.create_window("openswx", html=SPLASH, js_api=api, width=1600, height=960,
-                                   min_size=(1000, 640), maximized=True, background_color="#F2F3F5")
+    mac = sys.platform == "darwin"  # (there the content goes under a transparent title bar; see integrate_title_bar)
+    if mac:
+        webview.settings["DRAG_REGION_DIRECT_TARGET_ONLY"] = True  # (the bar itself drags; its menus and buttons do not)
+    window = webview.create_window("openswx", html=SPLASH, js_api=api, width=1600, height=960, frameless=mac,
+                                   easy_drag=False, min_size=(1000, 640), maximized=True, background_color="#F2F3F5")
     api._window = window
+    window.events.before_show += lambda *_: integrate_title_bar(window, api)
+
+    def shown():  # Windows: changing the frame before the window shows loses its start-up "maximised": put it back
+        if api._chrome == "windows":
+            import ctypes
+            if not ctypes.windll.user32.IsZoomed(api._hwnd):
+                ctypes.windll.user32.ShowWindow(api._hwnd, 3)  # SW_MAXIMIZE
+
+    window.events.shown += shown
 
     def closing():  # unsaved changes: ask before the window goes (False keeps it open)
         session = sys.modules.get("openswx.session")  # (not loaded yet while the splash shows: nothing to lose)

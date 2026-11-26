@@ -70,6 +70,7 @@ const MIXIN = {
   // that over at once, before the first frame, then check it against the state as it is now.
   async homeStart() {
     const box = $("#home");
+    $("#brand").onclick = () => this.homeShow(); // the logo in the title bar opens Home, as File > Home does
     if (box.classList.contains("starting")) { box.classList.remove("starting"); this.homeShow("local"); }
     const [s, st] = await Promise.all([
       this.api("/api/command", { name: "get_settings", args: {} }).catch(() => null),
