@@ -6,6 +6,21 @@ import pytest
 webview = pytest.importorskip("webview", reason="pywebview (the desktop extra) is not installed")
 
 
+def test_the_window_keeps_its_title_bar_until_the_shell_takes_it_over():
+    from openswx.shell import desktop
+    api = desktop.DesktopApi()
+    assert api.window_chrome() == ""  # (the page then draws no window buttons and starts no drags)
+    assert api.window_control("close") is False and api.window_control("drag") is False
+
+
+def test_the_page_starts_below_the_frame_only_when_maximised():
+    """With the caption removed the page starts at the window's top edge. Maximised, Windows places the window
+    with its frame hanging off the screen (top = -frame), so the page starts one frame lower: at screen y = 0."""
+    from openswx.shell import desktop
+    assert desktop.client_top(200, False, 8) == 200
+    assert desktop.client_top(-8, True, 8) == 0
+
+
 def test_menu_tree_becomes_pywebview_menus():
     from webview.menu import Menu, MenuAction, MenuSeparator
     from openswx.shell.desktop import install_native_menu, menu_objects

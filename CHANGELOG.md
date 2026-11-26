@@ -6,6 +6,13 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Changed
+
+- Clicking the openswx logo in the title bar opens Home (as File > Home and Ctrl+Shift+H do).
+- Desktop app, Windows and macOS: the bar with the logo and the menus is the window's title bar; there is no
+  second bar above it. On Windows it carries the minimise, maximise and close buttons and drags the window (double
+  click to maximise); on macOS the window's own buttons sit at its left end.
+
 ### Security
 
 - The live-collaboration presence endpoint (`/api/collab/presence`) checks its arguments before sending and

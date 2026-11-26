@@ -184,7 +184,36 @@ const MIXIN = {
     return { menus, fns };
   },
 
+  // Desktop app: the window has no title bar of its own; this page's is it (shell/desktop.py,
+  // integrate_title_bar). On Windows the page draws minimise / maximise / close and hands a press on the bare bar
+  // to the system as a window drag (a double click maximises); on macOS the window's own buttons sit over the
+  // bar's left end and the shell moves the window when the bar is dragged.
+  async windowChrome() {
+    const api = this.desk;
+    if (this.chromeDone || !api?.window_chrome) return;
+    this.chromeDone = true;
+    const kind = await api.window_chrome().catch(() => "");
+    if (kind === "mac") {
+      document.body.classList.add("mac-chrome");
+      for (const s of ["#titlebar", "#doctitle"]) $(s).classList.add("pywebview-drag-region");
+      return;
+    }
+    if (kind !== "windows") return;
+    document.body.classList.add("win-chrome");
+    const box = el("div", ""); box.id = "winctl";
+    for (const [act, title, d] of [["minimize", "Minimize", "M1 5.5h8"], ["maximize", "Maximize / Restore", "M1.5 1.5h7v7h-7z"], ["close", "Close", "M1 1l8 8M9 1l-8 8"]]) {
+      const b = el("button", `wc wc-${act}`, `<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="${d}"/></svg>`);
+      b.title = title; b.setAttribute("aria-label", title); b.onclick = () => api.window_control(act); box.append(b);
+    }
+    document.body.append(box);
+    // the bare bar: the top 30px of the title bar (or of Home, which covers it), not a menu, button or field on it
+    const bare = (e) => e.button === 0 && e.clientY <= 30 && e.target.closest("#titlebar, #home") && !e.target.closest("button, input, a, .menu-root, #searchresults");
+    document.addEventListener("mousedown", (e) => { if (bare(e) && e.detail === 1) api.window_control("drag"); });
+    document.addEventListener("dblclick", (e) => { if (bare(e)) api.window_control("maximize"); });
+  },
+
   async syncNativeMenu() {
+    this.windowChrome();
     const api = this.desk;
     if (!api?.set_native_menu || !/Mac/i.test(navigator.platform || navigator.userAgent)) return;
     const { menus, fns } = this.nativeMenuTree();

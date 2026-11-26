@@ -15,6 +15,52 @@
   gap: 6px;
   padding: 0 8px 0 2px;
   height: 100%;
+  border: 0;
+  background: none;
+  border-radius: var(--r-btn);
+  cursor: pointer; /* the logo opens Home */
+}
+#brand:hover {
+  background: var(--hover);
+}
+/* desktop app: this bar is the window's title bar (shell/desktop.py; ui.js windowChrome) */
+body.win-chrome #titlebar {
+  padding-right: 142px; /* (the three window buttons) */
+}
+#winctl {
+  position: fixed;
+  top: 0;
+  right: 0;
+  display: flex;
+  z-index: 95; /* over Home and dialogs: the window can always be moved aside or closed */
+}
+.wc {
+  width: 46px;
+  height: 30px;
+  border: 0;
+  background: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--text);
+}
+.wc svg {
+  width: 10px;
+  height: 10px;
+  color: inherit;
+}
+.wc:hover {
+  background: var(--hover);
+}
+.wc-close:hover {
+  background: #c42b1c;
+  color: #fff;
+}
+body.mac-chrome #titlebar {
+  padding-left: 78px; /* (the window's close, minimise and zoom buttons) */
+}
+body.mac-chrome .hm-side {
+  padding-top: 34px;
 }
 .brand-cube {
   width: 18px;
