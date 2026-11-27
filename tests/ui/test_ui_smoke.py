@@ -325,6 +325,51 @@ def test_agent_toasts(page):
     assert "<b>" not in "".join(got["shown"]) and got["dot"]
     assert got["whileOpen"] == 0
 
+
+IN_VIEW = """() => {  // is every corner of the model's box on screen?
+    const v = window.app.vp, b = v.bbox, out = [];
+    for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) {
+        const [sx, sy] = v.toScreen([x, y, z]); out.push(sx >= 0 && sx <= v.w && sy >= 0 && sy <= v.h);
+    }
+    return out.every(Boolean);
+}"""
+
+
+def test_the_view_follows_what_an_agent_builds_until_you_take_the_camera(page):
+    """After an agent's change the camera glides to keep the model framed; once you move the camera yourself it
+    stays where you put it, until Zoom to Fit."""
+    page.evaluate("""async () => {
+        await T.run('new_part', {name: 'Follow'});
+        await window.app.refresh(); window.app.vp.zoomFit(false);  // (a small box at the origin, framed)
+        const sk = (await T.run('create_sketch', {plane: 'Top'})).result.sketch;
+        await T.run('sketch_rectangle', {sketch: sk, corner1: [300, 300], corner2: [700, 500]});
+        await T.run('extrude', {sketch: sk, depth: 40});
+        await window.app.refresh();
+    }""")
+    assert page.evaluate(IN_VIEW) is False  # (built away from where the camera looks)
+    assert page.evaluate("window.app.vp.followModel()") is True
+    page.wait_for_function("!window.app.vp.anim2")
+    assert page.evaluate(IN_VIEW) is True
+    assert page.evaluate("window.app.vp.followModel()") is False  # (framed already: nothing moves)
+
+    box = page.locator("#graphics canvas").first.bounding_box()
+    page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+    page.mouse.wheel(0, -300)  # (you zoom: the camera is yours)
+    page.evaluate("""async () => {
+        const sk = (await T.run('create_sketch', {plane: 'Top'})).result.sketch;
+        await T.run('sketch_circle', {sketch: sk, center: [-900, -900], radius: 50});
+        await T.run('extrude', {sketch: sk, depth: 40});
+        await window.app.refresh();
+    }""")
+    held = page.evaluate("[window.app.vp.target.toArray(), window.app.vp.viewHeight]")
+    assert page.evaluate("window.app.vp.followModel()") is False
+    assert page.evaluate("[window.app.vp.target.toArray(), window.app.vp.viewHeight]") == held
+    page.evaluate("window.app.vp.zoomFit(false)")  # (Zoom to Fit hands the camera back)
+    page.evaluate("window.app.vp.followModel()")
+    page.wait_for_function("!window.app.vp.anim2")
+    assert page.evaluate(IN_VIEW) is True
+
+
 def test_agent_setup_dialog_fits_without_sideways_scrolling(page):
     """Help > Agent (MCP) Setup: long paths, the JSON config and the claude mcp add command wrap inside the dialog."""
     wide = page.evaluate("""async () => {
