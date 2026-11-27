@@ -135,7 +135,8 @@ def read_info(path: str) -> dict:
     info["parasolid"] = [{k: v for k, v in b.items() if k != "data"} for b in parasolid_blocks(streams)]
     info["geometry_note"] = ("B-rep geometry is stored as Parasolid binary transmit data (see 'parasolid'), "
                              "read natively by read_sldprt(); `sldinfo --extract` writes it as .x_b files. "
-                             "Native feature history is not decoded.")
+                             "The feature history is decoded and rebuilt where possible when the file is opened "
+                             "(open_part; tested on files saved by SOLIDWORKS 2025 only).")
     return info
 
 

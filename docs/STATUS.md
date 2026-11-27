@@ -40,7 +40,8 @@ state), and how the program got here, pass by pass, in [`PLAN.md`](PLAN.md) (a l
 
 - SOLIDWORKS feature history: 584 of the 841 sample parts rebuilt exactly (352 fully parametric) in the survey
   of 2026-11-23 (`docs/survey/2026-11-23-samples-841.json`; 2026-10-29: 525 / 363). The rest open as an
-  imported body. `.sldprt` is read-only.
+  imported body. All 841 were saved by SOLIDWORKS 2025: files saved by any other release (2026 included) have
+  not been tested, for history or for the stored body. `.sldprt` is read-only.
 - Simulation: every structural and thermal study (bonded assemblies, contact, springs and bolts included)
   uses curvature-based quadratic tetrahedra when the optional Netgen mesher is installed (`openswx[mesh]`;
   bundled in the Windows and macOS builds); without it, the voxel mesh, whose stresses at
