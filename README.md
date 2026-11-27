@@ -75,7 +75,8 @@ here without retraining. Underneath, it is a different program, built on differe
   back only your own changes. Edit history, named versions and restore; organisations, projects and roles on
   Home's Cloud tab. See [Work together live](#work-together-live).
 - **Files**: native `.oswprt` / `.oswasm` / `.oswdrw` (versioned JSON). Reads SOLIDWORKS `.sldprt` / `.sldasm` /
-  `.slddrw` (2015 and later) natively; clean-room Parasolid reader (`.x_t`, `.x_b`) and writer (`.x_t`); STEP and
+  `.slddrw` natively (tested on files saved by SOLIDWORKS 2025; see
+  [Compatibility](#how-it-differs-from-solidworks)); clean-room Parasolid reader (`.x_t`, `.x_b`) and writer (`.x_t`); STEP and
   IGES in and out; STL, 3MF, glTF, BREP out; DXF in and out.
 - **Safety**: autosave with crash recovery, an application log, a per-user token and origin checks on the
   local server, and an optional folder that agents are confined to.
@@ -239,11 +240,15 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
 
 **Compatibility with SOLIDWORKS files**
 
-- `.sldprt`, `.sldasm` and `.slddrw` (2015 and later) open without SOLIDWORKS installed. openswx reads the stored
-  body and, where it can decode it, the feature history, and rebuilds that history to check it against the stored
-  body. In the survey of 2026-11-23, 584 of the 841 sample parts that ship with SOLIDWORKS 2025 rebuilt exactly
-  (352 fully parametric). Parts whose features are not decoded yet (many sweeps, lofts, sheet-metal and
-  surface features) open as an imported solid that you can still measure, mate, draw and add features to.
+- `.sldprt`, `.sldasm` and `.slddrw` open without SOLIDWORKS installed. openswx reads the stored body and, where
+  it can decode it, the feature history, and rebuilds that history to check it against the stored body. In the
+  survey of 2026-11-23, 584 of the 841 sample parts that ship with SOLIDWORKS 2025 rebuilt exactly (352 fully
+  parametric). Parts whose features are not decoded yet (many sweeps, lofts, sheet-metal and surface features)
+  open as an imported solid that you can still measure, mate, draw and add features to.
+- **Tested on SOLIDWORKS 2025 files only.** Every part in that survey was saved by SOLIDWORKS 2025. Files saved
+  by other releases, 2026 included, have not been tested: their feature history may not rebuild (they then open
+  as an imported solid), and they may not open at all. If one doesn't open as you expect, please
+  [report it](https://github.com/DukeOfCheese/openswx/issues/new/choose).
 - SOLIDWORKS files are **read-only**. Save as openswx files, or exchange through STEP, Parasolid `.x_t` or IGES.
 - Equations, end conditions (by name or by `swEndConditions_e` number) and dimension names (`D1@Sketch1`) use
   the same syntax, so existing design intent carries over.
@@ -272,7 +277,8 @@ everything else is its own. If you are coming from SOLIDWORKS, these are the dif
 openswx is **alpha**: usable for real parts, with rough edges. Save often (autosave keeps a recovery copy;
 `OPENSWX_AUTOSAVE` sets the interval in seconds, or `off`).
 
-- **SOLIDWORKS feature history**: see the numbers above; `.sldprt` is read-only.
+- **SOLIDWORKS feature history**: see the numbers above; tested on files saved by SOLIDWORKS 2025 only;
+  `.sldprt` is read-only.
 - **Simulation and CAM**: see the list above.
 - **Builds** are not code-signed yet.
 - CI runs the test suite on Linux, Windows and macOS, and UI smoke tests in a headless browser.

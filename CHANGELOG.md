@@ -24,6 +24,9 @@ formats or commands; files are migrated automatically and the change is listed h
 - Windows installer: the Start menu entry, desktop icon and file types now start the app directly instead of
   through the small launcher in the install folder, so a missing or quarantined launcher no longer leaves only
   "Uninstall openswx" in the Start menu. The launchers also carry a version resource now. (issue 23)
+- The README and STATUS no longer claim SOLIDWORKS files "2015 and later" open: the feature-history rebuild has
+  been tested only on files saved by SOLIDWORKS 2025, and files from other releases (2026 included) are untested.
+  `sldinfo` no longer says the feature history is not decoded. (issue 24)
 
 ### Security
 
