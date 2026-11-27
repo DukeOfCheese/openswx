@@ -14,7 +14,7 @@ SKIP = {"moRefPlane_c", "moRefAxis_c", "moRefPoint_c", "moCoordSys_c", "moSensor
         "moMateReferenceFeature_c", "moSketchBlockDef_c", "moAttribute_c", "moAttributeDef_c", "moScalerParameter_c",
         "moStringParameter_c", "moIntegerParameter_c", "moNoteData_c", "moDetailCabinet_c", "moLockFeature_c",
         "moDesignTableFeature_c", "mo3DProfileFeature_c", "moSheetMetal_c", "moWeldmentFeature_c", "moFlatPattern_c",
-        "moCutListFolder_c"}
+        "moTemplateFlatPattern_c", "moCutListFolder_c"}  # (flat patterns: the stored folded body catches a flattened save)
 # features that change faces but not the solid (split lines): left out and reported
 # base bodies that are not editable in SOLIDWORKS either: imported, or derived / mirrored from another part
 FIXED_BASE = {"moBaseBody_c", "moStock_c", "moMirrorStock_c"}

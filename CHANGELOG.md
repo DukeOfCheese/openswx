@@ -6,6 +6,12 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Fixed
+
+- Sheet-metal SOLIDWORKS parts no longer open as a single imported body just because their tree ends with a
+  Flat-Pattern feature saved by SOLIDWORKS 2018 or later. The flat pattern doesn't change the folded body, so the
+  rebuild now skips it, as it already did for older flat patterns. (issue 24)
+
 ## 0.4.2 (2026-11-27)
 
 A cleaner window and fixes from the first outside bug reports: the title bar is the window's own, the logo opens

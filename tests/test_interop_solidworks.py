@@ -185,6 +185,22 @@ def test_sw_rebuild_imports_undecoded_feature(tmp_path, monkeypatch):
         rebuild_part(_sw_part(tmp_path, "fil_r5"), PartDocument("t"))
 
 
+@pytest.mark.parametrize("cls", ["moFlatPattern_c", "moTemplateFlatPattern_c"])
+def test_sw_rebuild_skips_flat_pattern(tmp_path, monkeypatch, cls):
+    """The Flat-Pattern feature at the end of a sheet-metal tree (written as moTemplateFlatPattern_c by
+    SOLIDWORKS 2018 and later) does not change the folded body: it is skipped, not imported or refused."""
+    import openswx.exchange.sw_tree as sw_tree
+    from openswx.core.document import PartDocument
+    from openswx.exchange.sw_rebuild import rebuild_part
+    real = sw_tree.read_tree
+    monkeypatch.setattr(sw_tree, "read_tree", lambda path, config=None: [
+        *real(path, config), {"name": "Flat-Pattern1", "cls": cls, "id": None, "params": []}])
+    doc = PartDocument("t")
+    r = rebuild_part(_sw_part(tmp_path, "fil_r5"), doc)
+    assert not r["imported"] and [f["type"] for f in doc.features] == ["sketch", "extrude", "fillet"]
+    assert abs(r["volume"] - r["stored_volume"]) <= 1e-3 * r["stored_volume"]
+
+
 def test_tagged_faces_extended_by_mirror():
     """A feature's tagged face that a later mirror merged with its copy (a pipe run, mirrored to full length)
     still matches the half the feature made; a candidate that falls short of a tagged end cap does not."""
