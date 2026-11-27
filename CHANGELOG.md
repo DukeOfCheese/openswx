@@ -21,6 +21,9 @@ formats or commands; files are migrated automatically and the change is listed h
 - While an agent builds, the view keeps the model in frame: when a change leaves part of it outside the view or
   makes it small in it, the camera glides to fit it. Once you rotate, pan or zoom yourself the camera stays where
   you put it, until the next Zoom to Fit.
+- Windows installer: the Start menu entry, desktop icon and file types now start the app directly instead of
+  through the small launcher in the install folder, so a missing or quarantined launcher no longer leaves only
+  "Uninstall openswx" in the Start menu. The launchers also carry a version resource now. (issue 23)
 
 ### Security
 
