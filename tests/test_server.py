@@ -68,6 +68,25 @@ def test_rest_api_and_origin_tagging():
         assert c.get("/api/state").json()["model"]["kind"] == "assembly"
 
 
+def test_a_file_opened_in_the_browser_is_the_users_action(tmp_path, monkeypatch):
+    """File > Open in a browser sends the file to /api/upload: the activity log calls it a UI action, not an
+    agent's, and the agent workspace (which limits agents only) does not refuse it."""
+    import base64
+    S.new_part("Sent")
+    sk = S.create_sketch("Top")["sketch"]
+    S.sketch_circle(sk, [0, 0], 5)
+    S.extrude(sk, 2)
+    S.call("save_part", {"path": str(tmp_path / "Sent.oswprt")}, "ui")
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    monkeypatch.setenv("OPENSWX_WORKSPACE", str(ws))
+    data = base64.b64encode((tmp_path / "Sent.oswprt").read_bytes()).decode()
+    with TestClient(create_app(mount_mcp=False, token=None), base_url="http://127.0.0.1:8765") as c:
+        r = c.post("/api/upload", json={"filename": "Sent.oswprt", "data": data})
+        assert r.json()["ok"], r.text
+    assert S.APP.log[-1]["command"] == "open_part" and S.APP.log[-1]["origin"] == "ui"
+
+
 def test_bad_arguments_and_file_names_are_handled_safely(tmp_path):
     """Arguments are checked against the command's signature before the call (the message names the
     problem, not the interpreter's error), and file names sent by a client cannot leave the temporary folder."""

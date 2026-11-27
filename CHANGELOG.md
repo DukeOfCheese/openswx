@@ -13,6 +13,12 @@ formats or commands; files are migrated automatically and the change is listed h
   second bar above it. On Windows it carries the minimise, maximise and close buttons and drags the window (double
   click to maximise); on macOS the window's own buttons sit at its left end.
 
+### Fixed
+
+- Agent activity no longer lists your own actions as an agent's: opening or importing a file in the browser and
+  the file openswx was started with are UI actions (no agent toast, and the agent workspace no longer refuses
+  them), and a collaborator's changes are marked "Collaborator" instead of "UI".
+
 ### Security
 
 - The live-collaboration presence endpoint (`/api/collab/presence`) checks its arguments before sending and

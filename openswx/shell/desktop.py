@@ -424,7 +424,7 @@ def run(port: int = 8765, file: str | None = None) -> int:
         if file:
             show(IMPORT_SHARE, "Opening " + file.replace("\\", "/").rsplit("/", 1)[-1])
             try:
-                S.open_part(file)
+                S.call("open_part", {"path": file}, "ui")  # (the file the app was opened with: the user's)
             except Exception as exc:  # noqa: BLE001 - the app still opens; the error is reported
                 print(f"openswx: could not open {file}: {exc}", file=sys.stderr)
         show(IMPORT_SHARE + 5, "Starting the user interface")
