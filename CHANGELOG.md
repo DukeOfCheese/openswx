@@ -18,6 +18,9 @@ formats or commands; files are migrated automatically and the change is listed h
 - Agent activity no longer lists your own actions as an agent's: opening or importing a file in the browser and
   the file openswx was started with are UI actions (no agent toast, and the agent workspace no longer refuses
   them), and a collaborator's changes are marked "Collaborator" instead of "UI".
+- While an agent builds, the view keeps the model in frame: when a change leaves part of it outside the view or
+  makes it small in it, the camera glides to fit it. Once you rotate, pan or zoom yourself the camera stays where
+  you put it, until the next Zoom to Fit.
 - Windows installer: the Start menu entry, desktop icon and file types now start the app directly instead of
   through the small launcher in the install folder, so a missing or quarantined launcher no longer leaves only
   "Uninstall openswx" in the Start menu. The launchers also carry a version resource now. (issue 23)

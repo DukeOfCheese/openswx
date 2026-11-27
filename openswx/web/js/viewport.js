@@ -90,6 +90,13 @@ export class Viewport {
     this._setView("trimetric", false);
     this._buildCube();
     this._bindInput();
+    // your own camera moves (mouse, keys, view and zoom tools) take the camera: followModel leaves it alone until
+    // the next Zoom to Fit
+    this.userHeld = false;
+    for (const m of ["rotateBy", "panBy", "zoomAt", "setView", "normalTo", "zoomToRect", "zoomToItems", "applyView", "previousView"]) {
+      const fn = this[m];
+      this[m] = (...a) => { this.userHeld = true; this.anim2 = null; return fn.apply(this, a); };
+    }
     new ResizeObserver(() => this.resize()).observe(canvas.parentElement);
     this.resize();
     this._loop();
@@ -554,24 +561,52 @@ export class Viewport {
   }
 
   zoomFit(animate = true, only = null) {
+    if (!only) this.userHeld = false; // (the whole model in view again: following an agent may resume)
     if (this.anim && animate) { this.pendingFit = true; return; } // fit for the final orientation
     const box = only && !only.isEmpty() ? only : this.bbox.isEmpty() ? new THREE.Box3(new THREE.Vector3(-50, -50, -50), new THREE.Vector3(50, 50, 50)) : this.bbox;
+    const { c, height } = this._fit(box);
+    if (!animate) { this.anim2 = null; this.target.copy(c); this.viewHeight = height; this._placeCamera(); this._updateProjection(); return; }
+    this._glide(c, height, 260);
+  }
+
+  // where the camera looks and how much it shows (view height) to frame `box` from the current direction
+  _fit(box) {
     const c = box.getCenter(new THREE.Vector3());
+    const { w, h } = this._extent(box, c);
+    const a = (this.w || 1) / (this.h || 1);
+    return { c, height: Math.max(2 * h, (2 * w) / a, 1) * 1.25 };
+  }
+
+  // half-width and half-height of `box` on screen about the point `c`, in model units
+  _extent(box, c) {
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion), up = new THREE.Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion);
     let w = 0, h = 0;
     for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) {
       const p = new THREE.Vector3(x, y, z).sub(c); w = Math.max(w, Math.abs(p.dot(right))); h = Math.max(h, Math.abs(p.dot(up)));
     }
-    const a = (this.w || 1) / (this.h || 1);
-    const target = Math.max(2 * h, (2 * w) / a, 1) * 1.25;
-    if (!animate) { this.target.copy(c); this.viewHeight = target; this._placeCamera(); this._updateProjection(); return; }
+    return { w, h };
+  }
+
+  _glide(c, height, ms) { // move the target and view height there, easing in and out
     const t0 = performance.now(), c0 = this.target.clone(), h0 = this.viewHeight;
     this.anim2 = (t) => {
-      const k = Math.min(1, (t - t0) / 260);
-      this.target.lerpVectors(c0, c, k); this.viewHeight = h0 + (target - h0) * k;
+      const k = Math.min(1, (t - t0) / ms), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      this.target.lerpVectors(c0, c, e); this.viewHeight = h0 + (height - h0) * e;
       this._placeCamera(); this._updateProjection();
       if (k >= 1) this.anim2 = null;
     };
+  }
+
+  // An agent changed the model: if it no longer sits well in the view (part of it outside, or it fills under 40%
+  // of it), glide to frame it. Nothing moves while the camera is yours (see userHeld) or a view change is running.
+  followModel() {
+    if (this.userHeld || this.anim || this.anim2 || this.bbox.isEmpty()) return false;
+    const a = (this.w || 1) / (this.h || 1), hh = this.viewHeight / 2;
+    const { w, h } = this._extent(this.bbox, this.target);
+    const fit = this._fit(this.bbox);
+    if (w <= hh * a * 0.95 && h <= hh * 0.95 && fit.height >= this.viewHeight * 0.4) return false;
+    this._glide(fit.c, fit.height, 600);
+    return true;
   }
 
   // Zoom to Selection: fit the selected faces / edges / sketch entities
