@@ -6,8 +6,8 @@ authors:
   - name: "The openswx authors"
 repository-code: "https://github.com/DukeOfCheese/openswx"
 license: Apache-2.0
-version: 0.4.1
-date-released: 2026-11-24
+version: 0.4.2
+date-released: 2026-11-27
 keywords:
   - CAD
   - parametric modelling

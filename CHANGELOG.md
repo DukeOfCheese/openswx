@@ -6,12 +6,23 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+## 0.4.2 (2026-11-27)
+
+A cleaner window and fixes from the first outside bug reports: the title bar is the window's own, the logo opens
+Home, who is online in a cloud part moves to a People pane, the view keeps an agent's model in frame, and the
+Windows installer's Start menu entry starts the app directly.
+
 ### Changed
 
 - Clicking the openswx logo in the title bar opens Home (as File > Home and Ctrl+Shift+H do).
 - Desktop app, Windows and macOS: the bar with the logo and the menus is the window's title bar; there is no
   second bar above it. On Windows it carries the minimise, maximise and close buttons and drags the window (double
   click to maximise); on macOS the window's own buttons sit at its left end.
+- In a cloud part, who is online is now a **People** pane in the Task Pane on the right, beside Agent activity,
+  instead of a bar over the top-left of the view. Its tab shows only in a cloud part, with how many are in it.
+  The pane lists everyone in their pointer colour, with their role, the tool they are using, the features they
+  have open (locked for others) and whether they are idle. Click someone, or press Enter on them, to follow their
+  view.
 
 ### Fixed
 
@@ -29,23 +40,6 @@ formats or commands; files are migrated automatically and the change is listed h
   `sldinfo` no longer says the feature history is not decoded. (issue 24)
 - The browser's own middle-click actions (autoscroll, paste) can no longer take a middle-button press in the 3D
   view; the press always goes to orbit and the rotation centre. (issue 25)
-
-### Security
-
-- The live-collaboration presence endpoint (`/api/collab/presence`) checks its arguments before sending and
-  answers a failure with a fixed message; the details go to the log instead of back to the page
-  (code-scanning alert 12).
-
-### Changed
-
-- In a cloud part, who is online is now a **People** pane in the Task Pane on the right, beside Agent activity,
-  instead of a bar over the top-left of the view. Its tab shows only in a cloud part, with how many are in it.
-  The pane lists everyone in their pointer colour, with their role, the tool they are using, the features they
-  have open (locked for others) and whether they are idle. Click someone, or press Enter on them, to follow their
-  view.
-
-### Fixed
-
 - Save on a document that has never been saved to a file opens Save As, as in other programs, wherever Save is
   started: the key, File › Save, the toolbar or the macOS menu bar. Cancelling leaves the document unsaved and
   shows no error, and later Saves go to the chosen file without asking.
@@ -53,6 +47,12 @@ formats or commands; files are migrated automatically and the change is listed h
   - A Save that fails in the desktop app (a folder that cannot be written, say) now shows the error. Before,
     nothing happened.
   - `save_part` with no `path` on a never-saved document returns an error that names the `path` argument.
+
+### Security
+
+- The live-collaboration presence endpoint (`/api/collab/presence`) checks its arguments before sending and
+  answers a failure with a fixed message; the details go to the log instead of back to the page
+  (code-scanning alert 12).
 
 ## 0.4.1 (2026-11-24)
 
