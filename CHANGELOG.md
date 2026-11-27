@@ -27,6 +27,8 @@ formats or commands; files are migrated automatically and the change is listed h
 - The README and STATUS no longer claim SOLIDWORKS files "2015 and later" open: the feature-history rebuild has
   been tested only on files saved by SOLIDWORKS 2025, and files from other releases (2026 included) are untested.
   `sldinfo` no longer says the feature history is not decoded. (issue 24)
+- The browser's own middle-click actions (autoscroll, paste) can no longer take a middle-button press in the 3D
+  view; the press always goes to orbit and the rotation centre. (issue 25)
 
 ### Security
 

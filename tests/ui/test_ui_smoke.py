@@ -370,6 +370,40 @@ def test_the_view_follows_what_an_agent_builds_until_you_take_the_camera(page):
     assert page.evaluate(IN_VIEW) is True
 
 
+def test_middle_drag_orbits_the_view(page):
+    """Issue 25: holding the middle button (a wheel click) and dragging rotates the view; a wheel tick during the
+    drag does not stop it, and the browser's middle-click autoscroll never takes the press."""
+    page.evaluate("""async () => {
+        await T.run('new_part', {name: 'Orbit'});
+        const sk = (await T.run('create_sketch', {plane: 'Top'})).result.sketch;
+        await T.run('sketch_rectangle', {sketch: sk, corner1: [-20, -20], corner2: [20, 20]});
+        await T.run('extrude', {sketch: sk, depth: 20});
+        await window.app.refresh(); window.app.vp.zoomFit(false);
+    }""")
+    quat = "window.app.vp.camera.quaternion.toArray().map((q) => q.toFixed(4))"
+    box = page.locator("#graphics canvas").first.bounding_box()
+    cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+    before = page.evaluate(quat)
+    page.mouse.move(cx, cy)
+    page.mouse.down(button="middle")
+    page.mouse.move(cx + 60, cy + 10, steps=6)
+    page.mouse.wheel(0, 1)  # (a wheel mouse often rolls a notch as it is pressed)
+    page.mouse.move(cx + 120, cy + 20, steps=6)
+    page.mouse.up(button="middle")
+    after = page.evaluate(quat)
+    assert after != before
+    default_prevented = page.evaluate("""() => {
+        const c = document.querySelector('#graphics canvas'), r = c.getBoundingClientRect(), out = {};
+        for (const type of ['mousedown', 'auxclick']) {
+            const e = new MouseEvent(type, {button: 1, buttons: type === 'mousedown' ? 4 : 0, bubbles: true, cancelable: true,
+                                            clientX: r.left + 10, clientY: r.top + 10});
+            c.dispatchEvent(e); out[type] = e.defaultPrevented;
+        }
+        return out;
+    }""")
+    assert default_prevented == {"mousedown": True, "auxclick": True}
+
+
 def test_agent_setup_dialog_fits_without_sideways_scrolling(page):
     """Help > Agent (MCP) Setup: long paths, the JSON config and the claude mcp add command wrap inside the dialog."""
     wide = page.evaluate("""async () => {
