@@ -18,6 +18,13 @@ OPEN_WITH = (".sldprt", ".sldasm", ".slddrw", ".step", ".stp", ".igs", ".iges", 
 APP_KEY = r"Software\Classes\Applications\openswx.exe"
 
 
+def open_with() -> tuple[str, ...]:
+    """The extensions offered in "Open with": the neutral CAD ones above and any a plugin can open."""
+    from openswx.exchange import formats
+    extra = [e for f in formats.all_formats() if f.plugin and f.open for e in f.extensions]
+    return (*OPEN_WITH, *(e for e in extra if e not in OPEN_WITH and e not in PROGIDS))
+
+
 def _command(exe: str) -> str:
     return f'"{exe}" "%1"'
 
@@ -32,7 +39,7 @@ def planned_keys(exe: str) -> list[tuple[str, str | None, str]]:
                 (rf"Software\Classes\{progid}\shell\open\command", None, _command(exe))]
     out += [(APP_KEY, "FriendlyAppName", "openswx"),
             (rf"{APP_KEY}\shell\open\command", None, _command(exe))]
-    for ext in (*PROGIDS, *OPEN_WITH):
+    for ext in (*PROGIDS, *open_with()):
         out += [(rf"{APP_KEY}\SupportedTypes", ext, ""),
                 (rf"Software\Classes\{ext}\OpenWithProgids", PROGIDS.get(ext, ("openswx.File",))[0], "")]
     out += [(r"Software\Classes\openswx.File", None, "CAD file (openswx)"),
@@ -108,7 +115,7 @@ def unregister(reg=None) -> list[str]:
                     removed.append(rf"Software\Classes\{ext}")
         except OSError:
             pass
-    for ext in (*PROGIDS, *OPEN_WITH):
+    for ext in (*PROGIDS, *open_with()):
         try:
             with reg.OpenKey(reg.HKEY_CURRENT_USER, rf"Software\Classes\{ext}\OpenWithProgids", 0, reg.KEY_ALL_ACCESS) as k:
                 reg.DeleteValue(k, PROGIDS.get(ext, ("openswx.File",))[0])

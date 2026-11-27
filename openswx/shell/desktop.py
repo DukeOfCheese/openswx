@@ -8,6 +8,7 @@ import socket
 import sys
 import threading
 import time
+from pathlib import Path
 
 
 
@@ -138,7 +139,9 @@ class DesktopApi:
         return {"path": path} if path else {"cancelled": True}
 
     def open_file(self):
-        path = self._dialog("open", types=("openswx and CAD files (*.oswprt;*.oswasm;*.oswdrw;*.step;*.stp;*.igs;*.iges;*.x_t;*.x_b;*.stl;*.3mf;*.FCStd;*.sldprt;*.sldasm;*.slddrw)",
+        from openswx.exchange import formats
+        every = ";".join("*" + e for e in formats.extensions(open=True))
+        path = self._dialog("open", types=(f"openswx and CAD files ({every})", *formats.dialog_filters(open=True),
                                            "All files (*.*)"))
         if not path:
             return {"cancelled": True}
@@ -150,18 +153,25 @@ class DesktopApi:
     def save_as(self):
         d = S.APP.active_doc
         ext = ".oswasm" if getattr(d, "kind", "part") == "assembly" else ".oswprt"
-        path = self._dialog("save", f"{d.name}{ext}", (f"openswx document (*{ext})",))
+        from openswx.exchange import formats
+        path = self._dialog("save", f"{d.name}{ext}", (f"openswx document (*{ext})", *formats.dialog_filters(export=True)))
         if not path:
             return {"cancelled": True}
+        fmt = formats.by_extension(Path(path).suffix)
         try:
+            if fmt is not None and fmt.export:  # Save As a STEP, STL, a plugin's format...: an export
+                return {"ok": True, "result": S.call("export_file", {"path": path, "format": fmt.id}, "ui")}
             return {"ok": True, "result": S.call("save_part", {"path": path}, "ui")}
         except (S.CommandError, OSError) as exc:  # (OSError: a folder that cannot be written, say)
             return {"ok": False, "error": str(exc)}
 
     def export(self, fmt):
         d = S.APP.active_doc
-        ext = "igs" if fmt == "iges" else fmt
-        path = self._dialog("save", f"{d.name}.{ext}", (f"{fmt.upper()} file (*.{ext})",))
+        from openswx.exchange import formats
+        spec = formats.by_id(fmt)
+        ext = "igs" if fmt == "iges" else (spec.extensions[0].lstrip(".") if spec is not None else fmt)
+        filt = formats.dialog_filter(spec) if spec is not None else f"{fmt.upper()} file (*.{ext})"
+        path = self._dialog("save", f"{d.name}.{ext}", (filt,))
         if not path:
             return {"cancelled": True}
         try:

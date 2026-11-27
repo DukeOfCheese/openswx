@@ -547,7 +547,13 @@ def _import_file(doc: PartDocument, path: str, config: int | None = None) -> dic
     from build123d import import_brep, import_step
     p = Path(path)
     ext, notes = p.suffix.lower(), []
-    if ext in (".x_t", ".x_b", ".xmt_txt", ".xmt_bin", ".sldprt", ".igs", ".iges"):
+    from openswx.exchange import formats
+    plugin = formats.plugin_format(ext)
+    if plugin is not None and plugin.reader is None:
+        raise DocumentError(f"{plugin.name} ({ext}) files can be exported but not read: plugin {plugin.plugin} has no reader")
+    if plugin is not None:
+        shape, notes = _read_plugin(plugin, str(p))
+    elif ext in (".x_t", ".x_b", ".xmt_txt", ".xmt_bin", ".sldprt", ".igs", ".iges"):
         shape, notes = _read_foreign(str(p), config)
     elif ext in (".stl", ".3mf"):
         shape, notes = _read_mesh(str(p))
@@ -565,6 +571,25 @@ def _import_file(doc: PartDocument, path: str, config: int | None = None) -> dic
     if notes:
         params["notes"] = notes
     return doc.add_feature("import", params)
+
+
+def _read_plugin(fmt, path: str):
+    """Run a plugin format's reader: (build123d shape, notes). Any failure becomes a DocumentError naming the plugin."""
+    from build123d import Compound, Shape
+    try:
+        got = fmt.reader(path)
+    except DocumentError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - a plugin's own error, reported with its name
+        raise DocumentError(f"{fmt.name} reader (plugin {fmt.plugin}) failed: {type(exc).__name__}: {exc}") from exc
+    shape, notes = got if isinstance(got, tuple) else (got, [])
+    if shape is not None and not isinstance(shape, Shape):  # an OCP TopoDS_Shape
+        shape = Shape.cast(shape)
+    if shape is None:
+        raise DocumentError(f"{fmt.name} reader (plugin {fmt.plugin}) returned nothing")
+    if not isinstance(shape, Compound) and not hasattr(shape, "solids"):
+        raise DocumentError(f"{fmt.name} reader (plugin {fmt.plugin}) returned {type(shape).__name__}, not a shape")
+    return shape, [str(n) for n in (notes or [])]
 
 
 def _eval_body():

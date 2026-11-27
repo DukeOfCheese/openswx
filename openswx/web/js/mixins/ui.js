@@ -100,6 +100,7 @@ const MIXIN = {
         ...(asm() ? [["Pack and Go...", "", () => this.packAndGoDialog()]] : []), "-",
         ["Export > STEP", "", () => this.exportAs("step")], ["Export > Parasolid (x_t)", "", () => this.exportAs("x_t")], ["Export > STL", "", () => this.exportAs("stl")],
         ["Export > IGES", "", () => this.exportAs("iges")], ["Export > 3MF (3D printing)", "", () => this.exportAs("3mf")], ["Export > glTF (GLB)", "", () => this.exportAs("glb")],
+        ...this.pluginExports().map((f) => [`Export > ${f.name.replace(/>/g, "›")}`, "", () => this.exportAs(f.id)]),
         ["Export > Image (PNG)", "", () => (this.desk ? this.deskCall("save_image") : window.open("/api/image?view=isometric&width=1600&height=1200"))],
         ["Export > Flat Pattern DXF...", "", () => this.exportFlatDxf()], ["Export > Sketch as DXF...", "", () => this.exportSketchDxf()],
         ["Import DXF into Sketch...", "", () => this.importDxf()], ["Publish eDrawings File...", "", () => this.publishEDrawing()], "-",

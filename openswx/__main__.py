@@ -140,7 +140,8 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(info, indent=1))
         return 0
     if a.cmd in ("register-file-types", "unregister-file-types"):
-        from openswx.system import fileassoc
+        from openswx.system import fileassoc, plugins
+        plugins.load_all()  # (formats plugins can open are offered in "Open with" too)
         if a.cmd == "unregister-file-types":
             print(json.dumps({"removed": fileassoc.unregister()}, indent=1))
             return 0

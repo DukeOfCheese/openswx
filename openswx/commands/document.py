@@ -35,7 +35,7 @@ from openswx.session import (
 )  # noqa: F401
 
 __all__ = ["new_part", "open_part", "save_part", "recent_files", "clear_recent_files", "save_drawing_document", "list_documents", "activate_document",
-           "close_document", "import_file", "export_file", "get_model", "get_feature", "get_topology",
+           "close_document", "import_file", "export_file", "list_file_formats", "get_model", "get_feature", "get_topology",
            "get_mass_properties", "list_end_conditions", "get_mesh", "get_activity", "measure", "save_named_view",
            "delete_named_view", "face_features", "measure_items", "undo", "redo", "rebuild", "edit_feature",
            "redefine_feature", "delete_feature", "get_design_table", "apply_design_table", "delete_design_table",
@@ -57,10 +57,11 @@ def new_part(name: str | None = None) -> dict:
 
 @command(category="document")
 def open_part(path: str, history: bool = True) -> dict:
-    """Open a document. .oswprt/.oswasm open natively; .step/.stp/.brep and Parasolid .x_t/.x_b are imported
-    as a base feature. .sldprt: with history (default) the feature tree is rebuilt as editable openswx
-    features when every feature is understood and the result matches the file's embedded Parasolid body;
-    otherwise that body is imported as one feature. .sldasm: components (each part read natively) at their
+    """Open a document. .oswprt/.oswasm open natively; .step/.stp/.brep, IGES, Parasolid .x_t/.x_b, meshes
+    (.stl, .3mf), FreeCAD .FCStd and formats added by plugins (list_file_formats) are imported as a base
+    feature. .sldprt: with history (default) the feature tree is rebuilt as editable openswx features when
+    every feature is understood and the result matches the file's embedded Parasolid body; otherwise that body
+    is imported as one feature. .sldasm: components (each part read natively) at their
     saved positions, with the common mates. Everything is read natively: openswx never uses SOLIDWORKS,
     installed or not."""
     p = Path(path)
@@ -81,9 +82,19 @@ def _open(p: Path, history: bool) -> dict:
         APP.documents[doc.name] = doc
         APP.active = doc.name
         return doc.summary()
-    if ext in (".step", ".stp", ".brep", ".x_t", ".x_b", ".xmt_txt", ".xmt_bin", ".igs", ".iges", ".stl", ".3mf", ".fcstd"):
+    from openswx.exchange import formats
+    fmt = formats.by_extension(ext)
+    if fmt is None or not fmt.open:
+        raise DocumentError(f"unsupported file type {ext}"
+                            + (f": {fmt.name} files can be exported but not opened" if fmt is not None else ""))
+    if fmt.import_ and fmt.id != "sldprt":  # neutral formats and plugin formats: a new part with an Imported feature
         doc = APP.new_document(p.stem)
-        _import_file(doc, str(p))
+        try:
+            _import_file(doc, str(p))
+        except Exception:
+            APP.documents.pop(doc.name, None)  # (no empty part left behind by a file that would not read)
+            APP.active = next(iter(APP.documents), None)
+            raise
         return doc.summary()
     if ext == ".oswdrw":  # a drawing document: open (or reuse) its model, then show the drawing
         data = json.loads(p.read_text(encoding="utf-8"))
@@ -298,23 +309,37 @@ def close_document(name: str | None = None) -> dict:
 
 @command(category="document")
 def import_file(path: str) -> dict:
-    """Import a STEP (.step/.stp), IGES, BREP, Parasolid (.x_t/.x_b), SOLIDWORKS part (.sldprt, read natively)
-    or a closed triangle mesh (.stl, .3mf: becomes a faceted solid) into the active part as an Imported feature."""
+    """Import a STEP (.step/.stp), IGES, BREP, Parasolid (.x_t/.x_b), SOLIDWORKS part (.sldprt, read natively),
+    a closed triangle mesh (.stl, .3mf: becomes a faceted solid) or a file of a format a plugin added
+    (list_file_formats shows them all) into the active part as an Imported feature."""
     feat = _import_file(APP.doc, path)
     return {"feature": feat["name"], "model": APP.doc.summary()}
 
 
 @command(mutates=False, category="document")
-def export_file(path: str, format: Literal["step", "stl", "brep", "x_t", "iges", "3mf", "gltf", "glb"] | None = None) -> dict:
-    """Export the active part's (or assembly's) bodies to STEP, IGES (solids), STL, 3MF (3D printing), glTF /
-    GLB (web / visualisation), BREP or Parasolid text .x_t (opens in SOLIDWORKS and other Parasolid-based
-    CAD); the format is inferred from the extension."""
+def export_file(path: str, format: str | None = None) -> dict:
+    """Export the active part's (or assembly's) bodies to a file. format: "step", "iges" (solids), "stl", "3mf"
+    (3D printing), "gltf" / "glb" (web / visualisation), "brep", "x_t" (Parasolid text: opens in SOLIDWORKS and
+    other Parasolid-based CAD), or the id of a format a plugin added (list_file_formats lists every export);
+    without format it is inferred from the path's extension. Returns {"exported": path, "format": id}."""
     from build123d import export_brep, export_gltf, export_step, export_stl
+    from openswx.exchange import formats
     body = APP.active_doc.body
     if body is None:
         raise DocumentError("nothing to export: the part has no body")
-    fmt = (format or Path(path).suffix.lstrip(".")).lower().replace("stp", "step").replace("igs", "iges")
-    if fmt == "step":
+    key = (format or Path(path).suffix).lower().lstrip(".")
+    spec = formats.by_id("x_t" if key == "xt" else key) if key else None
+    if spec is None or not spec.export:
+        raise DocumentError(f"unsupported export format {key!r}; exports: {', '.join(f.id for f in formats.all_formats() if f.export)}")
+    fmt = spec.id
+    if spec.plugin:
+        try:
+            spec.writer(body, str(path))
+        except DocumentError:
+            raise
+        except Exception as exc:  # noqa: BLE001 - a plugin's own error, reported with its name
+            raise DocumentError(f"{spec.name} writer (plugin {spec.plugin}) failed: {type(exc).__name__}: {exc}") from exc
+    elif fmt == "step":
         export_step(body, path)
     elif fmt == "iges":
         from OCP.IGESControl import IGESControl_Writer
@@ -334,16 +359,25 @@ def export_file(path: str, format: Literal["step", "stl", "brep", "x_t", "iges",
         export_stl(body, path, tolerance=0.01, angular_tolerance=0.1)
     elif fmt == "brep":
         export_brep(body, path)
-    elif fmt in ("x_t", "xt", "xmt_txt"):
+    elif fmt == "x_t":
         from openswx.exchange.parasolid_write import XTWriteError, write_xt
         try:
             write_xt(body, path)
         except XTWriteError as exc:
             raise DocumentError(f"Parasolid export: {exc}") from exc
-        fmt = "x_t"
     else:
         raise DocumentError(f"unsupported export format {fmt!r}")
     return {"exported": str(Path(path).resolve()), "format": fmt}
+
+
+@command(mutates=False, category="document")
+def list_file_formats() -> dict:
+    """The file formats openswx can open (open_part), import into a part (import_file) and export (export_file),
+    including those added by plugins. Returns {"formats": [{"id", "name", "extensions", "open", "import",
+    "export", "native", "plugin"}], "open": [extensions], "import": [...], "export": [...]}; "id" is what
+    export_file takes as format, "plugin" names the plugin that added the format (null: built in)."""
+    from openswx.exchange import formats
+    return formats.describe()
 
 
 @command(mutates=False, category="query")

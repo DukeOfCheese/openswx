@@ -259,10 +259,13 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
             doc = S.APP.doc
             return Response(json.dumps(doc.to_dict(), indent=1), media_type="application/json",
                             headers={"Content-Disposition": f'attachment; filename="{doc.name}.oswprt"'})
-        if format not in ("step", "stl", "brep", "x_t", "iges", "3mf", "glb"):
-            raise HTTPException(400, "format must be oswprt, step, iges, stl, 3mf, glb, brep or x_t")
+        from openswx.exchange import formats
+        spec = formats.by_id(format)
+        if spec is None or not spec.export:
+            raise HTTPException(400, "format must be oswprt or one of " + ", ".join(f.id for f in formats.all_formats() if f.export))
+        format = spec.id
         doc = S.APP.active_doc  # assemblies export too
-        ext = "igs" if format == "iges" else format
+        ext = "igs" if format == "iges" else spec.extensions[0].lstrip(".")
         tmp = _temp_path(f"{doc.name}.{ext}", f"model.{ext}")
         try:
             S.export_file(str(tmp), format)

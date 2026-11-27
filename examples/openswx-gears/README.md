@@ -4,6 +4,9 @@ A small example of an openswx plugin. It adds one command, `spur_gear`, which bu
 spur gear as a new part. The point is the packaging and the API, not gear design: the flanks are sampled and
 interpolated with a closed spline, so the tooth tips are slightly rounded.
 
+A plugin can also add file formats (a reader and/or a writer for an extension); see
+[docs/plugins.md](../../docs/plugins.md) for the whole plugin API and a minimal format plugin.
+
 ## Install
 
 From a checkout of openswx:

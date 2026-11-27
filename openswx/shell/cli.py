@@ -1,6 +1,7 @@
 """Headless command-line tools: one-shot jobs on a file, for scripts and CI (no window, no server).
 
   openswx convert IN OUT              any format openswx opens -> .step .iges .stl .3mf .glb .brep .x_t .oswprt
+                                      (and formats plugins added)
   openswx render FILE -o out.png      a picture (--view isometric|front|top|..., --size 1600x1200)
   openswx massprops FILE              mass properties as JSON
   openswx check FILE                  the file's requirements and a rebuild check; exit status 1 if any fails
@@ -17,8 +18,12 @@ import sys
 from pathlib import Path
 
 COMMANDS = ("convert", "render", "massprops", "check", "drawing", "script", "diff")
-EXPORTS = {".step": "step", ".stp": "step", ".igs": "iges", ".iges": "iges", ".stl": "stl", ".3mf": "3mf",
-           ".glb": "glb", ".gltf": "gltf", ".brep": "brep", ".x_t": "x_t"}
+
+
+def exports() -> dict[str, str]:
+    """Extension -> export_file format, for `convert` (built-in formats and those plugins added)."""
+    from openswx.exchange import formats
+    return {e: f.id for f in formats.all_formats() if f.export for e in f.extensions}
 
 
 def add_parsers(sub) -> None:
@@ -70,9 +75,10 @@ def run(a) -> int:
                 r = S.call("save_part", {"path": str(out.resolve())}, "ui")
                 print(r["saved"])
                 return 0
-            if ext not in EXPORTS:
-                return fail(f"cannot write {ext or 'a file without an extension'}; expected one of {sorted(EXPORTS)} or .oswprt")
-            S.call("export_file", {"path": str(out.resolve()), "format": EXPORTS[ext]}, "ui")
+            ex = exports()
+            if ext not in ex:
+                return fail(f"cannot write {ext or 'a file without an extension'}; expected one of {sorted(ex)} or .oswprt")
+            S.call("export_file", {"path": str(out.resolve()), "format": ex[ext]}, "ui")
             print(out.resolve())
             return 0
         if a.cmd == "render":

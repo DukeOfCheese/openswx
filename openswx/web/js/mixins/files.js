@@ -13,6 +13,7 @@ const MIXIN = {
 
   bindFileInput() {
     const fi = $("#fileinput");
+    this.loadFileFormats();
     fi.onchange = async () => {
       const f = fi.files[0]; if (!f) return;
       const buf = new Uint8Array(await f.arrayBuffer()); let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
@@ -22,6 +23,23 @@ const MIXIN = {
       if (res.result?.solidworks_file) return this.modal("SOLIDWORKS file", `<p>Read the SOLIDWORKS container (${Object.keys(res.result.solidworks_file.streams).length} streams).</p><pre class="code">${escapeHtml(JSON.stringify(res.result.solidworks_file, null, 1)).slice(0, 4000)}</pre>`, null, "open");
       await this.refresh(); this.vp.zoomFit();
     };
+  },
+
+  // The formats the server opens and exports (list_file_formats: the built-in ones and those plugins added). The
+  // Open dialog's filter, the Export menu and Save As follow it; until it arrives the page's own list stands.
+  async loadFileFormats() {
+    const r = await this.api("/api/command", { name: "list_file_formats", args: {} }).catch(() => null);
+    if (!r?.ok) return;
+    this.fileFormats = r.result;
+    $("#fileinput").accept = r.result.open.join(",");
+  },
+
+  pluginExports() { return (this.fileFormats?.formats || []).filter((f) => f.plugin && f.export); },
+
+  // the export format a Save As path names by its extension (null: an openswx document)
+  exportFormatFor(path) {
+    const ext = (/\.[^./\\]+$/.exec(path || "")?.[0] || "").toLowerCase();
+    return (this.fileFormats?.formats || []).find((f) => f.export && f.extensions.includes(ext)) || null;
   },
 
   openFile(mode = "open") {
@@ -42,8 +60,13 @@ const MIXIN = {
     }
     if (this.desk) return this.deskCall("save_as");
     const def = this.model.path || `${this.model.name}.oswprt`;
-    this.modal("Save As", `<div class="field"><label>File path on this computer</label><input id="savepath" value="${escapeHtml(def)}"></div><div class="pm-msg">Saved as openswx part (.oswprt). Use File &gt; Export for STEP/STL.</div>`,
-      async () => { const r = await this.run("save_part", { path: $("#savepath").value }); this.toast(`Saved ${r.result.saved}`); }, "save");
+    const exts = (this.fileFormats?.export || [".step", ".stl"]).join(" ");
+    this.modal("Save As", `<div class="field"><label>File path on this computer</label><input id="savepath" value="${escapeHtml(def)}"></div><div class="pm-msg">Saved as an openswx document (.oswprt / .oswasm), or exported when the name ends in ${escapeHtml(exts)}.</div>`,
+      async () => {
+        const path = $("#savepath").value, fmt = this.exportFormatFor(path);
+        const r = fmt ? await this.run("export_file", { path, format: fmt.id }) : await this.run("save_part", { path });
+        if (r?.ok) this.toast(`Saved ${escapeHtml(r.result.saved || r.result.exported)}`);
+      }, "save");
   },
 
   // a file path from the native dialog (desktop) or typed in (browser, server-side path)
