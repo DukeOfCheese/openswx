@@ -124,8 +124,10 @@ class App {
     es.onmessage = (m) => {
       const d = JSON.parse(m.data);
       if (d.version !== this.version) {
-        if (d.last && d.last.origin === "agent" && this.version >= 0) this.onAgent(d.last);
-        this.refresh();
+        const agent = d.last && d.last.origin === "agent" && this.version >= 0;
+        if (agent) this.onAgent(d.last);
+        const done = this.refresh();
+        if (agent) done.then(() => { if (!this.cl.follow) this.vp.followModel(); }); // (keep what it builds in view)
       }
       if (d.collab !== undefined && d.collab !== this.cl.rev) this.refreshCollab(); // (peers, locks: no document change)
     };
