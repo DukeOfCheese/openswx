@@ -106,7 +106,7 @@ const MIXIN = {
       $("#tp-agent").innerHTML = `<div class="tp-h">${icon("agent")} Agent activity</div>
         <div class="pm-msg">Agents connect over MCP at <b>${location.origin}/mcp</b> (or stdio: <code>python -m openswx mcp</code>). Their actions appear here live.</div>` +
         log.map((a) => `<div class="act ${a.origin === "agent" ? "agent" : ""} ${a.ok ? "" : "fail"}"><div class="cmd">${escapeHtml(a.command)}</div>
-          <div class="meta">${a.origin === "agent" ? "Agent (MCP)" : "UI"} · ${new Date(a.t * 1000).toLocaleTimeString()}${a.ok ? "" : " · " + escapeHtml(a.message)}</div>
+          <div class="meta">${({ agent: "Agent (MCP)", collab: "Collaborator" })[a.origin] || "UI"} ·${new Date(a.t * 1000).toLocaleTimeString()}${a.ok ? "" : " · " + escapeHtml(a.message)}</div>
           <div class="args">${escapeHtml(JSON.stringify(a.args))}</div></div>`).join("");
     }
     if (!$("#tp-props").classList.contains("hidden")) {

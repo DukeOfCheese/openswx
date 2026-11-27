@@ -83,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
         from openswx import session as S
         from openswx.server.web_server import run
         if a.file:
-            S.open_part(a.file)
+            S.call("open_part", {"path": a.file}, "ui")  # (the file named on the command line: the user's)
         url = f"http://{a.host}:{a.port}/"
         link = url + (f"?token={token}" if token else "")
         if a.open:

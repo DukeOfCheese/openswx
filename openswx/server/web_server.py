@@ -248,7 +248,7 @@ def create_app(mount_mcp: bool = True, token: str | None = "auto", host: str = "
         tmp.write_bytes(base64.b64decode(body["data"]))
         cmd = "import_file" if body.get("mode") == "import" else "open_part"
         try:
-            result = await asyncio.to_thread(S.call, cmd, {"path": str(tmp)})
+            result = await asyncio.to_thread(S.call, cmd, {"path": str(tmp)}, "ui")  # (the user's own Open, not an agent)
         except S.CommandError as exc:
             return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
         return {"ok": True, "result": result}
