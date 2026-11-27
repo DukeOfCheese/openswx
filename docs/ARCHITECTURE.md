@@ -168,6 +168,10 @@ touching the real document, the undo stack or the journal.
   port, relays JSON-RPC through `openswx/server/mcp_bridge.py` so the agent edits the open window.
 - **Plugins.** Commands that came from a plugin carry a `plugin` marker in `COMMANDS`; they appear in the
   `plugins` toolset (`toolset_commands("plugins")`), which also shows up in `list_toolsets` when non-empty.
+- **File formats.** `openswx/exchange/formats.py` is the one list of formats openswx opens, imports and exports.
+  `open_part`, `import_file`, `export_file`, `list_file_formats`, the web UI's Open filter and Export menu, the
+  desktop dialogs, `openswx convert`, `/api/download` and the Windows "Open with" keys all read it; a plugin adds
+  to it with `plugins.register_format` (a reader and/or a writer). See `docs/plugins.md`.
 - **Access control.** `openswx/server/security.py` requires the per-user token for `/api/` and `/mcp` unless
   started with `--no-token`, checks origins, confines remote access unless `--allow-remote`, and supports a
   view-only share token that the server rejects non-query commands for. `OPENSWX_WORKSPACE` additionally
@@ -222,6 +226,6 @@ property manager. Styles live in `web/css/`, one file per widget group imported 
   `packaging/openswx.spec`; a new package directory still has to be added to `[tool.setuptools] packages` in
   `pyproject.toml`.
 - **An extension without touching the tree:** publish a package that declares an `openswx.plugins` entry
-  point; see `examples/openswx-gears/` and `openswx/system/plugins.py`.
+  point; see `docs/plugins.md`, `examples/openswx-gears/` and `openswx/system/plugins.py`.
 - **A UI feature:** add a method to a mixin (never shadow `App`), a CSS file under `web/css/` if it is a new
   widget group, and an SVG in `web/svgs/` for a new pictogram; no build step is involved.

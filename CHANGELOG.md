@@ -6,6 +6,21 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Added
+
+- Plugins can add file formats, not only commands (asked for in #24). `register_format(".ncx", "Neutral CAD eXchange",
+  reader=..., writer=...)` in a plugin makes the extension open through File > Open, the desktop app's dialogs,
+  a double-click and `openswx FILE`, import with `import_file`, and export through File > Export, Save As,
+  `export_file` and `openswx convert`. The API and a minimal example plugin are in `docs/plugins.md`.
+- `list_file_formats`: every format openswx opens, imports and exports, including those plugins added.
+
+### Changed
+
+- Save As accepts an export format's extension (a name ending in `.step` exports a STEP file), in the browser
+  and in the desktop app's dialog.
+- `export_file` takes `format` as a plain string (a plugin's format id is accepted); an unknown format is an
+  error that lists the valid ones.
+
 ## 0.4.2 (2026-11-27)
 
 A cleaner window and fixes from the first outside bug reports: the title bar is the window's own, the logo opens

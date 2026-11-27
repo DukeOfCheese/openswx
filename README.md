@@ -67,7 +67,7 @@ here without retraining. Underneath, it is a different program, built on differe
 - **Rendering**: real-time PBR, or path traced for soft shadows and reflections.
 - **Review**: design review, requirements checked like tests, tolerance stack-up, design studies, document
   compare.
-- **Agents**: <!-- counts -->463 commands, 443 of them MCP tools ([full list](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md))<!-- /counts -->,
+- **Agents**: <!-- counts -->464 commands, 444 of them MCP tools ([full list](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md))<!-- /counts -->,
   over stdio or streamable HTTP, shown live in the UI's Agent activity pane.
 - **Live collaboration**: several people in one part at once, on a server you host yourself
   ([openswx-collab](https://github.com/DukeOfCheese/openswx-collab)). Edits appear for everyone as they are
@@ -190,8 +190,9 @@ What an agent sees and can do:
 - **Limits you can set.** `--workspace DIR` (or `OPENSWX_WORKSPACE`) confines agents' file reads and writes to
   one folder. `--share` prints a separate view-only link for people watching. The rules are in
   [`openswx/server/security.py`](https://github.com/DukeOfCheese/openswx/blob/main/openswx/server/security.py).
-- **Your own tools.** A Python package can add commands through the `openswx.plugins` entry point; they become
-  MCP tools in the `plugins` toolset ([`openswx/system/plugins.py`](https://github.com/DukeOfCheese/openswx/blob/main/openswx/system/plugins.py),
+- **Your own tools.** A Python package can add commands and file formats through the `openswx.plugins` entry
+  point: commands become MCP tools in the `plugins` toolset, and a format opens and exports everywhere the built-in
+  ones do ([`docs/plugins.md`](https://github.com/DukeOfCheese/openswx/blob/main/docs/plugins.md), [`openswx/system/plugins.py`](https://github.com/DukeOfCheese/openswx/blob/main/openswx/system/plugins.py),
   example: [`examples/openswx-gears/`](https://github.com/DukeOfCheese/openswx/tree/main/examples/openswx-gears)).
 
 Try: *"Make a 120×60×10 mm mounting plate with four Ø8 holes 12 mm from the edges and a Ø36 boss with a
