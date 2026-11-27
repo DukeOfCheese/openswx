@@ -781,6 +781,9 @@ export class Viewport {
     const c = this.canvas;
     let drag = null;
     c.addEventListener("contextmenu", (e) => e.preventDefault());
+    // the middle button is the view's (orbit, pivot): the browser's own middle-click actions (autoscroll, paste,
+    // open in new tab) must not take the press, whichever mouse event a driver's wheel click arrives as
+    for (const type of ["mousedown", "mouseup", "auxclick"]) c.addEventListener(type, (e) => { if (e.button === 1) e.preventDefault(); });
     c.addEventListener("pointerdown", (e) => {
       try { c.setPointerCapture(e.pointerId); } catch { /* (a pointer that has already gone) */ }
       const mode = e.button === 0 ? (e.altKey ? "rotate" : null) : (MOUSE[this.mouse.preset] || MOUSE.solidworks)(e.button, e);
