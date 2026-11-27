@@ -4,8 +4,11 @@
 ; Installs per user. The install folder ({userpf}\openswx by default) holds only two small launchers
 ; (packaging\launcher.cs, compiled by build.py into build-new\launcher); the PyInstaller runtime (its exe and
 ; _internal) goes to %LOCALAPPDATA%\openswx\runtime, which the launchers find through
-; HKCU\Software\openswx\RuntimeDir. Adds Start menu / optional desktop shortcuts and the
-; same file associations as `openswx-cli register-file-types` (.oswprt / .oswasm open in openswx; it is
+; HKCU\Software\openswx\RuntimeDir. The launchers are for the command line (the folder goes on PATH); the
+; shortcuts, the post-install launch and the file types start the runtime's openswx.exe directly, so the app
+; still opens if a launcher is missing (an antivirus can quarantine a small unsigned launcher, and Windows then
+; hides a shortcut whose target is gone, leaving only "Uninstall openswx"). Adds Start menu / optional desktop
+; shortcuts and the same file associations as `openswx-cli register-file-types` (.oswprt / .oswasm open in openswx; it is
 ; offered in "Open with" for SOLIDWORKS and neutral CAD files). Uninstall removes all of it.
 
 #define AppName "openswx"
@@ -32,7 +35,7 @@ ChangesEnvironment=yes
 OutputDir=..\dist
 OutputBaseFilename=openswx-setup-{#AppVersion}
 SetupIconFile=openswx.ico
-UninstallDisplayIcon={app}\openswx.exe
+UninstallDisplayIcon={#RuntimeDir}\openswx.exe
 Compression=lzma2/max
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
@@ -59,9 +62,9 @@ Source: "{#SourceDir}\*"; DestDir: "{#RuntimeDir}"; Flags: ignoreversion recurse
 Type: filesandordirs; Name: "{#RuntimeDir}"
 
 [Icons]
-Name: "{group}\openswx"; Filename: "{app}\openswx.exe"
+Name: "{group}\openswx"; Filename: "{#RuntimeDir}\openswx.exe"
 Name: "{group}\Uninstall openswx"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\openswx"; Filename: "{app}\openswx.exe"; Tasks: desktopicon
+Name: "{autodesktop}\openswx"; Filename: "{#RuntimeDir}\openswx.exe"; Tasks: desktopicon
 
 [Registry]
 ; the install folder (openswx-cli.exe) on this user's PATH, once; removed again by the uninstaller ([Code])
@@ -71,20 +74,20 @@ Root: HKCU; Subkey: "Software\openswx"; ValueType: string; ValueName: "RuntimeDi
 ; openswx's own formats
 Root: HKA; Subkey: "Software\Classes\.oswprt"; ValueType: string; ValueName: ""; ValueData: "openswx.Part"; Flags: uninsdeletevalue uninsdeletekeyifempty; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\openswx.Part"; ValueType: string; ValueName: ""; ValueData: "openswx Part"; Flags: uninsdeletekey; Tasks: assoc
-Root: HKA; Subkey: "Software\Classes\openswx.Part\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"",0"; Tasks: assoc
-Root: HKA; Subkey: "Software\Classes\openswx.Part\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"" ""%1"""; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\openswx.Part\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{#RuntimeDir}\openswx.exe"",0"; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\openswx.Part\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{#RuntimeDir}\openswx.exe"" ""%1"""; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\.oswasm"; ValueType: string; ValueName: ""; ValueData: "openswx.Assembly"; Flags: uninsdeletevalue uninsdeletekeyifempty; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\openswx.Assembly"; ValueType: string; ValueName: ""; ValueData: "openswx Assembly"; Flags: uninsdeletekey; Tasks: assoc
-Root: HKA; Subkey: "Software\Classes\openswx.Assembly\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"",0"; Tasks: assoc
-Root: HKA; Subkey: "Software\Classes\openswx.Assembly\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"" ""%1"""; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\openswx.Assembly\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{#RuntimeDir}\openswx.exe"",0"; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\openswx.Assembly\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{#RuntimeDir}\openswx.exe"" ""%1"""; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\.oswdrw"; ValueType: string; ValueName: ""; ValueData: "openswx.Drawing"; Flags: uninsdeletevalue uninsdeletekeyifempty; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\openswx.Drawing"; ValueType: string; ValueName: ""; ValueData: "openswx Drawing"; Flags: uninsdeletekey; Tasks: assoc
-Root: HKA; Subkey: "Software\Classes\openswx.Drawing\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"",0"; Tasks: assoc
-Root: HKA; Subkey: "Software\Classes\openswx.Drawing\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"" ""%1"""; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\openswx.Drawing\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{#RuntimeDir}\openswx.exe"",0"; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\openswx.Drawing\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{#RuntimeDir}\openswx.exe"" ""%1"""; Tasks: assoc
 ; "Open with" for SOLIDWORKS and neutral CAD files (their default program is left alone)
 Root: HKA; Subkey: "Software\Classes\openswx.File"; ValueType: string; ValueName: ""; ValueData: "CAD file (openswx)"; Flags: uninsdeletekey
-Root: HKA; Subkey: "Software\Classes\openswx.File\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"",0"
-Root: HKA; Subkey: "Software\Classes\openswx.File\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"" ""%1"""
+Root: HKA; Subkey: "Software\Classes\openswx.File\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{#RuntimeDir}\openswx.exe"",0"
+Root: HKA; Subkey: "Software\Classes\openswx.File\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{#RuntimeDir}\openswx.exe"" ""%1"""
 Root: HKA; Subkey: "Software\Classes\.sldprt\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue uninsdeletekeyifempty
 Root: HKA; Subkey: "Software\Classes\.sldasm\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue uninsdeletekeyifempty
 Root: HKA; Subkey: "Software\Classes\.step\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue uninsdeletekeyifempty
@@ -92,10 +95,10 @@ Root: HKA; Subkey: "Software\Classes\.stp\OpenWithProgids"; ValueType: string; V
 Root: HKA; Subkey: "Software\Classes\.x_t\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue uninsdeletekeyifempty
 Root: HKA; Subkey: "Software\Classes\.x_b\OpenWithProgids"; ValueType: string; ValueName: "openswx.File"; ValueData: ""; Flags: uninsdeletevalue uninsdeletekeyifempty
 Root: HKA; Subkey: "Software\Classes\Applications\openswx.exe"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "openswx"; Flags: uninsdeletekey
-Root: HKA; Subkey: "Software\Classes\Applications\openswx.exe\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\openswx.exe"" ""%1"""
+Root: HKA; Subkey: "Software\Classes\Applications\openswx.exe\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{#RuntimeDir}\openswx.exe"" ""%1"""
 
 [Run]
-Filename: "{app}\openswx.exe"; Description: "{cm:LaunchProgram,openswx}"; Flags: nowait postinstall skipifsilent
+Filename: "{#RuntimeDir}\openswx.exe"; Description: "{cm:LaunchProgram,openswx}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 // the user's PATH (HKCU\Environment) already holds `dir`?

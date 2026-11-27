@@ -44,16 +44,23 @@ def version() -> str:
     return m.group(1) if m else "0.0.0"
 
 
-def build_launchers() -> None:
+def build_launchers(ver: str) -> None:
     """The installer's openswx.exe / openswx-cli.exe (packaging/launcher.cs): they start the runtime in AppData.
-    Compiled with the C# compiler of the .NET Framework that ships with Windows."""
+    Compiled with the C# compiler of the .NET Framework that ships with Windows; `ver` goes in their version
+    resource."""
     csc = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Microsoft.NET" / "Framework64" / "v4.0.30319" / "csc.exe"
     out = WORK / "launcher"
     out.mkdir(parents=True, exist_ok=True)
     src, ico = ROOT / "packaging" / "launcher.cs", ROOT / "packaging" / "openswx.ico"
+    nums = (re.findall(r"\d+", ver) + ["0"] * 4)[:4]  # "0.4.1" -> 0.4.1.0 (Windows wants four numbers)
+    info = out / "version.cs"
+    info.write_text(f'[assembly: System.Reflection.AssemblyVersion("{".".join(nums)}")]\n'
+                    f'[assembly: System.Reflection.AssemblyFileVersion("{".".join(nums)}")]\n'
+                    f'[assembly: System.Reflection.AssemblyInformationalVersion("{ver}")]\n', encoding="utf-8")
     for name, opts in (("openswx.exe", ["/target:winexe", "/r:System.Windows.Forms.dll"]),
                        ("openswx-cli.exe", ["/target:exe", "/define:CLI"])):
-        subprocess.run([str(csc), "/nologo", *opts, f"/win32icon:{ico}", f"/out:{out / name}", str(src)], check=True)
+        subprocess.run([str(csc), "/nologo", *opts, f"/win32icon:{ico}", f"/out:{out / name}", str(src), str(info)],
+                       check=True)
 
 
 def build_windows(ver: str, zip_too: bool) -> None:
@@ -62,7 +69,7 @@ def build_windows(ver: str, zip_too: bool) -> None:
         raise SystemExit(f"no app build at {app}")
     iscc = next((p for p in ISCC if p.exists()), None)
     if iscc:
-        build_launchers()
+        build_launchers(ver)
         subprocess.run([str(iscc), f"/DAppVersion={ver}", str(ROOT / "packaging" / "openswx.iss")], check=True, cwd=ROOT)
         print(f"installer: {DIST / f'openswx-setup-{ver}.exe'}")
     if zip_too or not iscc:

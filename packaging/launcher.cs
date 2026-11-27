@@ -9,7 +9,19 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Reflection;
 using Microsoft.Win32;
+
+// a version resource (name, product, publisher) like the rest of the install: an exe without one is more
+// likely to be flagged by antivirus heuristics, and Windows shows these in Task Manager and file properties
+[assembly: AssemblyProduct("openswx")]
+[assembly: AssemblyCompany("openswx contributors")]
+[assembly: AssemblyCopyright("Apache-2.0")]
+#if CLI
+[assembly: AssemblyTitle("openswx command line")]
+#else
+[assembly: AssemblyTitle("openswx")]
+#endif
 
 static class Launcher
 {

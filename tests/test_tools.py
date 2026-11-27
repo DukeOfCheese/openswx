@@ -101,6 +101,20 @@ def test_release_metadata_agrees():
     assert re.search(rf'^version: {re.escape(meta["version"])}$', (root / "CITATION.cff").read_text(encoding="utf-8"), re.M)
 
 
+def test_installer_shortcuts_start_the_app_itself():
+    """Issue 23: the Start menu entry, desktop icon, post-install launch and file types start the runtime's
+    openswx.exe, not the small launcher in the install folder; if the launcher is quarantined or missing,
+    Windows hides its shortcut and only "Uninstall openswx" is left."""
+    import re
+    iss = (Path(__file__).resolve().parent.parent / "packaging" / "openswx.iss").read_text(encoding="utf-8")
+    assert "{app}\\openswx.exe" not in iss  # (openswx-cli.exe in {app} stays: it is the PATH entry)
+    icons = re.search(r"^\[Icons\]\n(.*?)^\[", iss, re.M | re.S)[1]
+    app_icons = [ln for ln in icons.splitlines() if ln.startswith("Name:") and "Uninstall" not in ln]
+    assert len(app_icons) == 2 and all('Filename: "{#RuntimeDir}\\openswx.exe"' in ln for ln in app_icons)
+    run = re.search(r"^\[Run\]\n(.*?)^\[", iss, re.M | re.S)[1]
+    assert 'Filename: "{#RuntimeDir}\\openswx.exe"' in run
+
+
 def test_material_library_entries_are_plausible():
     """Every library material has the fields the studies need, in sane ranges and units (kg/m^3, MPa, W/(m K),
     J/(kg K)): a slip of units (GPa for MPa, g/cm^3 for kg/m^3) shows up as an out-of-range value here."""
