@@ -6,6 +6,15 @@ formats or commands; files are migrated automatically and the change is listed h
 
 ## Unreleased
 
+### Added
+
+- `openswx mcp`, which MCP clients such as Claude Desktop start in the background (often when the computer
+  starts), now shows the openswx icon in the system tray while it runs, with the tooltip "openswx MCP server
+  running" and a menu to open the live UI or **Quit openswx**. Before, it could only be ended from the Task
+  Manager. Quitting keeps documents with unsaved changes for recovery at the next start. Windows and Linux
+  desktops; it needs pystray and Pillow (in the desktop builds, or `pip install openswx[tray]`), and without
+  them, without a desktop, or with `OPENSWX_TRAY=off` the server runs as before.
+
 ### Fixed
 
 - Sheet-metal SOLIDWORKS parts no longer open as a single imported body just because their tree ends with a

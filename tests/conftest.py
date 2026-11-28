@@ -9,6 +9,7 @@ os.environ.setdefault("OPENSWX_CACHE", "off")
 os.environ.setdefault("OPENSWX_ISOLATE", "off")  # (readers run in-process: a child per file would triple the run time)
 os.environ.setdefault("OPENSWX_PLUGINS", "off")  # (plugins installed on this machine are not under test)
 os.environ.setdefault("OPENSWX_AUTOSAVE", "off")
+os.environ.setdefault("OPENSWX_TRAY", "off")  # (no tray icons from processes the tests start)
 os.environ.setdefault("OPENSWX_SHOW_HOME", "0")  # (the window opens on the editor, as the UI tests expect; test_ui_home turns it on)
 os.environ.setdefault("OPENSWX_LOG", "off")  # (test runs do not write to the user's application log)  # (no autosave thread or recovery files from test runs)
 
