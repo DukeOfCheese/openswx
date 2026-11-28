@@ -13,13 +13,15 @@ edits, pointers and open features show up for the others as they happen.**
 
 https://github.com/user-attachments/assets/a2f0469a-6fc6-4da8-857d-d7ce00e8c905
 
-<sub>39 s ([4K original](https://github.com/DukeOfCheese/openswx/blob/main/docs/media/demo.mp4)). Recorded in
-openswx: every feature is built by a real MCP tool call, the same calls Claude makes through Claude Code or any
-other MCP client. Then the part moves to the cloud and a second person joins it from their own openswx, through
-a local [openswx-collab](https://github.com/DukeOfCheese/openswx-collab) server: their pointer, their fillet
-and the history arrive live, each from a real command. The chat panel illustrates the conversation and is
-replayed by a script ([`tools/demo/`](https://github.com/DukeOfCheese/openswx/blob/main/tools/demo)); the
-people are made-up demo accounts. Claude is made by [Anthropic](https://www.anthropic.com/).</sub>
+<sub>37 s ([4K original](https://github.com/DukeOfCheese/openswx/blob/main/docs/media/demo.mp4)). Recorded in
+openswx: Claude shares the part with the team through a local
+[openswx-collab](https://github.com/DukeOfCheese/openswx-collab) server, then builds it while two teammates
+work in the same part from their own openswx: their pointers move over it, one fillets the boss and the other
+has the boss open, which locks it. Every feature is a real command, Claude's through MCP (the same calls it
+makes through Claude Code or any other MCP client) and the teammates' through their own openswx. The chat panel
+illustrates the conversation and is replayed by a script
+([`tools/demo/`](https://github.com/DukeOfCheese/openswx/blob/main/tools/demo)); the people are made-up demo
+accounts. Claude is made by [Anthropic](https://www.anthropic.com/).</sub>
 
 openswx is an alternate CAD program for engineers. Its screen is laid out the way many mechanical engineers
 already know from SOLIDWORKS: a command bar across the top, a design tree on the left, a property panel for

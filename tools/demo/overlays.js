@@ -33,6 +33,10 @@ window.DEMO = {
     .lockup img{width:46px;height:46px}
     .lockup .sep{width:1.5px;height:48px;background:rgba(20,23,28,.18)}
     .lockup .it{display:flex;align-items:center;gap:16px}
+    .lockup .team{display:flex}
+    .lockup .team i{width:34px;height:34px;border-radius:50%;border:3px solid #fff;margin-left:-12px;display:grid;place-items:center;
+      font:700 14px 'Segoe UI',system-ui,sans-serif;color:#fff;font-style:normal;box-shadow:0 2px 6px rgba(40,20,30,.18)}
+    .lockup .team i:first-child{margin-left:0}
     @keyframes dcRise{from{opacity:0;transform:translateY(22px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
     #demo-cc{position:fixed;left:0;right:0;bottom:30px;z-index:100001;text-align:center;pointer-events:none}
     #demo-cc span{display:inline-block;padding:9px 20px;border-radius:12px;background:rgba(20,23,28,.82);color:#fff;border-bottom:2px solid #e3324b;
@@ -45,13 +49,14 @@ window.DEMO = {
     .toast{display:none!important}`;
     document.head.append(s);
   },
-  card(logo) {  // the openswx title, then the "openswx | Claude" lockup
+  card(logo) {  // the openswx title, then the "openswx | Claude | your team" lockup
     const d = document.createElement('div'); d.id = 'demo-card';
     const cube = '<span class="cube"><i></i><i class="t"></i><i class="r"></i></span>';
     d.innerHTML = `<div class="scene s1"><div class="dc-logo">${cube}<div class="dc-name">open<span>swx</span></div></div>
         <div class="pill">Open-source parametric CAD&nbsp;&nbsp;·&nbsp;&nbsp;MCP server built in</div></div>
       <div class="scene s2 wait"><div class="pill lockup"><span class="it">${cube}openswx</span><span class="sep"></span>
-        <span class="it">${logo ? `<img src="${logo}">` : '<span style="color:#d97757">✻</span>'}Claude</span></div></div>`;
+        <span class="it">${logo ? `<img src="${logo}">` : '<span style="color:#d97757">✻</span>'}Claude</span><span class="sep"></span>
+        <span class="it t3"><span class="team"><i style="background:#3f7be0">S</i><i style="background:#2e9e6a">M</i><i style="background:#e08a2e">A</i></span>your team</span></div></div>`;
     document.getElementById('demo-card')?.remove(); document.body.after(d);
   },
   lockup() { const d = document.getElementById('demo-card'); d.querySelector('.s1').classList.add('gone'); d.querySelector('.s2').classList.remove('wait'); },
