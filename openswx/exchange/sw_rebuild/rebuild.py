@@ -12,12 +12,121 @@ from openswx.core.document import DocumentError, PartDocument
 from ._base import (FIXED_BASE, MATCH, NEUTRAL, SKIP, STD_PLANES, TOL, RebuildError, _AVOID, _BASE_TRIALS,
                     _DEADLINE, _LATER_SCALE, _LUMP, _MOVED_LATER, _PROGRESS, _REVOLVE_AXES, _TAGGED, _TRUST,
                     _Oracle, _check_time, _faces_on_body, _import_delta, _log, _lump, _mesh_volume, _plane,
-                    _tagged_faces, _try, _try_kinds)
+                    _tagged_faces, _try, _try_kinds, _volume)
 from .features import (_draft_variants, _fillet_radii, _helix, _hole_variants, _off_boundary_edges, _scale_bytes,
                        _scale_factor)
 from .features_weld import _weld_member
 from .patterns import _try_pattern
 from .sketches import _consume, _loose_axes, _orient_arcs, _reach, _revolve_angles, _settle_arcs, _sketch_dict
+
+def _combine(doc: PartDocument, oracle: _Oracle, name: str) -> dict:
+    """Combine bodies: the bodies and the mode are not decoded, so each main body with all the others (or with
+    one other) is tried in each mode. Combine needs two or more bodies: when the part has one, an earlier boss
+    was made as a body of its own ("merge result" off, not decoded either), so each earlier boss (the most
+    recent first) is tried with merge off, and the combination that agrees best is kept."""
+
+    def variants():
+        n_ = len(doc.body.solids()) if doc.body is not None else 0
+        if not 2 <= n_ <= 6:
+            return []
+        sets = []
+        for m_ in range(n_):
+            others = [j for j in range(n_) if j != m_]
+            sets += [(m_, others)] + ([(m_, [j]) for j in others] if len(others) > 1 else [])
+        return [{"op": "combine", "main": m_, "tools": t_, "mode": md}
+                for md in ("add", "subtract", "common") for m_, t_ in sets]
+    if variants():
+        return _try(doc, oracle, "body_op", name, variants())
+    best, best_s = None, -math.inf
+    bosses = [f for f in doc.features[1:] if f["params"].get("merge") is True][::-1][:6]
+    for b in bosses:
+        _check_time()
+        try:
+            doc.edit_feature(b["name"], {"merge": False})
+        except DocumentError:
+            continue
+        vs = variants()
+        if vs:
+            try:
+                feat = _try(doc, oracle, "body_op", name, vs)
+                s = oracle.score_doc(doc)
+                if s > best_s + 1e-6:
+                    best, best_s = (b["name"], feat["params"]), s
+                doc.delete_feature(name, with_children=False)
+            except RebuildError:
+                pass
+        doc.edit_feature(b["name"], {"merge": True})
+    if best is None:
+        raise RebuildError(f"{name}: needs two or more bodies")
+    doc.edit_feature(best[0], {"merge": False})
+    return doc.add_feature("body_op", best[1], name=name)
+
+
+def _lines_as_curves(doc: PartDocument, name: str, sk: dict) -> None:
+    """A sketch of lines only, all taken for construction lines (a lone line reads as a centerline): its lines
+    not flagged as construction in their own records become ordinary lines, so the sketch can be a sweep's
+    path or guide curve."""
+    feat = doc.find(name)
+    if not sk.get("lines") or feat is None or feat.get("type") != "sketch":
+        return
+    data = feat["params"]["sketch"]
+    ents = data["entities"]
+    if not ents or any(e["type"] != "line" or not e.get("construction") for e in ents.values()):
+        return
+    pts = data["points"]
+    key = lambda xy: (round(xy[0], 6), round(xy[1], 6))  # noqa: E731
+    flagged = {frozenset((key(sk["points"][a]), key(sk["points"][b]))) for a, b in sk["lines"]
+               if frozenset((a, b)) in sk.get("construction", set())}
+    new = {k: ({**e, "construction": False} if frozenset((key(pts[e["p1"]]), key(pts[e["p2"]]))) not in flagged else e)
+           for k, e in ents.items()}
+    if new != ents:
+        doc.edit_feature(name, {"sketch": {**data, "entities": new}})
+
+
+def _try_planes(doc: PartDocument, oracle: _Oracle, sketches: dict, kind: str, name: str, variants: list[dict],
+                uses) -> dict:
+    """_try for a feature built from several sketches (sweep, loft), also trying the candidate planes of each
+    sketch whose plane was not decoded (a frame record that only says "a standard plane"). `uses(params)` names
+    the sketches a variant uses. The combination that agrees best with the stored body is kept."""
+    names = list(dict.fromkeys(n for v in variants for n in uses(v) if "R" in sketches.get(n, {})))  # (3D: none)
+    options = {n: [(sketches[n]["R"], sketches[n]["t"])] + list(sketches[n].get("frames", []))
+               + list(sketches[n].get("more_frames", [])) for n in names}
+    open_ = [n for n in names if len(options[n]) > 1]
+    if not open_:
+        return _try(doc, oracle, kind, name, variants)
+    # (the decoded planes first; up to 24 combinations, as each runs every variant)
+    combos = list(itertools.islice(itertools.product(*[options[n] for n in open_]), 24))
+    original = {n: doc.find(n)["params"]["plane"] for n in open_}
+    s0, v0 = oracle.score_doc(doc), _volume(doc)
+    s0 = s0 if math.isfinite(s0) else 0.0
+    best, best_s = None, -math.inf
+    for combo in combos:
+        _check_time()
+        try:
+            for n, (R, t) in zip(open_, combo):
+                doc.edit_feature(n, {"plane": _plane(R, t)})
+            feat = _try(doc, oracle, kind, name, variants)
+        except (DocumentError, RebuildError):
+            continue
+        s, params, v = oracle.score_doc(doc), feat["params"], _volume(doc)
+        doc.delete_feature(name, with_children=False)
+        if s > best_s + 1e-6:
+            best, best_s = (combo, params), s
+        # the feature changed the body only where it agrees with the stored body (all the change is gain):
+        # no other plane can do better
+        if oracle.volume > 0 and abs(v - v0) > 1e-9 and s - s0 >= abs(v - v0) * (1 - 1e-3) - 1e-6:
+            break
+    if best is None:
+        for n, pl in original.items():
+            doc.edit_feature(n, {"plane": pl})
+        raise RebuildError(f"{name}: no variant builds")
+    for n, (R, t) in zip(open_, best[0]):
+        doc.edit_feature(n, {"plane": _plane(R, t)})
+    return doc.add_feature(kind, best[1], name=name)
+
+
+_RUN: dict = {}  # the stored body's oracle and face ids, kept between the passes of one rebuild_part call
+
 
 def rebuild_part(path: str, doc: PartDocument, config: int | None = None, budget: float = 150.0) -> dict:
     """Recreate the part's features in `doc` (an empty part). Returns a report; raises RebuildError when a
@@ -29,6 +138,7 @@ def rebuild_part(path: str, doc: PartDocument, config: int | None = None, budget
     comparison of the finished body with the stored one decides."""
     import time
     start = time.monotonic()
+    _RUN.clear()  # (what a second pass can reuse from the first: both read the same file)
     try:
         return _rebuild(path, doc, config, budget, trust_built=False)
     except RebuildError as exc:
@@ -92,12 +202,15 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
             raise
         from build123d import Compound
         shape = Compound([])
-    oracle = oracle_full = _Oracle(shape)
+    if _RUN.get("key") != (path, config):  # (the oracle keeps the scores of bodies tried already)
+        _RUN.clear()
+        _RUN.update(key=(path, config), oracle=_Oracle(shape), faces={})
+    oracle = oracle_full = _RUN["oracle"]
     pre_scale: dict = {}  # later scale factor -> oracle of the stored body scaled back
     axes: dict[str, list[str]] = {}
     last_sketch = recent_sketch = None
     sketch_order, consumed = [], set()  # sketches in tree order; those a feature has used
-    built, skipped, imported, face_cache = [], [], [], {}
+    built, skipped, imported, face_cache = [], [], [], _RUN["faces"]
     first_solid = None  # the feature that makes the first solid: it must be editable
     bend_done: set = set()
     weld_taken: dict = {}  # weldment path sketch -> its lines that members already run along
@@ -344,9 +457,10 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
                         _try_pattern(doc, oracle, "circular_pattern", name, variants)
                 elif cls == "moSMBaseFlange_c":  # sheet metal from a closed sketch: a plate of the sheet thickness
                     last_sketch = last_sketch or recent_sketch
-                    # (older parts: the thickness on the Sheet-Metal feature before it, the bend radius and depth on
-                    # the base bend after it)
-                    sheet = next((g for g in reversed(tree[:tree.index(f)]) if g["cls"] == "moSheetMetal_c"), None)
+                    # (older parts: the thickness on the Sheet-Metal feature before it - moTemplateSheetMetal_c in
+                    # files saved by SOLIDWORKS 2018 and later - the bend radius and depth on the base bend after it)
+                    sheet = next((g for g in reversed(tree[:tree.index(f)])
+                                  if g["cls"] in ("moSheetMetal_c", "moTemplateSheetMetal_c")), None)
                     bend = later[0] if later and later[0]["cls"] == "moSketchBend_c" else None
                     own = lengths or [p["value"] * 1000.0 for p in (sheet or {}).get("params", []) if p["kind"] == "length"]
                     if last_sketch is None or not own:
@@ -400,6 +514,31 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
                     if not made:
                         raise RebuildError(f"{name}: no path line gives a member of the stored body")
                     last_sketch = None
+                elif cls == "moSewRefSurface_c":  # Knit: the surface bodies so far, sewn. A planar surface whose
+                    # class was not decoded (read as None, so not built) is made first from a sketch still unused,
+                    # named after the undecoded features just before the knit
+                    i_ = tree.index(f)
+                    unnamed = [g["name"] for g in tree[:i_] if g["cls"] is None and g["name"] not in built
+                               and not any(h["cls"] is not None and h["cls"] not in SKIP | NEUTRAL
+                                           for h in tree[tree.index(g) + 1:i_])]
+                    for x in [s for s in sketch_order if s not in consumed and not sketches[s].get("is3d")]:
+                        nm = unnamed.pop(0) if unnamed else f"{name}-{x}"
+                        try:
+                            build = lambda x=x, nm=nm: _try(doc, oracle, "planar_surface", nm, [{"sketch": x}])  # noqa: E731
+                            _consume(doc, oracle, x, sketches[x], nm, build)
+                            consumed.add(x)
+                            built.append(nm)
+                        except RebuildError as exc:
+                            _log(str(exc))
+                    surfs = list(doc.ctx.surfaces)
+                    if len(surfs) < 2:
+                        raise RebuildError(f"{name}: needs two or more surface bodies")
+                    solid_ = bool(oracle.shape.solids())
+                    _try(doc, oracle, "knit_surface", name, [{"surfaces": surfs, "tolerance": t, "form_solid": solid_}
+                                                             for t in (1e-4, 2.5e-3, 0.1)])
+                elif cls == "moCombineBodies_c":  # Combine: which bodies and the mode are not decoded; each main
+                    # body with all the others, or with one other, is tried in each mode
+                    _combine(doc, oracle, name)
                 elif cls == "moScale_c":
                     if doc.body is None:
                         raise RebuildError(f"{name}: nothing to scale")
@@ -427,8 +566,17 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
                                 doc.edit_feature(prof, {"plane": {"origin": list(o_), "normal": list(d_), "x_dir": list(u_)}})
                     variants = [{"sketch": a, "path": b, "frenet": fr, "merge": True}
                                 for a, b in itertools.permutations(free[-3:], 2) for fr in (False, True)]
-                    feat = _try(doc, oracle, kind, name, variants)
+                    for x in free[-3:]:  # a lone line reads as a centerline: as a path or guide it is the curve
+                        _lines_as_curves(doc, x, sketches.get(x, {}))
+                    if kind == "sweep" and len(free) >= 3:  # (a guide curve the profile follows: a third sketch)
+                        variants += [{"sketch": a, "path": b, "guide": g, "merge": True}
+                                     for a, b, g in itertools.permutations(free[-3:], 3)
+                                     if not sketches.get(a, {}).get("lines") and sketches.get(g, {}).get("lines")]
+                    feat = _try_planes(doc, oracle, sketches, kind, name, variants,
+                                       lambda v: (v["sketch"], v["path"]) + ((v["guide"],) if v.get("guide") else ()))
                     consumed.update((feat["params"]["sketch"], feat["params"]["path"]))
+                    if feat["params"].get("guide"):
+                        consumed.add(feat["params"]["guide"])
                     last_sketch = None
                 elif cls in ("moBlend_c", "moBlendCut_c"):
                     free = [s for s in sketch_order if s not in consumed]
@@ -436,7 +584,7 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
                         raise RebuildError(f"{name}: needs two or more profile sketches")
                     kind = "cut_loft" if cls == "moBlendCut_c" else "loft"
                     variants = [{"profiles": free[-k:], "merge": True} for k in range(len(free), 1, -1)]
-                    feat = _try(doc, oracle, kind, name, variants)
+                    feat = _try_planes(doc, oracle, sketches, kind, name, variants, lambda v: v["profiles"])
                     consumed.update(feat["params"]["profiles"])
                     last_sketch = None
                 elif cls == "moExtruRefSurface_c":
@@ -453,8 +601,10 @@ def _rebuild(path: str, doc: PartDocument, config: int | None, budget: float, tr
                     angs = _revolve_angles(angles, lengths)
                     lines = [e for e, v in doc.find(last_sketch)["params"]["sketch"]["entities"].items() if v["type"] == "line"]
                     cands = [f"{last_sketch}/{a}" for a in (axes.get(last_sketch) or lines)] + ["X", "Y", "Z"]
-                    _try(doc, oracle, "revolved_surface", name,
-                         [{"sketch": last_sketch, "axis": a, "angle": g} for g in angs for a in cands])
+                    _lines_as_curves(doc, last_sketch, sketches[last_sketch])  # (a lone profile line, read as a centerline)
+                    variants = [{"sketch": last_sketch, "axis": a, "angle": g} for g in angs for a in cands]
+                    build = lambda: _try(doc, oracle, "revolved_surface", name, variants)  # noqa: E731
+                    _consume(doc, oracle, last_sketch, sketches[last_sketch], name, build)  # (its candidate planes too)
                     consumed.add(last_sketch)
                     last_sketch = None
                 elif cls == "moThicken_c":

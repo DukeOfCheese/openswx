@@ -425,13 +425,20 @@ def read_sketches(path: str, config: int | None = None) -> dict:
             sk["dimensions"] = dimensions(buf, [p for p in objs[i + 1:] if p["offset"] < end
                                                 and p["cls"] in ("moLengthParameter_c", "moAngleParameter_c")])
             # a frame record with flag 0 means "the sketch plane itself": the Front plane or a user plane
+            std = [(np.array(TOP), np.zeros(3)), (np.array(RIGHT), np.zeros(3))]
             if np.allclose(sk["R"], np.eye(3)) and not np.any(sk["t"]) and not sk["frames"]:
-                std = [(np.array(TOP), np.zeros(3)), (np.array(RIGHT), np.zeros(3))]
                 if recent is not None:
                     sk["R"], sk["t"] = recent
                     sk["frames"] = [(np.eye(3), np.zeros(3))] + [f for f in planes if f is not recent] + std
                 else:
                     sk["frames"] = list(planes) + std
+            elif np.allclose(sk["R"], np.eye(3)) and not np.any(sk["t"]):
+                # (other candidate planes were read, as for a sketch on a face; the user plane defined just before
+                # it, the other user planes and the standard planes are candidates too: files saved by SOLIDWORKS
+                # 2018 put a sketch on a new offset plane this way). They are kept apart: only a sweep or a loft
+                # tries them, since the score of a single extrude can prefer a wrong plane
+                sk["more_frames"] = ([recent] if recent is not None else []) + \
+                    [f for f in planes if f is not recent] + std
             out[o["name"]] = sk
             recent = None
     return out

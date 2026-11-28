@@ -32,6 +32,18 @@ def _path_lines(doc: PartDocument, path: str, psk: dict) -> list:
     doc.edit_feature(path, {"sketch": data})
     return lines
 
+def _stored_solid(oracle: "_Oracle", solid) -> bool:
+    """Is the solid one of the stored body's solids (same volume and centroid)? Weldments store each member as
+    a body of its own, so a member built alone along its path line can be compared with them exactly."""
+    stored = oracle.__dict__.get("_solids")
+    if stored is None:
+        stored = oracle.__dict__["_solids"] = [(s.volume, s.center()) for s in oracle.shape.solids()]
+    try:
+        v, c = solid.volume, solid.center()
+    except Exception:
+        return False
+    return any(abs(v - sv) <= 1e-6 * max(1.0, sv) and (c - sc).length <= 1e-3 for sv, sc in stored)
+
 def _weld_member(doc: PartDocument, oracle: "_Oracle", name: str, path: str, psk: dict, taken: set) -> None:
     """Weldment structural member: which path lines it uses, its profile and corner treatment are not decoded.
     The profile is the stored body's section across the middle of a path line (in the member's own frame:
@@ -78,11 +90,14 @@ def _weld_member(doc: PartDocument, oracle: "_Oracle", name: str, path: str, psk
         except DocumentError:
             continue
         gain, dv = oracle.score_doc(doc) - s0, _volume(doc) - v0
-        own = sum(t_.volume for _, t_ in doc.ctx.tools.get(name, []))  # the member's own volume
-        _log(f"{name}: path line {eid} gains {gain:.6g} for {dv:.6g} (member {own:.6g})")
+        tools = [t_ for _, t_ in doc.ctx.tools.get(name, [])]
+        own = sum(t_.volume for t_ in tools)  # the member's own volume
+        same = bool(tools) and all(_stored_solid(oracle, t_) for t_ in tools)
+        _log(f"{name}: path line {eid} gains {gain:.6g} for {dv:.6g} (member {own:.6g}{', a stored body' if same else ''})")
         doc.delete_feature(name, with_children=False)
-        # (and it is a member of its own, not a sliver along one already there)
-        if dv > 0 and gain >= 0.9 * dv and dv >= 0.5 * own:
+        # (and it is a member of its own, not a sliver along one already there); a member that is one of the
+        # stored bodies exactly belongs, whatever the score (sampled scores undercount thin-walled tubes)
+        if same or (dv > 0 and gain >= 0.9 * dv and dv >= 0.5 * own):
             used.append(eid)
     if not used:
         if profile_made:

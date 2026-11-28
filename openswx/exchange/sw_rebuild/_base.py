@@ -57,6 +57,39 @@ def _check_time() -> None:
     if time.monotonic() > _DEADLINE[0] and not _BASE_TRIALS[0]:
         raise RebuildError("the history needs more trials than the time budget allows")
 
+def _tessellate(shape, tol: float, angular: float):
+    """(vertices (n, 3), triangles (m, 3)) arrays of the shape's triangulation: what build123d's
+    Shape.tessellate gives (the same mesher call and winding), without a Vector object per vertex, which
+    took about half the time of scoring a candidate by sampling."""
+    import numpy as np
+    from OCP.BRep import BRep_Tool
+    from OCP.BRepMesh import BRepMesh_IncrementalMesh
+    from OCP.BRepTools import BRepTools
+    from OCP.TopAbs import TopAbs_REVERSED
+    from OCP.TopLoc import TopLoc_Location
+    from build123d.topology.shape_core import _topods_entities, downcast
+    if not BRepTools.Triangulation_s(shape.wrapped, tol):
+        BRepMesh_IncrementalMesh(shape.wrapped, tol, True, angular, True)
+    verts, tris, offset = [], [], 0
+    for f in _topods_entities(shape.wrapped, "Face"):  # (each face once, as Shape.faces() lists them)
+        face = downcast(f)
+        loc = TopLoc_Location()
+        poly = BRep_Tool.Triangulation_s(face, loc)
+        if poly is None:  # (a face the mesher left out: the mesh would have a hole, as Shape.tessellate fails)
+            raise ValueError("a face has no triangulation")
+        trsf, n = loc.Transformation(), poly.NbNodes()
+        for i in range(1, n + 1):
+            p = poly.Node(i).Transformed(trsf)
+            verts.append((p.X(), p.Y(), p.Z()))
+        t = np.array([(tr.Value(1), tr.Value(2), tr.Value(3)) for tr in poly.Triangles()], dtype=np.int64)
+        if len(t):
+            if face.Orientation() == TopAbs_REVERSED:
+                t = t[:, [0, 2, 1]]
+            tris.append(t + offset - 1)
+        offset += n
+    return np.array(verts, dtype=float).reshape(-1, 3), (np.concatenate(tris) if tris else np.zeros((0, 3), np.int64))
+
+
 def _mesh_volume(shape, tol: float | None = None) -> float:
     """Volume from a fine triangulation (divergence theorem): OCC's surface integrals are unreliable on some
     freeform faces, a mesh is not. Default tolerance: 0.005 mm, coarser for large parts (5e-4 of the size)."""
@@ -67,26 +100,24 @@ def _mesh_volume(shape, tol: float | None = None) -> float:
         if tol is None:
             bb = shape.bounding_box()
             tol = max(5e-4 * (bb.max - bb.min).length, 0.005)
-        vs, tris = shape.tessellate(tol, 0.05)
+        v, t = _tessellate(shape, tol, 0.05)
     except Exception:  # a face the mesher cannot triangulate
         return shape.volume
-    v = np.array([[p.X, p.Y, p.Z] for p in vs])
-    t = np.array(tris)
+    if not len(t):
+        return shape.volume
     return float(abs(np.einsum("ij,ij->i", v[t[:, 0]], np.cross(v[t[:, 1]], v[t[:, 2]])).sum()) / 6.0)
 
 
 def _triangles(shape, tol: float | None = None):
     """The shape's surface as an (n, 3, 3) array of triangles (by default 0.1 % of its size), or None."""
-    import numpy as np
     try:
         if tol is None:
             bb = shape.bounding_box()
             tol = max(1e-3 * (bb.max - bb.min).length, 1e-3)
-        vs, tris = shape.tessellate(tol, 0.2)
+        v, t = _tessellate(shape, tol, 0.2)
     except Exception:
         return None
-    v = np.array([[p.X, p.Y, p.Z] for p in vs])
-    return v[np.array(tris)] if len(tris) else None
+    return v[t] if len(t) else None
 
 
 def _inside_mesh(tri, pts):
@@ -168,7 +199,12 @@ class _Oracle:
             return self.score(ctx.body)
         from build123d import Compound
         sheets = list(ctx.surfaces.values())
-        return -self.deviation(Compound(sheets)) if sheets else -math.inf
+        if not sheets:
+            return -math.inf
+        # (ranked by how far the built surfaces lie from the stored ones first: while only some of them are built,
+        # the stored ones still missing are far from every candidate, which would make all placements tie)
+        near, far = self.deviation(Compound(sheets), parts=True)
+        return -(near + 1e-3 * far)
 
     def score(self, body) -> float:
         """2 * (volume shared with the stored body) - volume: highest for the body that matches."""
@@ -260,9 +296,10 @@ class _Oracle:
             return False
         return self.skin.distance_to(Vertex(pnt.X, pnt.Y, pnt.Z)) < TOL
 
-    def deviation(self, body) -> float:
+    def deviation(self, body, parts: bool = False):
         """Largest distance between sample points (vertices, points along edges) of either body and the other
-        body's boundary. Face centres are not used: a face's centroid can lie in a hole or outside a concave face."""
+        body's boundary. Face centres are not used: a face's centroid can lie in a hole or outside a concave face.
+        parts=True returns (body's points to the stored boundary, stored points to the body's) instead."""
         from build123d import Compound, Vertex
 
         def samples(shape):
@@ -270,7 +307,7 @@ class _Oracle:
         skin = Compound(body.faces())
         d1 = max((self.skin.distance_to(Vertex(p.X, p.Y, p.Z)) for p in samples(body)), default=0.0)
         d2 = max((skin.distance_to(Vertex(p.X, p.Y, p.Z)) for p in samples(self.shape)), default=0.0)
-        return max(d1, d2)
+        return (d1, d2) if parts else max(d1, d2)
 
 def _try(doc: PartDocument, oracle: _Oracle, ftype: str, name: str, variants: list[dict]) -> dict:
     """Add the feature with each parameter variant and keep the one whose body agrees best with the stored body."""
@@ -283,9 +320,10 @@ def _volume(doc: PartDocument) -> float:
         return 0.0
 
 
-def _exact(oracle: "_Oracle", body, s0: float, v0: float, s: float, v: float) -> bool:
+def _exact(oracle: "_Oracle", body, s0: float, v0: float, s: float, v: float, faces_ok=None) -> bool:
     """Did adding a feature change the body only where it agrees with the stored body? A matching boss adds
-    material the stored body has and a matching cut removes material it lacks: the score gains |change|."""
+    material the stored body has and a matching cut removes material it lacks: the score gains |change|.
+    `faces_ok`: a function giving _faces_on_body(body, tagged faces), when the caller shares its answer."""
     if not math.isfinite(s0):  # no body yet: an empty part scores 0
         s0 = 0.0
     dv = abs(v - v0)
@@ -293,10 +331,10 @@ def _exact(oracle: "_Oracle", body, s0: float, v0: float, s: float, v: float) ->
         return False
     # consistent with the stored body; complete too (a shorter boss is consistent) only if the faces SOLIDWORKS
     # tagged with this feature are all there
-    return bool(_TAGGED[0]) and body is not None and _faces_on_body(body, _TAGGED[0], share=0.98)
+    return bool(_TAGGED[0]) and body is not None and (faces_ok or (lambda: _faces_on_body(body, _TAGGED[0])))()
 
 
-def _tagged_ok(oracle: "_Oracle", body, s0: float, v0: float, s: float, v: float) -> bool:
+def _tagged_ok(oracle: "_Oracle", body, s0: float, v0: float, s: float, v: float, faces_ok=None) -> bool:
     """Does a candidate have the faces SOLIDWORKS tagged with the feature (ranked before its score)? A cut must
     also remove only material the stored body lacks: a cut that goes too deep keeps its tagged walls (they
     run on past them). An addition need not be all there (later cuts carve it)."""
@@ -306,7 +344,7 @@ def _tagged_ok(oracle: "_Oracle", body, s0: float, v0: float, s: float, v: float
         s0 = s0 if math.isfinite(s0) else 0.0
         if s - s0 < (v0 - v) * (1 - 1e-3) - 1e-6:
             return False
-    return _faces_on_body(body, _TAGGED[0], share=0.98)
+    return (faces_ok or (lambda: _faces_on_body(body, _TAGGED[0])))()
 
 
 def _trial(doc: PartDocument, ftype: str, params: dict, name: str):
@@ -339,9 +377,15 @@ def _try_kinds(doc: PartDocument, oracle: _Oracle, ftypes: list[str], name: str,
             ctx = _trial(doc, ftype, params, name)
         except Exception:
             continue
-        s = oracle.score_ctx(ctx)
-        exact = _exact(oracle, ctx.body, s0, v0, s, _body_volume(ctx.body))
-        tagged = exact or _tagged_ok(oracle, ctx.body, s0, v0, s, _body_volume(ctx.body))
+        s, v = oracle.score_ctx(ctx), _body_volume(ctx.body)
+        memo: list = []  # (both checks ask whether the tagged faces are on this body: answered once)
+
+        def faces_ok(body=ctx.body, memo=memo):
+            if not memo:
+                memo.append(_faces_on_body(body, _TAGGED[0]))
+            return memo[0]
+        exact = _exact(oracle, ctx.body, s0, v0, s, v, faces_ok)
+        tagged = exact or _tagged_ok(oracle, ctx.body, s0, v0, s, v, faces_ok)
         if (tagged, s) > (best_score[0], best_score[1] + 1e-6):
             best, best_score = (ftype, params), (tagged, s)
         if exact:  # no need to look further
@@ -368,8 +412,14 @@ def _faces_on_body(body, faces, tol: float = 1e-3, share: float = 0.98) -> bool:
         if not pts:
             continue
         pts = [p for p in pts if near(p)]
-        if not pts or sum(skin.distance_to(Vertex(p.X, p.Y, p.Z)) <= tol for p in pts) < share * len(pts):
+        if not pts:
             return False
+        allowed, off = len(pts) - share * len(pts), 0  # (points that may be off it; stop once more are)
+        for p in pts:
+            if skin.distance_to(Vertex(p.X, p.Y, p.Z)) > tol:
+                off += 1
+                if off > allowed + 1e-9:
+                    return False
     return True
 
 def _tagged_faces(path: str, config, fid: int, oracle: "_Oracle", cache: dict, anywhere: bool = False) -> list:
