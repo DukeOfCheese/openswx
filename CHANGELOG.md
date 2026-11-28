@@ -11,6 +11,8 @@ formats or commands; files are migrated automatically and the change is listed h
 - Sheet-metal SOLIDWORKS parts no longer open as a single imported body just because their tree ends with a
   Flat-Pattern feature saved by SOLIDWORKS 2018 or later. The flat pattern doesn't change the folded body, so the
   rebuild now skips it, as it already did for older flat patterns. (issue 24)
+- The flat pattern's per-bend entries ("Flatten-<bend>") are skipped as well. Before, they stopped the rebuild
+  of sheet-metal parts with edge, hem, miter or jog flanges just after the flat pattern itself.
 
 ## 0.4.2 (2026-11-27)
 

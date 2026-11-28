@@ -185,16 +185,19 @@ def test_sw_rebuild_imports_undecoded_feature(tmp_path, monkeypatch):
         rebuild_part(_sw_part(tmp_path, "fil_r5"), PartDocument("t"))
 
 
-@pytest.mark.parametrize("cls", ["moFlatPattern_c", "moTemplateFlatPattern_c"])
-def test_sw_rebuild_skips_flat_pattern(tmp_path, monkeypatch, cls):
+@pytest.mark.parametrize("name, cls", [("Flat-Pattern1", "moFlatPattern_c"),
+                                       ("Flat-Pattern1", "moTemplateFlatPattern_c"),
+                                       ("Flatten-<EdgeBend1>1", "moUiBend_c")])
+def test_sw_rebuild_skips_flat_pattern(tmp_path, monkeypatch, name, cls):
     """The Flat-Pattern feature at the end of a sheet-metal tree (written as moTemplateFlatPattern_c by
-    SOLIDWORKS 2018 and later) does not change the folded body: it is skipped, not imported or refused."""
+    SOLIDWORKS 2018 and later) and its per-bend Flatten entries (moUiBend_c) do not change the folded body:
+    they are skipped, not imported or refused."""
     import openswx.exchange.sw_tree as sw_tree
     from openswx.core.document import PartDocument
     from openswx.exchange.sw_rebuild import rebuild_part
     real = sw_tree.read_tree
     monkeypatch.setattr(sw_tree, "read_tree", lambda path, config=None: [
-        *real(path, config), {"name": "Flat-Pattern1", "cls": cls, "id": None, "params": []}])
+        *real(path, config), {"name": name, "cls": cls, "id": None, "params": []}])
     doc = PartDocument("t")
     r = rebuild_part(_sw_part(tmp_path, "fil_r5"), doc)
     assert not r["imported"] and [f["type"] for f in doc.features] == ["sketch", "extrude", "fillet"]
