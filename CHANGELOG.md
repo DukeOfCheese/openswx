@@ -13,6 +13,15 @@ formats or commands; files are migrated automatically and the change is listed h
   rebuild now skips it, as it already did for older flat patterns. (issue 24)
 - The flat pattern's per-bend entries ("Flatten-<bend>") are skipped as well. Before, they stopped the rebuild
   of sheet-metal parts with edge, hem, miter or jog flanges just after the flat pattern itself.
+- More SOLIDWORKS parts open with an editable feature tree instead of an imported body (issue 24):
+  - weldment members that are thin-walled tubes are kept (each member is checked against the body SOLIDWORKS
+    stored for it);
+  - base flanges saved by SOLIDWORKS 2018 or later read their sheet thickness;
+  - sweeps and lofts try the planes a section sketch may lie on, and sweeps with a guide curve are rebuilt;
+  - Combine, Knit and revolved surfaces are rebuilt;
+  - a lone sketch line used as a sweep path or a profile edge is no longer read as a centerline.
+- Rebuilding a SOLIDWORKS history does less repeated work: the stored body's mesh and face checks are kept
+  across retry passes, each candidate's faces are checked once, and the check stops as soon as it has failed.
 
 ## 0.4.2 (2026-11-27)
 

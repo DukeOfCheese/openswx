@@ -340,3 +340,21 @@ def test_no_solidworks_dependency():
                              cwd=str(pkg.parent))
     assert out.returncode == 0, out.stderr[-500:]
     assert out.stdout.strip().splitlines()[-1] == "False"
+
+
+def test_weld_member_matches_a_stored_body():
+    """A weldment stores each member as a body of its own: a trial member that is one of those bodies exactly
+    (volume and centroid) is accepted without relying on the sampled score, which undercounts thin-walled
+    tubes; a member that is shifted or longer is not one of them."""
+    from build123d import Box, Compound, Pos
+    from openswx.exchange.sw_rebuild._base import _Oracle
+    from openswx.exchange.sw_rebuild.features_weld import _stored_solid
+
+    def tube(length):  # a 20 x 20 x 2 square tube along X, from x = 0
+        return Pos(length / 2, 0, 0) * (Box(length, 20, 20) - Box(length, 16, 16))
+    stored = Compound([tube(200).solid(), (Pos(0, 50, 0) * tube(100)).solid()])
+    oracle = _Oracle(stored)
+    assert _stored_solid(oracle, (Pos(0, 50, 0) * tube(100)).solid())
+    assert _stored_solid(oracle, tube(200).solid())
+    assert not _stored_solid(oracle, (Pos(0, 51, 0) * tube(100)).solid())
+    assert not _stored_solid(oracle, (Pos(0, 50, 0) * tube(101)).solid())
