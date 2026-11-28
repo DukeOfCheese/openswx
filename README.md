@@ -2,8 +2,9 @@
 
 <!-- mcp-name: io.github.DukeOfCheese/openswx -->
 
-**Open-source parametric CAD with a familiar layout, a built-in MCP server so AI agents can design parts in
-it while you watch, and live collaboration so your team can edit the same part at once.**
+**Open-source parametric CAD where your team and your AI agents work on the same part at the same time.
+A familiar layout, a built-in MCP server so agents can design while you watch, and live collaboration: everyone's
+edits, pointers and open features show up for the others as they happen.**
 
 [![tests](https://github.com/DukeOfCheese/openswx/actions/workflows/test.yml/badge.svg)](https://github.com/DukeOfCheese/openswx/actions/workflows/test.yml)
 [![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](https://github.com/DukeOfCheese/openswx/blob/main/LICENSE)
@@ -25,6 +26,15 @@ already know from SOLIDWORKS: a command bar across the top, a design tree on the
 the active command, the same mouse navigation and shortcuts. If you can model a part there, you can model one
 here without retraining. Underneath, it is a different program, built on different foundations; the section
 [How it differs from SOLIDWORKS](#how-it-differs-from-solidworks) lists what that means in practice.
+
+Two things set it apart. **Agents are first-class users**: every command is also an MCP tool, so Claude or
+any other MCP client builds the part in your open window while you watch. And **a part can be shared live**:
+move it to the cloud (a small [openswx-collab](https://github.com/DukeOfCheese/openswx-collab) server you or
+your team host) and several people open it at once, each in their own openswx, with agents working through
+any of them. Each change reaches everyone as it is made. The **People** pane shows who is in the part, in
+their pointer colour, with their role, the tool they are using and the features they have open, which are
+locked for the others; click someone to follow their view. Undo takes back only your own changes, and the
+history keeps every change with its author. See [Work together live](#work-together-live).
 
 > **Not affiliated with Dassault Systèmes.** openswx is an independent open-source project. It is not
 > affiliated with, endorsed by, sponsored by or connected to Dassault Systèmes or SOLIDWORKS Corporation.
@@ -48,6 +58,15 @@ here without retraining. Underneath, it is a different program, built on differe
 
 ## What it does
 
+- **Agents**: <!-- counts -->463 commands, 443 of them MCP tools ([full list](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md))<!-- /counts -->,
+  over stdio or streamable HTTP, shown live in the UI's Agent activity pane.
+- **Live collaboration**: several people, and the agents working with them, in one part at once, on a server
+  you host yourself ([openswx-collab](https://github.com/DukeOfCheese/openswx-collab)). Edits appear for
+  everyone as they are made and others' pointers glide over the model. The People pane lists who is in the
+  part with their colour, role (editor or viewer), current tool, the features they have open and whether
+  they are idle; click someone to follow their view. An open sketch or feature is locked for the others, and
+  undo takes back only your own changes. Edit history, named versions and restore; organisations, projects,
+  invitations and roles on Home's Cloud tab. See [Work together live](#work-together-live).
 - **Parts**: constrained 2D and 3D sketches; extrude / revolve / sweep / loft (boss and cut, with the
   familiar end conditions), fillets and chamfers of every kind, shell, draft, rib, dome, wrap, Hole Wizard,
   threads, patterns (linear, circular, curve, sketch, table, fill), mirror, multibody tools, reference
@@ -67,13 +86,6 @@ here without retraining. Underneath, it is a different program, built on differe
 - **Rendering**: real-time PBR, or path traced for soft shadows and reflections.
 - **Review**: design review, requirements checked like tests, tolerance stack-up, design studies, document
   compare.
-- **Agents**: <!-- counts -->463 commands, 443 of them MCP tools ([full list](https://github.com/DukeOfCheese/openswx/blob/main/docs/commands.md))<!-- /counts -->,
-  over stdio or streamable HTTP, shown live in the UI's Agent activity pane.
-- **Live collaboration**: several people in one part at once, on a server you host yourself
-  ([openswx-collab](https://github.com/DukeOfCheese/openswx-collab)). Edits appear for everyone as they are
-  made, others' pointers move in the view, an open sketch or feature is locked for the others, and undo takes
-  back only your own changes. Edit history, named versions and restore; organisations, projects and roles on
-  Home's Cloud tab. See [Work together live](#work-together-live).
 - **Files**: native `.oswprt` / `.oswasm` / `.oswdrw` (versioned JSON). Reads SOLIDWORKS `.sldprt` / `.sldasm` /
   `.slddrw` natively (tested on files saved by SOLIDWORKS 2025; see
   [Compatibility](#how-it-differs-from-solidworks)); clean-room Parasolid reader (`.x_t`, `.x_b`) and writer (`.x_t`); STEP and
@@ -220,7 +232,14 @@ While you work, each change reaches the others as it is made and their pointers 
 name bubble. The **People** pane in the Task Pane on the right (its tab shows how many are in the part) lists
 everyone, with what each is editing; click someone to follow their view. A sketch or feature someone has open is locked for everyone else, and Undo takes back only your
 own changes. **Collaborate → History** lists every change with its author; name a version, or restore one.
-Agents take part too: the `collab` toolset gives them the same commands.
+
+Roles decide who can do what: an organisation has owners, admins and members, and each project gives people
+the role of owner, editor or viewer (a viewer follows along but cannot change the part). Invitations go by
+email or by a code.
+
+Agents take part too. An agent connected to your openswx edits the cloud part you have open the way you do,
+so its changes reach everyone live, and the `collab` toolset gives it the same commands as the menus: open
+cloud parts, see who is in them, read the history, name versions.
 
 ## How it differs from SOLIDWORKS
 
