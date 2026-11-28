@@ -110,7 +110,6 @@ def _mesh_volume(shape, tol: float | None = None) -> float:
 
 def _triangles(shape, tol: float | None = None):
     """The shape's surface as an (n, 3, 3) array of triangles (by default 0.1 % of its size), or None."""
-    import numpy as np
     try:
         if tol is None:
             bb = shape.bounding_box()
