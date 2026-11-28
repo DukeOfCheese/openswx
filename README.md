@@ -158,6 +158,10 @@ the open window, so you watch the agent's edits live; without it, it starts its 
 Setup* shows the exact entry for your installation); from source use `"command": "python", "args": ["-m",
 "openswx", "mcp"]`.
 
+The chat app keeps `openswx mcp` running in the background for as long as it runs itself, often from when the
+computer starts. While it does, the openswx icon sits in the system tray (Windows, Linux desktops); its menu opens
+the live UI or quits openswx. From source the icon needs `pip install openswx[tray]`.
+
 **Claude on the web (claude.ai)** cannot connect: its connectors call MCP servers from Anthropic's servers,
 which cannot reach an app running on your computer. Use Claude Desktop or Claude Code.
 

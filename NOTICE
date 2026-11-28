@@ -32,6 +32,8 @@ Uvicorn              BSD-3-Clause
 MCP Python SDK       MIT
 ezdxf                MIT
 pywebview            BSD-3-Clause (desktop builds)
+pystray              LGPL-3.0 (optional: the tray icon of `openswx mcp`; desktop builds)
+Pillow               MIT-CMU (with pystray)
 Netgen (netgen-mesher)   LGPL-2.1 (optional: tetrahedral simulation meshes; carries its own OpenCASCADE)
 PyInstaller bootloader   GPL-2.0 with the bootloader exception (desktop builds)
 

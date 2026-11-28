@@ -107,10 +107,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.cmd == "mcp":
         from openswx.server import mcp_bridge
+        from openswx.shell import tray  # (MCP clients start this in the background: the tray icon shows it and quits it)
         running = None if a.standalone or a.workspace or a.toolsets else mcp_bridge.find_running(a.port)
         if running:  # an openswx window is open: the agent works in it (its edits show there, live)
             from openswx.server import security
             print(f"openswx: relaying MCP to the running openswx at {running}", file=sys.stderr)
+            tray.start("openswx MCP server (relaying to the open window)")
             mcp_bridge.run(running + "/mcp", security.user_token())
             return 0
         from openswx.server.mcp_server import build_mcp
@@ -129,6 +131,7 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"openswx: web UI not started ({exc})", file=sys.stderr)
             threading.Thread(target=ui, daemon=True).start()
             print(f"openswx: live UI at http://{a.host}:{a.port}/?token={token}", file=sys.stderr)
+        tray.start("openswx MCP server running", url=None if a.no_ui else f"http://{a.host}:{a.port}/?token={token}")
         build_mcp().run("stdio")
         return 0
 

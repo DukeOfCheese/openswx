@@ -120,7 +120,8 @@ touching the real document, the undo stack or the journal.
 - **Collaboration.** Each cloud document has a network thread and a view thread in `openswx/collab/client.py`
   (see below).
 - **Tests.** `tests/conftest.py` sets `OPENSWX_ISOLATE=off`, `OPENSWX_PLUGINS=off`, `OPENSWX_AUTOSAVE=off`,
-  `OPENSWX_LOG=off` and a temporary `OPENSWX_HOME`, and clears `APP.documents` before each test.
+  `OPENSWX_LOG=off`, `OPENSWX_TRAY=off` (no tray icon from `openswx mcp`) and a temporary `OPENSWX_HOME`, and
+  clears `APP.documents` before each test.
 
 ## Documents, persistence, undo and snapshots
 

@@ -14,7 +14,7 @@ IS_MAC = sys.platform == "darwin"
 datas, binaries, hidden = [(str(ROOT / "openswx" / "web"), "openswx/web")], [], []
 for pkg in ("build123d", "OCP", "webview", "uvicorn", "mcp", "ezdxf", "ocpsvg", "anytree", "lib3mf", "bd_materials",
             "ocp_gordon", "svgpathtools", "trianglesolver", "threejs_materials", "webcolors", "fontTools",
-            "openswx_collab_protocol", "websockets"):  # (the last two: the collab extra, when installed)
+            "openswx_collab_protocol", "websockets", "pystray"):  # (the collab extra and the tray icon, when installed)
     try:
         d, b, h = collect_all(pkg)
     except Exception:
