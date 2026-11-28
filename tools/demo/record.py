@@ -1,13 +1,14 @@
 """Record the README demo (docs/media/demo.mp4, 4K): an MCP client builds a mounting plate in a running openswx while
 a chat panel illustrates the conversation. Every feature is made by a real MCP tool call; the chat text is scripted.
-Then the part goes to the cloud and a second person, in a second openswx, joins it: their pointer, a draft of
-their fillet and the fillet itself arrive live, and the History pane shows their change and a named version.
+Claude shares the part with the team first, and two teammates, each in their own openswx, work in it while Claude
+builds: their pointers move over the part, Sam fillets the boss rim (the draft shows as a ghost, then the fillet
+arrives) and Maya opens the boss, which locks it; the People pane shows who is doing what.
 
     pip install -e .[collab] playwright openswx-collab-server && playwright install chromium   (plus ffmpeg on PATH)
     python tools/demo/record.py OUT_DIR    -> OUT_DIR/demo.mp4 (3840x2160, under 10 MB), demo-1080p.mp4 and poster.png
 
 The collaboration part runs a throwaway openswx-collab server (SQLite, in a temporary folder) with two made-up
-accounts, Alex (the recorded window) and Sam (a second openswx with its own home and token). The server runs on
+accounts: Alex (the recorded window), Sam and Maya (two more openswx instances, each with its own home and token). The server runs on
 this Python, or on OPENSWX_COLLAB_SERVER_PYTHON if it is installed in another environment.
 
 Frames come from the browser's screencast (1920x1080 CSS pixels at device scale 2), timestamped, then encoded
@@ -40,16 +41,15 @@ OUT = Path(sys.argv[1])
 OUT.mkdir(parents=True, exist_ok=True)
 TOKEN = "demo-recording-token-0123456789abcdefghijklmnop"
 PROMPT = ("Make a 120×60×10 mm mounting plate with four Ø8 holes 12 mm from the edges and a Ø36 boss "
-          "with a counterbored hole. Fillet the corners R6. Material 6061.")
+          "with a counterbored hole. Fillet the corners R6. Material 6061. Share it with the team in Brackets.")
 W, H = 1920, 1080  # CSS pixels; captured at 2x = 3840x2160
 FPS = 30
 CAP = 9_500_000  # bytes: the 4K demo.mp4 stays under GitHub's 10 MB for an attached video
 # the collaboration part: made-up people on a throwaway server
-TOKEN_SAM = "demo-recording-token-sam-0123456789abcdefghijk"
-PASSWORD = "demo password"  # (both accounts live only in the temporary server)
+PASSWORD = "demo password"  # (the accounts live only in the temporary server)
 ALEX = {"email": "alex@example.com", "password": PASSWORD, "name": "Alex"}
-SAM = {"email": "sam@example.com", "password": PASSWORD, "name": "Sam"}
-SHARE = "Share it with Sam in Brackets."
+MATES = [{"email": "sam@example.com", "password": PASSWORD, "name": "Sam"},
+         {"email": "maya@example.com", "password": PASSWORD, "name": "Maya"}]
 
 
 def free_port() -> int:
@@ -106,17 +106,50 @@ def collab_server() -> tuple[subprocess.Popen, str]:
     return proc, url
 
 
-def team(server: str, alex: tuple[str, str], sam: tuple[str, str]) -> None:
+def team(server: str, alex: tuple[str, str], mates: list[tuple[str, str]]) -> None:
     """Alex (the first account: the server's admin) makes an organisation and the Brackets project and invites
-    Sam as an editor; both openswx instances sign in."""
+    the teammates as editors; every openswx instance signs in."""
     a = post(server + "/api/auth/register", ALEX)["token"]
     org = post(server + "/api/orgs", {"name": "Demo Works"}, a)["id"]
     command(*alex, "collab_sign_in", server=server, email=ALEX["email"], password=PASSWORD)
     project = command(*alex, "collab_create_project", name="Brackets")
-    inv = post(server + f"/api/orgs/{org}/invites", {"email": SAM["email"], "projects": [
-        {"project_id": project["id"], "role": "editor"}]}, a)["token"]
-    post(server + "/api/auth/register", {**SAM, "invite": inv})
-    command(*sam, "collab_sign_in", server=server, email=SAM["email"], password=PASSWORD)
+    for who, app in zip(MATES, mates):
+        inv = post(server + f"/api/orgs/{org}/invites", {"email": who["email"], "projects": [
+            {"project_id": project["id"], "role": "editor"}]}, a)["token"]
+        post(server + "/api/auth/register", {**who, "invite": inv})
+        command(*app, "collab_sign_in", server=server, email=who["email"], password=PASSWORD)
+
+
+class Mate:
+    """A teammate in their own openswx, off camera. Their pointer walks along paths in the background (about 12
+    presence messages a second); each message carries their whole presence: pointer, tool and selection."""
+
+    def __init__(self, app: tuple[str, str]):
+        self.app, self.pt, self.tool, self.sel, self.task = app, None, None, [], None
+
+    async def do(self, name, /, **args):
+        return await asyncio.to_thread(command, *self.app, name, **args)
+
+    async def show(self, **extra):
+        await self.do("collab_presence", pointer={"point": [round(v, 3) for v in self.pt]}, tool=self.tool or "",
+                      selection=self.sel, **extra)
+
+    def walk(self, points, steps=22, tool=None):
+        """Glide the pointer through points (world mm), in the background; returns at once."""
+        if tool is not None:
+            self.tool = tool
+        path = glide(([self.pt] if self.pt else []) + points, steps)
+
+        async def run():
+            for pt in path:
+                self.pt = pt
+                await self.show()
+                await asyncio.sleep(0.07)
+        self.task = asyncio.ensure_future(run())
+
+    async def arrive(self):
+        if self.task:
+            await self.task
 
 
 def glide(points: list[list[float]], n: int) -> list[list[float]]:
@@ -140,20 +173,22 @@ async def main():
     try:
         proc, base = openswx("oswx-demo-", TOKEN)
         procs.append(proc)
-        sam_proc, sam_base = openswx("oswx-demo-sam-", TOKEN_SAM)
-        procs.append(sam_proc)
+        mates = []
+        for who in MATES:
+            token = f"demo-recording-token-{who['name'].lower()}-0123456789abcdefghijk"
+            mp, mb = openswx(f"oswx-demo-{who['name'].lower()}-", token)
+            procs.append(mp)
+            mates.append((mb, token))
         server_proc, server = collab_server()
         procs.append(server_proc)
-        for u in (base, sam_base, server):
+        for u in (base, *(m[0] for m in mates), server):
             wait_up(u + "/api/health")
-        alex, sam = (base, TOKEN), (sam_base, TOKEN_SAM)
-        team(server, alex, sam)
-
-        async def sam_do(name, /, **args):  # Sam's openswx, off camera
-            return await asyncio.to_thread(command, *sam, name, **args)
+        team(server, (base, TOKEN), mates)
+        sam, maya = (Mate(m) for m in mates)
         async with async_playwright() as p:
             browser = await p.chromium.launch(args=["--enable-gpu", "--use-angle=d3d11", "--ignore-gpu-blocklist"])
-            ctx = await browser.new_context(viewport={"width": W, "height": H}, device_scale_factor=2)
+            ctx = await browser.new_context(viewport={"width": W, "height": H}, device_scale_factor=2,
+                                            bypass_csp=True)  # (the overlays are injected scripts)
             page = await ctx.new_page()
             frames_dir = OUT / "frames"
             frames_dir.mkdir(exist_ok=True)
@@ -183,7 +218,7 @@ async def main():
             mark = time.time()
             await page.evaluate("DEMO.cc('Open-source parametric CAD, with an MCP server built in.')")
             await page.wait_for_timeout(2300)
-            await page.evaluate("DEMO.lockup(); DEMO.cc('Now Claude can design parts in it.')")
+            await page.evaluate("DEMO.lockup(); DEMO.cc('Now Claude and your team design parts in it, together.')")
             await page.wait_for_timeout(2100)
             await page.evaluate("DEMO.cardOut(); CHAT.showChat(); DEMO.cc('Describe the part.')")  # the chat alone, centred
             await page.wait_for_timeout(900)
@@ -230,84 +265,77 @@ async def main():
                         c = r.content[0]
                         return json.loads(c.text) if getattr(c, "type", "") == "text" else c
 
-                    await call("new_part", name="MountingPlate", pause=150, think="Sketching the base plate...")
+                    await call("new_part", name="MountingPlate", pause=150, think="Sharing it with the team...")
+                    shared = await call("collab_enable", project="Brackets", pause=150, show="project = Brackets")
+                    joining = [asyncio.ensure_future(m.do("collab_open", document_id=shared["document_id"])) for m in (sam, maya)]
+                    await page.evaluate("CHAT.thinkText('Sketching the base plate...'); window.app.showTask('people');"
+                                        "DEMO.cc('Claude shares it with the team, and Sam and Maya join.')")
                     sk = (await call("create_sketch", plane="Top", pause=100))["sketch"]
                     rect = (await call("sketch_rectangle", sketch=sk, corner1=[0, 0], corner2=[80, 50], centered=True, pause=250, show="centered rectangle"))["result"]
                     lines = rect["entities"]
+                    await asyncio.gather(*joining)
                     await call("sketch_dimension", sketch=sk, kind="length", refs=[lines[0]], value=120, pause=150, show="width = 120 mm")
                     await call("sketch_dimension", sketch=sk, kind="length", refs=[lines[1]], value=60, pause=150, show="height = 60 mm")
-                    await call("extrude", sketch=sk, depth=10, pause=750, fit=True, show="depth = 10 mm")
+                    await call("extrude", sketch=sk, depth=10, pause=300, fit=True, show="depth = 10 mm")
+                    # the teammates' pointers, on the side of the part facing the camera (it turns slowly)
+                    cam = await page.evaluate("window.app.vp.camera.position.toArray()")
+                    th = math.atan2(cam[2], cam[0])
+                    at = lambda r, a, y: [r * math.cos(th + a), y, r * math.sin(th + a)]  # noqa: E731
+                    on_plate = lambda a, r=1.0: [36 * r * math.cos(th + a), 10.0, 20 * r * math.sin(th + a)]  # noqa: E731
+                    sam.pt, maya.pt = on_plate(1.3), on_plate(-1.2)
+                    sam.walk([on_plate(0.9), on_plate(0.3, 0.7)], steps=22)
+                    maya.walk([on_plate(-0.8, 0.8), on_plate(-0.2, 0.9)], steps=24)
+                    await page.evaluate("DEMO.cc('Your team works in the part while Claude builds it.')")
+                    await page.wait_for_timeout(1200)  # (a moment to see them)
                     topo = await call("get_topology", pause=0, show=False, think="Adding the boss...")
                     top = max((f for f in topo["faces"] if f["normal"][1] > 0.99), key=lambda f: f["point"][1])
-                    boss = (await call("create_sketch", plane=top["id"], pause=100, show="on the top face"))["sketch"]
+                    boss = (await call("create_sketch", plane=top.get("name") or top["id"], pause=100, show="on the top face"))["sketch"]
                     await call("sketch_circle", sketch=boss, center=[0, 0], radius=18, pause=150, show="Ø36")
-                    await call("extrude", sketch=boss, depth=25, pause=750, fit=True, show="depth = 25 mm")
+                    boss_feat = (await call("extrude", sketch=boss, depth=25, pause=300, fit=True, show="depth = 25 mm"))["feature"]
+                    # Maya opens the boss (locked for everyone else while she has it); Sam heads for its rim
+                    await maya.arrive()
+                    maya.walk([at(19, -0.5, 10), at(18.05, -0.35, 20)], steps=16, tool=f"Editing {boss_feat}")
+                    await maya.do("collab_lock", features=[boss_feat])
                     topo = await call("get_topology", pause=0, show=False, think="Drilling the holes...")
                     cap = max((f for f in topo["faces"] if f["normal"][1] > 0.99), key=lambda f: f["point"][1])
-                    await call("hole", face=cap["id"], points=[[0, 0]], diameter=16, end_condition="ThroughAll",
-                               type="counterbore", cbore_diameter=26, cbore_depth=6, pause=600, show="counterbore Ø16 / Ø26")
+                    await sam.arrive()
+                    sam.walk([at(28, 0.25, 10), at(19, 0.15, 10), at(18.05, 0.1, 24), at(18, 0.05, 35)], steps=22, tool="Fillet")
+                    await call("hole", face=cap.get("name") or cap["id"], points=[[0, 0]], diameter=16, end_condition="ThroughAll",
+                               type="counterbore", cbore_diameter=26, cbore_depth=6, pause=300, show="counterbore Ø16 / Ø26")
+                    await sam.arrive()
+                    rim = max((e for e in (await sam.do("get_topology"))["edges"] if e["type"] == "circle" and abs(e.get("radius", 0) - 18) < 1e-6),
+                              key=lambda e: e["point"][1])
+                    rim = rim.get("name") or rim["id"]
+                    sam.sel = [rim]
+                    await sam.show(draft={"kind": "feature", "command": "fillet", "args": {"radius": 3, "edges": [rim]}})
+                    await page.evaluate("DEMO.cc('Sam drafts a fillet on the boss; Maya has the boss open, so it is locked.')")
+                    await page.wait_for_timeout(1500)
                     topo = await call("get_topology", pause=0, show=False)
                     plate_top = [f for f in topo["faces"] if f["normal"][1] > 0.99 and abs(f["point"][1] - 10) < 1e-6][0]
-                    await call("hole", face=plate_top["id"], points=[[-48, -18]], diameter=8, end_condition="ThroughAll", pause=500, show="Ø8 through all")
-                    await call("linear_pattern", features=["Hole2"], direction="X", spacing=96, count=2,
-                               direction2="Z", spacing2=36, count2=2, reverse2=True, pause=600, show="2 × 2, 96 × 36 mm")
+                    poster_at = time.time()
+                    hole = (await call("hole", face=plate_top.get("name") or plate_top["id"], points=[[-48, -18]], diameter=8,
+                                       end_condition="ThroughAll", pause=400, show="Ø8 through all"))["feature"]
+                    await sam.do("fillet", radius=3, edges=[rim])  # Sam's own edit, arriving live
+                    sam.sel = []
+                    await sam.show(clear_draft=True)
+                    await page.wait_for_timeout(1000)  # (Sam's fillet comes in)
+                    sam.walk([at(30, 0.6, 10)], steps=16, tool="")
+                    await call("linear_pattern", features=[hole], direction="X", spacing=96, count=2,
+                               direction2="Z", spacing2=36, count2=2, reverse2=True, pause=400, show="2 × 2, 96 × 36 mm")
+                    await maya.do("collab_unlock", features=[boss_feat])
+                    maya.walk([on_plate(-0.4, 0.8)], steps=16, tool="")
+                    await page.wait_for_timeout(800)
                     topo = await call("get_topology", pause=0, show=False, think="Rounding the corners...")
-                    await page.evaluate("DEMO.cc('Every feature is real, and editable afterwards.')")
-                    vertical = [e["id"] for e in topo["edges"] if e["type"] == "line" and abs(e["length"] - 10) < 1e-6]
-                    await call("fillet", radius=6, edges=vertical, pause=700, fit=True, show="R6, 4 edges")
+                    await page.evaluate("DEMO.cc(\"Every change is real: Claude's, Sam's and Maya's.\")")
+                    vertical = [e.get("name") or e["id"] for e in topo["edges"] if e["type"] == "line" and abs(e["length"] - 10) < 1e-6]
+                    await call("fillet", radius=6, edges=vertical, pause=500, fit=True, show="R6, 4 edges")
                     await call("set_material", name="6061 Alloy", density_kg_m3=2700, pause=300, show="6061 aluminium", think="Checking the result...")
                     mp = await call("get_mass_properties", pause=200, show="")
-                    await page.evaluate("""(t) => { CHAT.say(t); DEMO.orbitSpeed = 24; DEMO.cc('A parametric part you can keep editing.'); }""",
-                                        f"Done. <b>MountingPlate</b>: 6061 aluminium, <b>{mp['mass']:.0f} g</b>, 9 features, all of them editable in the design tree.")
-                    await page.wait_for_timeout(2000)
-
-                    # ---------------------------------------------------- working together: Sam joins
-                    await page.evaluate("DEMO.orbitSpeed = 6; DEMO.cc('Share it, and work on it together, live.'); CHAT.focus()")
-                    for i in range(0, len(SHARE) + 1, 3):
-                        await page.evaluate("(t) => CHAT.type(t)", SHARE[:i])
-                        await page.wait_for_timeout(16)
-                    await page.evaluate("(t) => CHAT.type(t)", SHARE)
-                    await page.wait_for_timeout(250)
-                    await page.evaluate("(t) => { CHAT.send(t); CHAT.think('Moving it to the cloud...'); }", SHARE)
-                    await page.wait_for_timeout(350)
-                    shared = await call("collab_enable", project="Brackets", pause=250, show="project = Brackets")
-                    await page.evaluate("(t) => CHAT.say(t)", "Shared: <b>MountingPlate</b> is now a cloud part in "
-                                        "<b>Brackets</b>. Sam can open it from Home › Cloud.")
-                    await page.wait_for_timeout(500)
-            await sam_do("collab_open", document_id=shared["document_id"])  # Sam's avatar comes up in the bar
-            await page.wait_for_timeout(700)
-            await page.evaluate("DEMO.cc('Sam joins: their pointer and their edits arrive as they make them.')")
-            topo = await sam_do("get_topology")
-            rim = max((e for e in topo["edges"] if e["type"] == "circle" and abs(e.get("radius", 0) - 18) < 1e-6),
-                      key=lambda e: e["point"][1])
-            rim = rim.get("name") or rim["id"]
-            # Sam's pointer: across the plate towards the camera, up the boss and onto its rim (on the side in view)
-            cam = await page.evaluate("window.app.vp.camera.position.toArray()")
-            th = math.atan2(cam[2], cam[0])
-            at = lambda r, a, y: [r * math.cos(th + a), y, r * math.sin(th + a)]  # noqa: E731
-            start = [40 * math.cos(th + 0.9), 10.0, 22 * math.sin(th + 0.9)]  # (on the plate, clear of the holes)
-            path = glide([start, at(30, 0.35, 10), at(19, 0.18, 10), at(18.05, 0.1, 22), at(18, 0.0, 35)], 46)
-            for i, pt in enumerate(path):
-                await sam_do("collab_presence", pointer={"point": [round(v, 3) for v in pt]},
-                             tool="Fillet" if i > len(path) // 2 else "Select")
-                await page.wait_for_timeout(35)
-            # Sam picks the rim and opens Fillet: the draft shows here, translucent in Sam's colour (each presence
-            # message is Sam's whole presence: the pointer goes with it every time)
-            on_rim = {"point": [round(v, 3) for v in path[-1]]}
-            await sam_do("collab_presence", pointer=on_rim, selection=[rim], tool="Fillet")
-            await page.wait_for_timeout(500)
-            poster_at = time.time()
-            await sam_do("collab_presence", pointer=on_rim, selection=[rim], tool="Fillet",
-                         draft={"kind": "feature", "command": "fillet", "args": {"radius": 3, "edges": [rim]}})
-            await page.wait_for_timeout(1400)
-            await sam_do("fillet", radius=3, edges=[rim])
-            await sam_do("collab_presence", pointer=on_rim, selection=[], tool="Select", clear_draft=True)
-            await page.wait_for_timeout(700)
-            await sam_do("collab_presence", pointer={"point": [round(v, 3) for v in at(28, 0.5, 10)]}, tool="Select")
-            await page.wait_for_timeout(800)
-            await sam_do("collab_name_version", name="Rev A", note="Boss edge filleted")
-            await page.evaluate("DEMO.cc('Feature locks, undo of your own edits, history and named versions.'); window.app.collabHistoryDialog()")
-            await page.wait_for_timeout(2600)
+                    await page.evaluate("""(t) => { CHAT.say(t); DEMO.orbitSpeed = 24; DEMO.cc('One part, edited by Claude and your team at once.'); }""",
+                                        f"Done. <b>MountingPlate</b>: 6061 aluminium, <b>{mp['mass']:.0f} g</b>, shared with Sam and Maya "
+                                        "in <b>Brackets</b>. Sam's fillet on the boss is in the tree too.")
+                    await page.wait_for_timeout(3400)
+                    await asyncio.gather(sam.arrive(), maya.arrive())
             build_to = time.time()
             await page.evaluate("DEMO.cc(''); DEMO.endCard('Free and open source&nbsp;&nbsp;·&nbsp;&nbsp;Windows, macOS, Linux', 'github.com/DukeOfCheese/openswx')")
             await page.wait_for_timeout(4200)
