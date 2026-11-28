@@ -11,7 +11,7 @@ edits, pointers and open features show up for the others as they happen.**
 ![platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![status: alpha](https://img.shields.io/badge/status-alpha-orange)
 
-https://github.com/user-attachments/assets/a2f0469a-6fc6-4da8-857d-d7ce00e8c905
+https://github.com/user-attachments/assets/68aa6fa0-0bcd-48a0-8974-c54b89322d02
 
 <sub>37 s ([4K original](https://github.com/DukeOfCheese/openswx/blob/main/docs/media/demo.mp4)). Recorded in
 openswx: Claude shares the part with the team through a local
